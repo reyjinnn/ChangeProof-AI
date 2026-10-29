@@ -74,7 +74,7 @@ export const CapabilityKeySchema = z
         path: ['versionRange'],
         message:
           `versionRange "${key.versionRange}" claims every version. A capability record must name ` +
-          'an explicit version or range — .claude/AGENTS.md §3 rule 7 forbids "all versions" claims.',
+          'an explicit version or range — AGENTS.md §3 rule 7 forbids "all versions" claims.',
       });
     }
   })
@@ -115,7 +115,7 @@ export const CapabilityRecordSchema = z
         path: ['evidenceRefs'],
         message:
           `provenLevel "${record.provenLevel}" requires evidence references. A level without ` +
-          'evidence is a claim, not a capability (.claude/AGENTS.md §3 rule 7).',
+          'evidence is a claim, not a capability (AGENTS.md §3 rule 7).',
       });
     }
 

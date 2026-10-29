@@ -11,7 +11,7 @@ import { ExecutionModeSchema } from '../vocabulary.js';
  *  1. The oracle digest must still equal the frozen digest. A changed oracle
  *     invalidates proof, and a different full pass must not rescue it (NEG3-03).
  *  2. A skipped check is not a pass. A run carrying a skipped *required* check
- *     cannot claim its evidence is valid (.claude/AGENTS.md §4, "skipped check ≠ pass").
+ *     cannot claim its evidence is valid (AGENTS.md §4, "skipped check ≠ pass").
  */
 
 export const VerificationStageSchema = z.enum([

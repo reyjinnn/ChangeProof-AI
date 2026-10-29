@@ -3,7 +3,7 @@ import { z } from 'zod';
 /**
  * Status vocabulary.
  *
- * .claude/AGENTS.md §4 fixes these values exactly and forbids inventing synonyms.
+ * AGENTS.md §4 fixes these values exactly and forbids inventing synonyms.
  * They are defined once, here, and every contract imports them — so a typo
  * cannot become a second vocabulary.
  */
@@ -20,7 +20,7 @@ export type ExecutionMode = z.infer<typeof ExecutionModeSchema>;
 export const ProposalModeSchema = z.enum(['live_model', 'replay_model', 'human_reference']);
 export type ProposalMode = z.infer<typeof ProposalModeSchema>;
 
-/** Target-level product verdict. Never decided by the model (.claude/AGENTS.md §3 rule 1). */
+/** Target-level product verdict. Never decided by the model (AGENTS.md §3 rule 1). */
 export const TARGET_OUTCOMES = [
   'fixed',
   'no_impact_verified',
@@ -52,7 +52,7 @@ export type Dimension = z.infer<typeof DimensionSchema>;
 export const DimensionResultSchema = z.enum(['pass', 'fail', 'inconclusive', 'not_applicable']);
 export type DimensionResult = z.infer<typeof DimensionResultSchema>;
 
-/** The three support levels (.claude/AGENTS.md §4). `none` is a separate proven-level value. */
+/** The three support levels (AGENTS.md §4). `none` is a separate proven-level value. */
 export const SUPPORT_LEVELS = ['L1', 'L2', 'L3'] as const;
 export const SupportLevelSchema = z.enum(SUPPORT_LEVELS);
 export type SupportLevel = z.infer<typeof SupportLevelSchema>;
@@ -60,7 +60,7 @@ export type SupportLevel = z.infer<typeof SupportLevelSchema>;
 export const ProvenLevelSchema = z.enum(['none', 'L1', 'L2', 'L3']);
 export type ProvenLevel = z.infer<typeof ProvenLevelSchema>;
 
-/** Engineering task status. Kept separate from the product verdict (.claude/AGENTS.md §4). */
+/** Engineering task status. Kept separate from the product verdict (AGENTS.md §4). */
 export const TaskStatusSchema = z.enum(['not_started', 'in_progress', 'blocked', 'done']);
 export type TaskStatus = z.infer<typeof TaskStatusSchema>;
 

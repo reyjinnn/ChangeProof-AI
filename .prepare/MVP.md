@@ -698,7 +698,7 @@ Task ID / parent WP: DOC3-20261022-01 / WP3-01 preparation; cross-WP traceabilit
 Requirement IDs: BR3-01/03/08/09/14/17/19; FR3-01/06/07/08/14/15/24/28/31/34/35
 User-visible outcome: briefing includes assisted readiness, safe efficiency, B2/ablation, Meta contribution and first-user focus.
 Prerequisite evidence: normative sections of four documents read; actual package.json checked; folder contains seven files; Git metadata unavailable.
-Allowed source/config changes: BRD.md, PRD.md, MVP.md, architecture.md; .claude/SKILL.md only reference index/guidance.
+Allowed source/config changes: BRD.md, PRD.md, MVP.md, architecture.md; SKILL.md only reference index/guidance.
 Input snapshots + intended intervention: copies of seven files before editing in temporary workspace; user input and public sources checked 22 October 2026.
 Acceptance checks (positive, negative, native): ID/link/DAG/traceability, preservation of scope and proof rules; native not applicable to documentation edits.
 Protected oracle / proof scope: no changes to runtime oracle, policy, budget or historical evidence; target specifications only.
@@ -718,7 +718,7 @@ Final documentation task checks:
 | `node 'C:\Users\user\AppData\Local\Temp\changeproof-doc-review-eb3faf1d215d49688b4575c12865e5f2\document-check.cjs'` | 0 — seven files, five changed files, 94 valid local links, 218 canonical IDs preserved, 34-WP DAG remains cycle-free | Document structure/link/preservation checks; not product behavior acceptance |
 | Semantics and public source review | No process exit code; sources/dates/qualifications in BRD §20 | Independent oracle, fresh proof, tenant scope, fair comparator and full release scope retained; account balances not verified |
 
-The initial validator exited 1 because it required a literal phrase that did not match exactly; prose matching checks were replaced with manual review, not treated as behavior proof. Link, ID, DAG and file preservation checks still ran. `.claude/AGENTS.md` and `mockup.html` were identical to pre-edit copies; `.claude/SKILL.md` only received references/guidance for further detail. No files added to the seven-file package.
+The initial validator exited 1 because it required a literal phrase that did not match exactly; prose matching checks were replaced with manual review, not treated as behavior proof. Link, ID, DAG and file preservation checks still ran. `AGENTS.md` and `mockup.html` were identical to pre-edit copies; `SKILL.md` only received references/guidance for further detail. No files added to the seven-file package.
 
 **Mock vs native / missing checks:** no mock or native product tests run. `pnpm typecheck`, `pnpm lint`, unit/integration and model/runner/browser/CI/provider acceptance **not run** because changes were documentation-only; no passing results claimed. No paid API, publication or application changes. Runtime contracts/policy not edited; new target schemas and evaluation design revision recorded in PRD §20. All implementation, economics, B2/ablation, onboarding and live Meta evidence still must be produced by related WPs; this review does not change product gate status.
 
@@ -1082,7 +1082,7 @@ All gates are finally reviewed in phase-7; earlier phases produce required local
 
 ### Routing, status and report migration
 
-Follow [AGENTS §18](.claude/AGENTS.md#18-pemanggilan-fase-eksekusi) and [skill](.claude/SKILL.md). Valid prompts are phase-1 through phase-7. Save reports only on actual execution as `docs/phase-reports/phase-N.md`. Record task scope separately from full-WP status, plan revision 2, commands/exit codes, source/config/evaluation identity, evidence, missing checks and exact next dependency-ready task. Phases finish allocated tasks only; full WPs/gates require all original acceptance. No phase automatically starts its successor or authorizes paid APIs, external changes/messages, payments or deployment.
+Follow [AGENTS §18](AGENTS.md#18-pemanggilan-fase-eksekusi) and [skill](SKILL.md). Valid prompts are phase-1 through phase-7. Save reports only on actual execution as `docs/phase-reports/phase-N.md`. Record task scope separately from full-WP status, plan revision 2, commands/exit codes, source/config/evaluation identity, evidence, missing checks and exact next dependency-ready task. Phases finish allocated tasks only; full WPs/gates require all original acceptance. No phase automatically starts its successor or authorizes paid APIs, external changes/messages, payments or deployment.
 
 Any old phase-4 experience work maps to backend phase-4 plus front-end phase-6; old phase-5 qualification maps to backend/preparation phase-5 plus whole-system phase-7. Older phase-1..3 UI contributions also move to phase-6. Preserve historical reports and immutable artifacts; do not bulk relabel prior results or infer new completion. Audit old tasks against current identities and record the migration in the next actual execution report. No existing execution report was present in this extracted package during this document change.
 
@@ -1097,7 +1097,7 @@ Task ID / parent WP: DOC3-20261022-02 / execution preparation for WP3-01..34
 Requirement IDs: all existing WP/BR3/FR3 mappings; no product requirements added
 User-visible outcome: phase-1..5 prompts routed to five implementation playbooks with dependencies, acceptance and resume.
 Prerequisite evidence: MVP §8/21, source instructions and actual package.json read; Git metadata unavailable.
-Allowed source/config changes: phases/*.md; .claude/AGENTS.md/.claude/SKILL.md; references in four documents; root .claude/AGENTS.md only 1.0 phase routing.
+Allowed source/config changes: phases/*.md; AGENTS.md/SKILL.md; references in four documents; root AGENTS.md only 1.0 phase routing.
 Input snapshots + intended intervention: pre-change snapshot in temporary workspace; user's request to add phases supersedes the seven-file-only structure limit.
 Acceptance checks (positive, negative, native): completeness of exactly 34 WP without duplication, dependency order/DAG, local links/anchors, root+folder routing; native not applicable to documentation.
 Protected oracle / proof scope: oracle, model, product source, thresholds and historical evidence unchanged; implementation phases not yet run.
@@ -1107,13 +1107,13 @@ Status + remaining blocker: done for document preparation and validation; implem
 Next dependency-ready task: when user requests phase-1, audit actual contracts/policy against WP3-01 then execute ready tasks.
 ```
 
-Actual checks: `node 'C:\Users\user\AppData\Local\Temp\changeproof-phases-0a2a459697554d54a0e8c0a1ea570519\check-phases.cjs'` → **exit 0**. Five phase files contain exactly 34 WP without duplication; phase matrix matches playbooks; each dependency precedes its dependent in the chosen order; WP DAG unchanged from pre-edit snapshot; 174 valid local links/anchors; mockup identical. Root and `.claude/AGENTS.md` routing reviewed so old phases do not take over new prompts. This is document validation, not end-to-end testing of agent behavior in future sessions.
+Actual checks: `node 'C:\Users\user\AppData\Local\Temp\changeproof-phases-0a2a459697554d54a0e8c0a1ea570519\check-phases.cjs'` → **exit 0**. Five phase files contain exactly 34 WP without duplication; phase matrix matches playbooks; each dependency precedes its dependent in the chosen order; WP DAG unchanged from pre-edit snapshot; 174 valid local links/anchors; mockup identical. Root and `AGENTS.md` routing reviewed so old phases do not take over new prompts. This is document validation, not end-to-end testing of agent behavior in future sessions.
 
 Mock/native: not run. Missing application checks: strict typecheck, lint/boundaries, unit/integration, native/model/provider/browser not run because product source unchanged; no passing results claimed. Schema/policy/evaluation semantics unchanged, only development orchestration added. No phase marked complete, external effect or automation created. Operation authorization and actual prerequisites still checked when playbooks invoked.
 
 ## Seven-file package consolidation — 22 October 2026
 
-Per user instruction, the requested final `` package contains only `BRD.md`, `PRD.md`, `MVP.md`, `architecture.md`, `.claude/SKILL.md`, `.claude/AGENTS.md`, and `mockup.html`. Seven references merged in full into the Unified references section in SKILL; identical skill copies verified. SVG logo, WOFF2 fonts, and OFL license text stored in HTML; reports folder originally empty. Product scope, requirement IDs, schema, policy and acceptance gates unchanged. Document consolidation is not proof of implementation or passed gates.
+Per user instruction, the requested final `` package contains only `BRD.md`, `PRD.md`, `MVP.md`, `architecture.md`, `SKILL.md`, `AGENTS.md`, and `mockup.html`. Seven references merged in full into the Unified references section in SKILL; identical skill copies verified. SVG logo, WOFF2 fonts, and OFL license text stored in HTML; reports folder originally empty. Product scope, requirement IDs, schema, policy and acceptance gates unchanged. Document consolidation is not proof of implementation or passed gates.
 
 **Deletion status:** consolidation complete, but deletion of source files/folders denied by automated policy check. Source folders still exist; seven-file layout not yet achieved.
 

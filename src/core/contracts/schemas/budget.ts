@@ -9,7 +9,7 @@ import { IdSchema, NonEmptyStringSchema, Sha256Schema } from '../primitives.js';
  * Two properties matter and are enforced here:
  *
  *  1. Every limit is finite and validated before the run. There is no
- *     "unlimited" default (.claude/AGENTS.md §3 rule 14).
+ *     "unlimited" default (AGENTS.md §3 rule 14).
  *  2. Usage is monotonic. A resume may carry usage forward but never back:
  *     retrying or resuming must not reset the counter (NEG3-13).
  *
@@ -185,7 +185,7 @@ export function remainingBudget(budget: ExecutionBudget): {
 /**
  * True when the remaining budget cannot cover the mandatory proof, reproduction
  * and cleanup pass. When true, the run must stop `unverified` with a resource
- * blocker rather than reduce n or skip the suite (.claude/AGENTS.md §3 rule 14).
+ * blocker rather than reduce n or skip the suite (AGENTS.md §3 rule 14).
  */
 export function cannotFundFullProof(budget: ExecutionBudget): boolean {
   const remaining = remainingBudget(budget);

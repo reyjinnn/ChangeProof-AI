@@ -19,7 +19,7 @@ Phase-1 is executed **in this repository (`ChangeProof-AI/`)** as the applicatio
 
 ## Why this is recorded
 
-`.claude/AGENTS.md` §2.2 requires verifying what actually exists rather than copying claims, and §13 requires
+`AGENTS.md` §2.2 requires verifying what actually exists rather than copying claims, and §13 requires
 explicitly versioning and recording scope-affecting decisions. A different ChangeProof implementation
 exists elsewhere on this host (`../changeproof`) built against an earlier specification revision.
 Reusing it would have imported an unverified provenance chain, a divergent module layout

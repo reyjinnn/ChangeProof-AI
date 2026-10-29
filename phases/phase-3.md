@@ -34,11 +34,11 @@ Read PRD §5–10/13/20, MVP §3/5–8/11/17/21, architecture §4/6–10/20. Sco
 | WP3-12 evidence / publication | `secret-serialization`, `code-security` | ⚠ `code-security` |
 | WP3-18 complex scenarios | `security-model` | — |
 
-Full binding matrix: `.claude/SKILL.md` §1 *Skill bindings*. **Do not** load `claude-api` — the target model is Meta Muse Spark 1.3.
+Full binding matrix: `SKILL.md` §1 *Skill bindings*. **Do not** load `claude-api` — the target model is Meta Muse Spark 1.3.
 
 ## Task breakdown — failure-path tests first
 
-**Tests before implementation.** NEG3 IDs map to `.claude/SKILL.md#ref-negative-cases`.
+**Tests before implementation.** NEG3 IDs map to `SKILL.md#ref-negative-cases`.
 
 | Task | Target path | Write these tests FIRST (NEG3-xx) | Then implement / prove |
 | --- | --- | --- | --- |
@@ -81,7 +81,7 @@ Mock, replay and live must be labelled distinctly (AGENTS §4: `executionMode` a
 
 This is a target playbook, not proof of execution. A direct `phase-N`, `jalankan phase-N`, `lanjutkan phase-N` or `resume phase-N` request selects that phase (case-insensitive, N = 1–7). Explanation/review or restructuring requests do not execute phases.
 
-1. Read [AGENTS](../.claude/AGENTS.md), [skill](../.claude/SKILL.md), then [BRD](../.prepare/BRD.md) → [PRD](../.prepare/PRD.md) → [MVP](../.prepare/MVP.md) → [architecture](../.prepare/architecture.md), followed by this playbook. The specification directory is the directory containing these files. If it is ``, the application root is its parent; in this extracted package it is the current project root. Do not create a second specification tree or implement product source in `phases/`.
+1. Read [AGENTS](../AGENTS.md), [skill](../SKILL.md), then [BRD](../.prepare/BRD.md) → [PRD](../.prepare/PRD.md) → [MVP](../.prepare/MVP.md) → [architecture](../.prepare/architecture.md), followed by this playbook. The specification directory is the directory containing these files. If it is ``, the application root is its parent; in this extracted package it is the current project root. Do not create a second specification tree or implement product source in `phases/`.
 2. Audit Git (if available), actual source, `package.json`, relevant AGENTS, source/config identities, scripts, artifacts and the existing engineering report. Documents/old checkboxes are not proof. Revalidate reused results when relevant identities or grants change.
 3. Use [MVP §22](../.prepare/MVP.md#execution-phases) for back-end/front-end/acceptance task allocation and §8 for the unchanged full WP DAG. Write AGENTS §7.1 task headers including prerequisite evidence and allowed changes. A slice may progress with proven task prerequisites; an incomplete full-WP dependency permits only independent preparation, not full WP completion or acceptance.
 4. Write failure-path tests first for policy, guard, verifier and security. Preserve protected intent/oracle, independent deterministic verdicts, typed gateway, current grants, tenant isolation, qualified guests, lease/fencing and finite cumulative budget. No source execution on the host/control plane.

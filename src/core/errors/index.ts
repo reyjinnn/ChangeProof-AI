@@ -1,7 +1,7 @@
 /**
  * Typed failures for the ChangeProof core.
  *
- * .claude/AGENTS.md §3 rule 8 (fail closed): an unknown or unresolved condition must
+ * AGENTS.md §3 rule 8 (fail closed): an unknown or unresolved condition must
  * produce a specific, actionable error — never a silent default and never a
  * generic success. Every error here carries the data needed to act on it.
  */

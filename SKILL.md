@@ -5,7 +5,7 @@ description: Playbook for developing ChangeProof AI 1.0, a hosted TypeScript mod
 
 # ChangeProof AI 1.0 — Development Playbook
 
-This skill guides agents in building ChangeProof correctly. It complements `.claude/AGENTS.md` (non-negotiable rules, always read first). If `.claude/AGENTS.md` and this skill appear to differ, `.claude/AGENTS.md` takes precedence; then record the conflict.
+This skill guides agents in building ChangeProof correctly. It complements `AGENTS.md` (non-negotiable rules, always read first). If `AGENTS.md` and this skill appear to differ, `AGENTS.md` takes precedence; then record the conflict.
 
 The core principle to always remember: **this product sells evidence, not code.** Any decision that makes claims easier to make than to prove is the wrong decision. The reason: customers use these results to decide whether to merge cross-system changes; false assurance is more dangerous than "I don't know".
 
@@ -40,7 +40,7 @@ Large documents (MVP ~107 KB, PRD ~112 KB): do not read in full. Use `grep -n '^
 
 ### phase-1 through phase-7 and hackathon slice triggers
 
-If the user requests `phase-N` (N = 1–7), follow [AGENTS §18](.claude/AGENTS.md#18-pemanggilan-fase-eksekusi) and open `phases/phase-N.md` relative to this skill's folder. A bare prompt means execution, while an explanation/review question means answering the question asked. Use the division in [MVP §22](.prepare/MVP.md#execution-phases), not the P0 roadmap at the root. Audit prerequisites and continue all dependency-ready tasks within the requested phase; resume using the engineering report `docs/phase-reports/phase-N.md` at the project root after revalidating the evidence.
+If the user requests `phase-N` (N = 1–7), follow [AGENTS §18](AGENTS.md#18-pemanggilan-fase-eksekusi) and open `phases/phase-N.md` relative to this skill's folder. A bare prompt means execution, while an explanation/review question means answering the question asked. Use the division in [MVP §22](.prepare/MVP.md#execution-phases), not the P0 roadmap at the root. Audit prerequisites and continue all dependency-ready tasks within the requested phase; resume using the engineering report `docs/phase-reports/phase-N.md` at the project root after revalidating the evidence.
 
 If the user explicitly requests `hackathon-slice`, `competition slice`, or the Meta hackathon build/demo, use only [phases/hackathon-slice.md](phases/hackathon-slice.md) and its scope authorities [BRD §21](.prepare/BRD.md#hackathon-build-scope), [PRD §21](.prepare/PRD.md#hackathon-competition-compliance), [MVP §23](.prepare/MVP.md#hackathon-build-scope), and [architecture](.prepare/architecture.md#hackathon-build-architecture). This is a competition build playbook, **not an eighth release phase**. It does not change the full product scope, WP DAG, phase assignments or G3 gates. Preserve the product's value by keeping the slice deep (real workflow, live/labeled Meta contribution, protected intent, independent proof, evidence) while reducing breadth. Never describe the slice as the full product or organic pilot.
 
@@ -56,7 +56,7 @@ Do not automatically run the next phase. Phase files are playbooks, not schedule
 - If a dependency is not ready but certain work does not depend on it (e.g. preparation), do that part and record the rest as a blocker.
 
 ### Step 3 — Trace requirements
-For the task, gather relevant BR3 → FR3 → NFR3 → DEC3 → WP → G3 → NEG3 → SC3 (see `SKILL.md#ref-requirements-index`). Read the original text in PRD/MVP, not the summary here. Write the task header using the format in `.claude/AGENTS.md §7.1`.
+For the task, gather relevant BR3 → FR3 → NFR3 → DEC3 → WP → G3 → NEG3 → SC3 (see `SKILL.md#ref-requirements-index`). Read the original text in PRD/MVP, not the summary here. Write the task header using the format in `AGENTS.md §7.1`.
 
 ### Step 4 — Write failure-path tests first
 For `policy`, guard/gateway, verifier, identity/grants, jobs/lease, usage, deletion: write negative tests **before** implementation. Example questions to guide tests:
@@ -71,7 +71,7 @@ Follow the module playbooks in §2 below. Always: versioned Zod schemas in `core
 Strict typecheck → lint + dependency-cruiser → unit/integration → **native/real checks if the scope touches real execution, isolation, DB, browser, or hosted**. Record command + exit code. Report mock vs native separately.
 
 ### Step 7 — Report
-Use the format in `.claude/AGENTS.md §7.2`. Separate: *proven*, *worked on but not yet proven*, *blocked*, *missing check*. Name the next dependency-ready task.
+Use the format in `AGENTS.md §7.2`. Separate: *proven*, *worked on but not yet proven*, *blocked*, *missing check*. Name the next dependency-ready task.
 
 ### Skill bindings — what to load before the step that needs it
 

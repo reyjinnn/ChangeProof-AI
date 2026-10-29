@@ -16,7 +16,7 @@ export const NonEmptyStringSchema = z.string().min(1);
 export type NonEmptyString = z.infer<typeof NonEmptyStringSchema>;
 
 /**
- * Opaque identifier. Deliberately not permission — .claude/AGENTS.md §3 rule 10.
+ * Opaque identifier. Deliberately not permission — AGENTS.md §3 rule 10.
  *
  * Used for tenant, job, run and artifact identities, where the token must not
  * look like a path or a URL. Graph node and edge identifiers use the wider

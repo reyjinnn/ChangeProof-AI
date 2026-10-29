@@ -1,7 +1,7 @@
 /**
  * Dependency boundary rules for the ChangeProof single host package.
  *
- * Source of truth: .prepare/architecture.md §3 import matrix, .claude/AGENTS.md §5 boundary rules.
+ * Source of truth: .prepare/architecture.md §3 import matrix, AGENTS.md §5 boundary rules.
  *
  *   core        -> imports nothing internal
  *   modules/*   -> may import core only (leaf modules never import each other)
@@ -48,7 +48,7 @@ module.exports = {
       name: 'core-imports-nothing-internal',
       comment:
         'core holds contracts, ports and typed errors. It must stay dependency-free so that ' +
-        'every module can import it without pulling in behaviour. .claude/AGENTS.md §5.',
+        'every module can import it without pulling in behaviour. AGENTS.md §5.',
       severity: 'error',
       from: { path: CORE },
       to: {
@@ -59,7 +59,7 @@ module.exports = {
       name: 'leaf-modules-import-core-only',
       comment:
         'Leaf modules may only import core. A module importing another module directly ' +
-        'creates the coupling that ports in core exist to prevent. .claude/AGENTS.md §5. ' +
+        'creates the coupling that ports in core exist to prevent. AGENTS.md §5. ' +
         'A module public index may re-export its own internals; no other file may ' +
         'reach across module boundaries.',
       severity: 'error',
@@ -74,7 +74,7 @@ module.exports = {
       comment:
         'Each module publishes exactly one entry point: <module>/index.ts. Reaching into ' +
         'another module internals bypasses its published contract. Imports within the same ' +
-        'module are unrestricted. .claude/AGENTS.md §5.',
+        'module are unrestricted. AGENTS.md §5.',
       severity: 'error',
       from: { path: `${MODULES}([^/]+)/` },
       to: {
@@ -86,7 +86,7 @@ module.exports = {
       name: 'orchestrator-imports-public-apis-only',
       comment:
         'orchestrator is the composition root: it may import core and every module public ' +
-        'index, and nothing else in src. .claude/AGENTS.md §5.',
+        'index, and nothing else in src. AGENTS.md §5.',
       severity: 'error',
       from: { path: ENTRY },
       to: {
@@ -102,7 +102,7 @@ module.exports = {
       name: 'http-workers-cli-import-core-orchestrator',
       comment:
         'Process entrypoints compose core contracts with the orchestrator. They do not reach ' +
-        'into module internals. .claude/AGENTS.md §5.',
+        'into module internals. AGENTS.md §5.',
       severity: 'error',
       from: { path: PROCESS },
       to: {
@@ -118,7 +118,7 @@ module.exports = {
       name: 'no-unresolvable',
       comment:
         'An unresolved import is a hole in the boundary check: dependency-cruiser cannot ' +
-        'prove a rule it cannot follow. FAIL CLOSED (.claude/AGENTS.md §3 rule 8).',
+        'prove a rule it cannot follow. FAIL CLOSED (AGENTS.md §3 rule 8).',
       severity: 'error',
       from: {},
       to: { couldNotResolve: true },

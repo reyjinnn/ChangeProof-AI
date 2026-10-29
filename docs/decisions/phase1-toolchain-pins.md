@@ -25,7 +25,7 @@ the frozen resolution and is the identity recorded in the phase report.
 Node is pinned exactly to `26.12.1`, the version this project is developed against, so a
 reproducible run means the same runtime the developer actually uses. The pin is exact rather than a
 range: a range would let a different minor version produce a different result under the same
-identity, which is the drift `.claude/AGENTS.md` §3 rule 7 warns about for capability claims.
+identity, which is the drift `AGENTS.md` §3 rule 7 warns about for capability claims.
 
 ## Pinned native toolchain for adapter conformance (WP3-03)
 
@@ -42,7 +42,7 @@ on this host at the time of this record:
 | `go` | `go` | **absent** → Go L1 blocked |
 | `dotnet` | `dotnet` | **absent** → .NET L1 blocked |
 
-Absent toolchains are recorded as a **specific blocker** per `.claude/AGENTS.md` §12 and are never
+Absent toolchains are recorded as a **specific blocker** per `AGENTS.md` §12 and are never
 substituted with a simulation. The affected capability records stay `provenLevel = none`.
 
 ## What this does not decide

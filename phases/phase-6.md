@@ -6,7 +6,7 @@
 **Outcome:** The complete ChangeProof public site, dashboard and trace viewer match the active final mockup and operate through real authorized services.
 
 **Competition slice:** the Meta hackathon build is a separate bounded playbook, [hackathon-slice](hackathon-slice.md). It is not an eighth release phase and does not change this phase's scope, work packages or gates. A competition demo does not make any WP or G3 gate complete.
-**Design source:** [mockup.html](../mockup.html), equivalent to `mockup.html` when the package is in ``. Read sections only; do not print embedded fonts/data URIs wholesale. Follow [skill UI guide](../.claude/SKILL.md#ref-ui-mockup-guide), PRD FR3-31/37..45 and §20, MVP §20/21/22, architecture §18–20.
+**Design source:** [mockup.html](../mockup.html), equivalent to `mockup.html` when the package is in ``. Read sections only; do not print embedded fonts/data URIs wholesale. Follow [skill UI guide](../SKILL.md#ref-ui-mockup-guide), PRD FR3-31/37..45 and §20, MVP §20/21/22, architecture §18–20.
 
 ## Prerequisites and front-end work
 
@@ -47,11 +47,11 @@ Contributes to G3-07..10/12..16. Phase-7 performs the complete cross-system regr
 | Visual polish per page | `antislop-ui`, `ui-visual-composition` | — |
 | **Final gate before handoff** | `reviewing-interface-quality` | Required — runs after implementation, before the report |
 
-Full binding matrix: `.claude/SKILL.md` §1 *Skill bindings*. `mockup.html` remains a **design source, not evidence** — do not copy its layered `!important` CSS; extract tokens into one source (see `.claude/SKILL.md#ref-ui-mockup-guide`).
+Full binding matrix: `SKILL.md` §1 *Skill bindings*. `mockup.html` remains a **design source, not evidence** — do not copy its layered `!important` CSS; extract tokens into one source (see `SKILL.md#ref-ui-mockup-guide`).
 
 ## Task breakdown — browser tests first where the risk is
 
-**Keyboard/label/state tests first.** NEG3 IDs map to `.claude/SKILL.md#ref-negative-cases`.
+**Keyboard/label/state tests first.** NEG3 IDs map to `SKILL.md#ref-negative-cases`.
 
 | Task | Surface | Tests FIRST | Then implement / prove |
 | --- | --- | --- | --- |
@@ -92,7 +92,7 @@ Accessibility and browser E2E are **native** rows — a component-test pass does
 
 This is a target playbook, not proof of execution. A direct `phase-N`, `jalankan phase-N`, `lanjutkan phase-N` or `resume phase-N` request selects that phase (case-insensitive, N = 1–7). Explanation/review or restructuring requests do not execute phases.
 
-1. Read [AGENTS](../.claude/AGENTS.md), [skill](../.claude/SKILL.md), then [BRD](../.prepare/BRD.md) → [PRD](../.prepare/PRD.md) → [MVP](../.prepare/MVP.md) → [architecture](../.prepare/architecture.md), followed by this playbook. The specification directory is the directory containing these files. If it is ``, the application root is its parent; in this extracted package it is the current project root. Do not create a second specification tree or implement product source in `phases/`.
+1. Read [AGENTS](../AGENTS.md), [skill](../SKILL.md), then [BRD](../.prepare/BRD.md) → [PRD](../.prepare/PRD.md) → [MVP](../.prepare/MVP.md) → [architecture](../.prepare/architecture.md), followed by this playbook. The specification directory is the directory containing these files. If it is ``, the application root is its parent; in this extracted package it is the current project root. Do not create a second specification tree or implement product source in `phases/`.
 2. Audit Git (if available), actual source, `package.json`, relevant AGENTS, source/config identities, scripts, artifacts and the existing engineering report. Documents/old checkboxes are not proof. Revalidate reused results when relevant identities or grants change.
 3. Use [MVP §22](../.prepare/MVP.md#execution-phases) for back-end/front-end/acceptance task allocation and §8 for the unchanged full WP DAG. Write AGENTS §7.1 task headers including prerequisite evidence and allowed changes. A slice may progress with proven task prerequisites; an incomplete full-WP dependency permits only independent preparation, not full WP completion or acceptance.
 4. Write failure-path tests first for policy, guard, verifier and security. Preserve protected intent/oracle, independent deterministic verdicts, typed gateway, current grants, tenant isolation, qualified guests, lease/fencing and finite cumulative budget. No source execution on the host/control plane.

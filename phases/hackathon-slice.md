@@ -51,11 +51,11 @@ Never substitute a simulation for these; mark the affected claim `blocked` and c
 | Slice UI (disclosure, run surface) | `design-systems-frontend-architecture` | — |
 | Final slice review before recording the demo | `code-review` | — |
 
-Full binding matrix: `.claude/SKILL.md` §1 *Skill bindings*. Load only what the current task needs.
+Full binding matrix: `SKILL.md` §1 *Skill bindings*. Load only what the current task needs.
 
 ## Task breakdown — failure-path tests first
 
-One row = one AGENTS §7.1 task header. **Write the tests column before touching implementation.** NEG3 IDs map to `.claude/SKILL.md#ref-negative-cases`.
+One row = one AGENTS §7.1 task header. **Write the tests column before touching implementation.** NEG3 IDs map to `SKILL.md#ref-negative-cases`.
 
 | Task | Target path | Write these tests FIRST (NEG3-xx) | Then implement / prove |
 | --- | --- | --- | --- |
@@ -122,7 +122,7 @@ Report mock/replay and native as separate lines. For T-S6/T-S7, a native row lef
 
 This is a target playbook, not proof of execution and not portal authorization.
 
-1. Read [AGENTS](../.claude/AGENTS.md), [skill](../.claude/SKILL.md), then [BRD](../.prepare/BRD.md) → [PRD](../.prepare/PRD.md) → [MVP](../.prepare/MVP.md) → [architecture](../.prepare/architecture.md), then [BRD §21](../.prepare/BRD.md#hackathon-build-scope), [PRD §21](../.prepare/PRD.md#hackathon-competition-compliance), [MVP §23](../.prepare/MVP.md#hackathon-build-scope). The specification directory is the directory containing these files; in this extracted package it is the current project root. Do not create a second specification tree or implement product source in `phases/`.
+1. Read [AGENTS](../AGENTS.md), [skill](../SKILL.md), then [BRD](../.prepare/BRD.md) → [PRD](../.prepare/PRD.md) → [MVP](../.prepare/MVP.md) → [architecture](../.prepare/architecture.md), then [BRD §21](../.prepare/BRD.md#hackathon-build-scope), [PRD §21](../.prepare/PRD.md#hackathon-competition-compliance), [MVP §23](../.prepare/MVP.md#hackathon-build-scope). The specification directory is the directory containing these files; in this extracted package it is the current project root. Do not create a second specification tree or implement product source in `phases/`.
 2. Audit actual source, `package.json`, toolchains, credentials and existing evidence. Documents and mockups are not proof of implementation.
 3. Write AGENTS §7.1 task headers including prerequisite evidence and allowed changes. Write failure-path tests first for policy, guard, verifier and security rows. Preserve protected intent/oracle, deterministic verdicts, typed gateway, qualified guests, lease/fencing and finite cumulative budget.
 4. Run strict typecheck, lint/boundaries, unit/integration and scope-appropriate native checks. Record commands + exit codes; keep mock/replay separate from real runtime.

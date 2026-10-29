@@ -12,7 +12,7 @@ import {
 /**
  * WP3-01 / T1-1 — status vocabulary and capability honesty.
  *
- * .claude/AGENTS.md §4 fixes this vocabulary exactly and forbids inventing synonyms.
+ * AGENTS.md §4 fixes this vocabulary exactly and forbids inventing synonyms.
  * NEG3-09: an unsupported adapter/version must not fall back to a generic
  * "verified"; a capability must not claim a level without evidence.
  */

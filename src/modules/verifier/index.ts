@@ -50,7 +50,7 @@ export const RunnerProfileSchema = z
       ctx.addIssue({
         code: 'custom',
         path: ['secretsProvided'],
-        message: 'Secrets must not be forwarded to the guest (.claude/AGENTS.md §3 rule 12).',
+        message: 'Secrets must not be forwarded to the guest (AGENTS.md §3 rule 12).',
       });
     }
     if (profile.networkMode === 'host' || profile.networkMode === 'bridge') {
@@ -140,7 +140,7 @@ export function planGuestRun(input: PlanGuestRunInput): GuestRunPlan {
   if (oracle === candidate || oracle.startsWith(`${candidate}/`)) {
     throw new ChangeProofError(
       `Oracle path "${oracle}" is inside candidate workspace "${candidate}". ` +
-        'The protected oracle must be outside candidate access and mounted read-only (.claude/AGENTS.md §3 rule 2).',
+        'The protected oracle must be outside candidate access and mounted read-only (AGENTS.md §3 rule 2).',
     );
   }
 

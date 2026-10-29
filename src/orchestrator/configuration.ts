@@ -6,7 +6,7 @@ import { MissingConfigurationError } from '../core/index.js';
  * A missing tool, credential or config must become a specific, actionable
  * error. Never a silent default, never a fabricated value: a default here would
  * let a run proceed with a capability it does not actually have, which is the
- * difference between "unverified" and "verified" (.claude/AGENTS.md §3 rule 8).
+ * difference between "unverified" and "verified" (AGENTS.md §3 rule 8).
  */
 
 export interface ConfigurationSource {

@@ -12,7 +12,7 @@ import { afterEach, describe, expect, it } from 'vitest';
  * Each fixture is a tiny, isolated graph under the project root and is removed
  * after the assertion. The tool is run against the repository's actual
  * `.dependency-cruiser.cjs`; the test is not a snapshot of the config text.
- * The forbidden graphs must fail the actual boundary command (.claude/AGENTS.md §14).
+ * The forbidden graphs must fail the actual boundary command (AGENTS.md §14).
  */
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '../..');

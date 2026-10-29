@@ -84,7 +84,7 @@ export default tseslint.config(
               group: ['**/modules/*/**', '!**/modules/*/index.js'],
               message:
                 'Import a module through its public index only (src/modules/<name>/index.ts). ' +
-                'Deep module imports defeat the boundary contract — .claude/AGENTS.md §5.',
+                'Deep module imports defeat the boundary contract — AGENTS.md §5.',
             },
             // Relative depth alone is not a boundary violation: a module nested
             // at src/modules/<name>/<sub>/ legitimately reaches core with

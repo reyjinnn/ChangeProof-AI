@@ -5,7 +5,7 @@ import { z } from 'zod';
  *
  * A reason code explains *why* a verdict landed where it did. It never decides
  * the verdict: policy precedence and evidence validity remain decisive
- * (.claude/AGENTS.md §3 rule 1, PRD FR3-16).
+ * (AGENTS.md §3 rule 1, PRD FR3-16).
  */
 export const REASON_CODES = [
   // Refusal / honesty codes — the product must be able to say "I could not".

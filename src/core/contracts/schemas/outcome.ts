@@ -8,7 +8,7 @@ import { PolicyVersionSchema } from '../primitives.js';
 /**
  * Outcome contracts: how a verdict is stated, and what it is allowed to claim.
  *
- * The central rule (.claude/AGENTS.md §3 rule 1) is that these are produced by
+ * The central rule (AGENTS.md §3 rule 1) is that these are produced by
  * deterministic policy over verifier evidence. A model may populate free-text
  * fields, but no field here lets model output decide the outcome.
  */

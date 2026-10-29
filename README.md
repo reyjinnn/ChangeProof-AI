@@ -148,8 +148,8 @@ Customer application code runs in an isolated guest per job. Egress is closed by
 | `.prepare/MVP.md` | Scope, capability matrix, `WP3-01..34`, gates `G3-01..17`, `NEG3-01..40`, `SC3-01..11` — *when done* |
 | `.prepare/architecture.md` | Module structure, import matrix, hosted topology — *where and how constrained* |
 | `mockup.html` | UI **design source**, not implementation evidence |
-| `.claude/AGENTS.md` | Working contract for every AI agent in this repository |
-| `.claude/SKILL.md` | Step-by-step playbook + requirement index (`changeproof-development`) |
+| `AGENTS.md` | Working contract for every AI agent in this repository |
+| `SKILL.md` | Step-by-step playbook + requirement index (`changeproof-development`) |
 | `phases/phase-N.md` | Execution playbooks for the active full release |
 | `docs/decisions/` | Decision records; schemas and policies are versioned from the start |
 
@@ -262,10 +262,10 @@ The base install does not require every language toolchain. If your task runs na
 
 ### First contribution
 
-1. Read `.claude/AGENTS.md` and `.claude/SKILL.md` for the working rules, task format, and negative-case index.
+1. Read `AGENTS.md` and `SKILL.md` for the working rules, task format, and negative-case index.
 2. Read `.prepare/BRD.md`, `.prepare/PRD.md`, `.prepare/MVP.md`, then `.prepare/architecture.md` in that order.
 3. Pick a dependency-ready task from the MVP work-package dependency graph. Do not pick by WP number alone. The current next task recorded in the phase report is WP3-01; verify [the latest report](docs/phase-reports/phase-1.md) before starting because task status can change.
-4. Before changing code, write down the task scope, requirement IDs, expected behavior, failure cases, and proof checks using the task header in `.claude/AGENTS.md`.
+4. Before changing code, write down the task scope, requirement IDs, expected behavior, failure cases, and proof checks using the task header in `AGENTS.md`.
 5. Add or update positive and negative tests, make the smallest change that meets the task, then run the checks for the affected area and `pnpm verify`.
 6. In your pull request, summarize the behavior changed, tests and commands run with results, remaining limitations, and any contract or decision record changes. Never present mock/replay success as real-runtime proof.
 
@@ -277,8 +277,8 @@ At the time this README was updated, `pnpm verify` was **not green** in this che
 
 ### Reading before coding
 
-1. `.claude/AGENTS.md` — the working contract and non-negotiable golden rules.
-2. `.claude/SKILL.md` — development playbook and requirement index, including negative cases and UI guidance.
+1. `AGENTS.md` — the working contract and non-negotiable golden rules.
+2. `SKILL.md` — development playbook and requirement index, including negative cases and UI guidance.
 3. `.prepare/BRD.md` → `PRD.md` → `MVP.md` → `architecture.md`.
 4. One dependency-ready work package from MVP §8, selected by the dependency graph.
 
@@ -329,7 +329,7 @@ Hard rules:
 - No acceptance passes because a file exists or a text snapshot matches.
 - Unit mock/replay is allowed for development, **never** for acceptance gates.
 - Hosted tests use **concurrent tenants** (RLS + pooling context reset), not a single tenant.
-- The full `NEG3-01..40` list lives in `.claude/SKILL.md#ref-negative-cases`; cover the ones relevant to your scope.
+- The full `NEG3-01..40` list lives in `SKILL.md#ref-negative-cases`; cover the ones relevant to your scope.
 
 ---
 
@@ -337,8 +337,8 @@ Hard rules:
 
 | Document | Says |
 | --- | --- |
-| [`.claude/AGENTS.md`](.claude/AGENTS.md) | Contract, golden rules, boundaries, DoD, anti-patterns |
-| [`.claude/SKILL.md`](.claude/SKILL.md) | Playbook, requirement index, UI mockup guide, negative cases |
+| [`AGENTS.md`](AGENTS.md) | Contract, golden rules, boundaries, DoD, anti-patterns |
+| [`SKILL.md`](SKILL.md) | Playbook, requirement index, UI mockup guide, negative cases |
 | [`phases/phase-1.md`](phases/phase-1.md) … [`phase-7.md`](phases/phase-7.md) | The seven execution playbooks of one complete release |
 | [`phases/hackathon-slice.md`](phases/hackathon-slice.md) | Competition vertical slice — **not** a release phase |
 | [`docs/phase-reports/`](docs/phase-reports/) | Per-phase proof: commands, exit codes, artifacts, blockers |

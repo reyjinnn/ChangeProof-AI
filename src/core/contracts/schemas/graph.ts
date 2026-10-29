@@ -95,7 +95,7 @@ export const GraphEdgeSchema = z
         path: ['evidence'],
         message:
           'A `proven` edge must carry an evidence locator. Without it the claim is ' +
-          'indistinguishable from an inference (.claude/AGENTS.md §3 rule 8).',
+          'indistinguishable from an inference (AGENTS.md §3 rule 8).',
       });
     }
 
@@ -127,7 +127,7 @@ export const GraphEdgeSchema = z
         path: ['evidenceClass'],
         message:
           'An `inferred` edge cannot be labelled with proven-grade evidence. Promoting ' +
-          'inferred to proven requires evidence, not relabelling (.claude/AGENTS.md §3 rule 8).',
+          'inferred to proven requires evidence, not relabelling (AGENTS.md §3 rule 8).',
       });
     }
   })

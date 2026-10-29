@@ -26,7 +26,7 @@ export interface NativeRunOptions {
  *
  * Only toolchain build/cache variables are forwarded. Nothing secret is passed:
  * model, GitHub and payment credentials stay in their brokers and never reach a
- * parser helper (.claude/AGENTS.md §3 rule 12). The list is explicit so a new
+ * parser helper (AGENTS.md §3 rule 12). The list is explicit so a new
  * environment variable cannot leak in by accident.
  */
 const FORWARDED_ENVIRONMENT = [

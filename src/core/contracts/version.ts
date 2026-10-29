@@ -3,7 +3,7 @@ import { SchemaVersionUnknownError } from '../errors/index.js';
 /**
  * Contract version registry.
  *
- * .claude/AGENTS.md §13: schemas are explicitly versioned from the start, and a
+ * AGENTS.md §13: schemas are explicitly versioned from the start, and a
  * semantic change bumps the version and gets a decision record. Nothing may
  * read a version it does not know — `resolveSchemaVersion` fails closed.
  *

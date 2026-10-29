@@ -119,8 +119,8 @@ pnpm test:runner-security:native
 
 ## 8. Source-of-truth references
 
-- [`.claude/AGENTS.md`](.claude/AGENTS.md): collaboration contract, security rules, task/report format, and definition of done.
-- [`.claude/SKILL.md`](.claude/SKILL.md): development workflow, module playbooks, requirements index, negatives, and dependency summary.
+- [`AGENTS.md`](AGENTS.md): collaboration contract, security rules, task/report format, and definition of done.
+- [`SKILL.md`](SKILL.md): development workflow, module playbooks, requirements index, negatives, and dependency summary.
 - [`phases/phase-1.md`](phases/phase-1.md): phase-1 scope, tasks, prerequisites, acceptance checks, and blockers.
 - [`docs/phase-reports/phase-1.md`](docs/phase-reports/phase-1.md): recorded phase-1 results and remaining gaps.
 - [`.prepare/BRD.md`](.prepare/BRD.md), [`.prepare/PRD.md`](.prepare/PRD.md), [`.prepare/MVP.md`](.prepare/MVP.md), [`.prepare/architecture.md`](.prepare/architecture.md): normative product and architecture specifications.

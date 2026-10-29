@@ -17,7 +17,7 @@ User-visible outcome: judging rubric, eligible Meta tooling, prizes, API credit 
 Prerequisite evidence: package reviewed; BRD/PRD/MVP/architecture/SKILL/AGENTS/phases reviewed;
                        participant-provided event terms index available in the session
 Allowed source/config changes: .prepare/BRD.md, .prepare/PRD.md, .prepare/MVP.md,
-                               .prepare/architecture.md, .claude/SKILL.md, phases/hackathon-slice.md,
+                               .prepare/architecture.md, SKILL.md, phases/hackathon-slice.md,
                                phase-execution-prompts.md, mockup.html, this report
 Input snapshot + intended intervention: record the supplied event terms as dated, sourced
                                        data without elevating them to verified official facts

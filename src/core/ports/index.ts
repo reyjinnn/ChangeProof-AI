@@ -1,7 +1,7 @@
 /**
  * Ports in core.
  *
- * .claude/AGENTS.md §5: leaf modules may only import `core`. Cross-module collaboration
+ * AGENTS.md §5: leaf modules may only import `core`. Cross-module collaboration
  * goes through ports defined here, with implementations wired by the
  * orchestrator. A port is a contract, never a concrete I/O handle: no AST
  * objects, no runtime handles, no driver instances.
@@ -81,7 +81,7 @@ export interface CampaignRunnerPort {
 /**
  * Configuration access.
  *
- * .claude/AGENTS.md §3 rule 8 and NFR3-08: a missing tool, credential or config must
+ * AGENTS.md §3 rule 8 and NFR3-08: a missing tool, credential or config must
  * raise a specific actionable error, never silently default. Implementations
  * are required to throw rather than return a substitute.
  */

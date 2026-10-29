@@ -2,7 +2,7 @@
 
 **Plan revision:** 3 (26 October 2026). **Package:** seven main files + `phases/` (seven phase playbooks + one competition-slice playbook).
 
-This file is a *prompt*, not specification authority. Where it differs from `.claude/AGENTS.md`, `.claude/SKILL.md`, `.prepare/BRD.md`, `.prepare/PRD.md`, `.prepare/MVP.md`, `.prepare/architecture.md` or the selected `phases/phase-N.md`, those files win and the difference must be recorded.
+This file is a *prompt*, not specification authority. Where it differs from `AGENTS.md`, `SKILL.md`, `.prepare/BRD.md`, `.prepare/PRD.md`, `.prepare/MVP.md`, `.prepare/architecture.md` or the selected `phases/phase-N.md`, those files win and the difference must be recorded.
 
 ---
 
@@ -12,7 +12,7 @@ These instructions apply together with exactly one selected phase request below.
 
 ### Read and orient before changing anything
 
-Read `.claude/AGENTS.md`, `.claude/SKILL.md`, then `.prepare/BRD.md` → `.prepare/PRD.md` → `.prepare/MVP.md` → `.prepare/architecture.md`, followed by the selected `phases/phase-N.md` playbook and its relevant references. Follow execution-plan revision 2 and the allocation in MVP §22.
+Read `AGENTS.md`, `SKILL.md`, then `.prepare/BRD.md` → `.prepare/PRD.md` → `.prepare/MVP.md` → `.prepare/architecture.md`, followed by the selected `phases/phase-N.md` playbook and its relevant references. Follow execution-plan revision 2 and the allocation in MVP §22.
 
 Resolve paths from the actual project layout, never from this document:
 
@@ -27,7 +27,7 @@ Resume unfinished work using evidence that remains valid. Do not repeat proven w
 
 ### Load the skills bound to this task before implementing
 
-`.claude/SKILL.md` §1 *Skill bindings* maps every workflow step, and every §2 change type, to the Claude skills that govern it. Each `phases/phase-N.md` repeats the applicable subset under **Skill bindings for this phase**.
+`SKILL.md` §1 *Skill bindings* maps every workflow step, and every §2 change type, to the Claude skills that govern it. Each `phases/phase-N.md` repeats the applicable subset under **Skill bindings for this phase**.
 
 - Load a skill **before** the step it governs (typically Step 4 and Step 5), not after the damage.
 - Load only the skills the current task needs. Loading the whole set dilutes attention and burns context.

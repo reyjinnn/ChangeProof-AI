@@ -21,7 +21,7 @@ import {
  *  - the oracle is mounted read-only and outside the candidate workspace;
  *  - a run that is cancelled or times out still has to produce a cleanup
  *    receipt, and a failed cleanup quarantines the environment instead of
- *    letting it be reused (NFR3-04, .claude/AGENTS.md §3 rule 8).
+ *    letting it be reused (NFR3-04, AGENTS.md §3 rule 8).
  *
  * These are contract-level checks. The native isolation probes live in the
  * runner-security script and are reported separately.

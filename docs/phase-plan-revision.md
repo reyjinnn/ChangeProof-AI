@@ -16,7 +16,7 @@ Prerequisite evidence: AGENTS and the development skill reviewed; BRD reference 
                        neighboring project; PRD → MVP → architecture and five older playbooks
                        reviewed; this root initially contained specification documents only,
                        with no .git, package.json, or application source
-Allowed source/config changes: phases/*.md, .claude/AGENTS.md, .claude/SKILL.md, .prepare/BRD.md,
+Allowed source/config changes: phases/*.md, AGENTS.md, SKILL.md, .prepare/BRD.md,
                                .prepare/PRD.md, .prepare/MVP.md, .prepare/architecture.md,
                                this revision note; temporary validators/snapshots
 Input snapshots + intended intervention: pre-change document snapshot stored in a temporary
@@ -42,9 +42,9 @@ Next dependency-ready task: on a phase-1 request, audit the actual source and th
 
 ## Changes and limitations
 
-The normative allocation is in [MVP §22](../.prepare/MVP.md#execution-phases), with prompt routing in [AGENTS §18](../.claude/AGENTS.md#18-pemanggilan-fase-eksekusi). All seven playbooks use revision 2. Work packages spanning service and UI work have separate tasks; completing a service task does not complete the WP until all dependencies and original acceptance criteria are satisfied. Independent preparation may use proven task inputs, but does not replace full-WP prerequisites. Phase-7 still reviews all gates; local positive/negative tests and native checks remain required in each development phase.
+The normative allocation is in [MVP §22](../.prepare/MVP.md#execution-phases), with prompt routing in [AGENTS §18](../AGENTS.md#18-pemanggilan-fase-eksekusi). All seven playbooks use revision 2. Work packages spanning service and UI work have separate tasks; completing a service task does not complete the WP until all dependencies and original acceptance criteria are satisfied. Independent preparation may use proven task inputs, but does not replace full-WP prerequisites. Phase-7 still reviews all gates; local positive/negative tests and native checks remain required in each development phase.
 
-The actual package layout has the source documents directly in the ChangeProof-AI root: `phases/`, `.claude/SKILL.md`, four specifications, and `mockup.html`. No duplicate specification tree was created. Playbooks use relative links to neighboring documents and accommodate both the conventional layout and this extracted root-level package. No historical execution report was present in `docs/phase-reports/` before this report; migration guidance is provided without fabricating execution status.
+The actual package layout has the source documents directly in the ChangeProof-AI root: `phases/`, `SKILL.md`, four specifications, and `mockup.html`. No duplicate specification tree was created. Playbooks use relative links to neighboring documents and accommodate both the conventional layout and this extracted root-level package. No historical execution report was present in `docs/phase-reports/` before this report; migration guidance is provided without fabricating execution status.
 
 `.prepare/BRD.md` was initially absent. It was supplied from `C:/Users/user/Documents/All Project/changeproof/.prepare/BRD.md`, with source SHA-256 `e88f14c7a3ae9999affe9f514e4d3252435f683391ad3992fabd58f7ed1c132e`. After copying, only references for phase allocation and provenance were aligned. The neighboring project was not changed. The copy restores a local BRD reference that was previously broken; it does not prove any capability.
 

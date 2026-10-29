@@ -1,7 +1,7 @@
 /**
  * Core — the only module every other module may import.
  *
- * .claude/AGENTS.md §5: `core` holds contracts, ports and typed errors, and imports
+ * AGENTS.md §5: `core` holds contracts, ports and typed errors, and imports
  * nothing internal. It is dependency-free so that every leaf module can use it
  * without pulling behaviour into the contract layer.
  */

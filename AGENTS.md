@@ -1,6 +1,6 @@
 # AGENTS.md — ChangeProof AI 1.0
 
-Working contract for every AI agent (Claude Code, Codex, Cursor, etc.) developing this repository. Read this entire file before touching code. For the step-by-step playbook and requirement index, use the `changeproof-development` skill ([.claude/SKILL.md](.claude/SKILL.md), conventionally `.claude/SKILL.md`).
+Working contract for every AI agent (Claude Code, Codex, Cursor, etc.) developing this repository. Read this entire file before touching code. For the step-by-step playbook and requirement index, use the `changeproof-development` skill ([SKILL.md](SKILL.md), conventionally `SKILL.md`).
 
 This document is in Indonesian because the specification package uses Indonesian; identifiers, module names, and technical terms remain in English as in the specification.
 
@@ -191,7 +191,7 @@ Rules:
 - No AC passes merely because a file/class exists or a text snapshot matches.
 - Unit mock/replay is allowed for development; it **must not** pass acceptance gates.
 - Hosted tests must use concurrent tenants (RLS + pooling context reset), not a single tenant.
-- The full NEG3-01..40 list is in the `.claude/SKILL.md#ref-negative-cases` skill. Cover cases relevant to the task scope.
+- The full NEG3-01..40 list is in the `SKILL.md#ref-negative-cases` skill. Cover cases relevant to the task scope.
 
 ## 9. Security — what must not be in the code
 
@@ -229,7 +229,7 @@ Rules:
 - Accessibility is required: keyboard navigation, form labels, actionable errors, reconnect (NFR3-14).
 - Public content contains no tenant projections; sample reports use a separate static dataset.
 - **Runtime UI language = English** (FR3-40: "The main UI is in English according to the final mockup; document language is not the runtime locale"). Indonesian documents do not mean an Indonesian UI. If you find Indonesian labels in the mockup (e.g. aria-label), treat them as leftovers and align them to English; adding i18n is a new decision → decision record.
-- Mockup route list and further guidance: `.claude/SKILL.md#ref-ui-mockup-guide` skill.
+- Mockup route list and further guidance: `SKILL.md#ref-ui-mockup-guide` skill.
 
 ## 12. Blockers — how to report
 
