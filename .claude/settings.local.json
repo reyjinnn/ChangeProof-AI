@@ -1,0 +1,19 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(grep -o -i \"AI disclosure\\\\|AI-generated\\\\|disclosure[^\\\\\"<]\\\\{0,60\\\\}\\\\|you are interacting with[^\\\\\"<]\\\\{0,80\\\\}\" mockup.html)",
+      "Bash(grep -o -i \"const I18N\\\\s*=\\\\s*{.\\\\{0,200\\\\}\" mockup.html)",
+      "Bash(python -X utf8 scripts/check-links.py)",
+      "Skill(antislop)",
+      "PowerShell(pnpm verify)",
+      "PowerShell(pnpm exec python scripts/check-links.py README.md)",
+      "PowerShell(pnpm exec python scripts/check-docs.py)",
+      "PowerShell(python scripts/check-links.py)",
+      "PowerShell(python scripts/check-docs.py)",
+      "PowerShell(python scripts/check-inbound.py)",
+      "PowerShell(Get-Command *)",
+      "PowerShell(python -I -m http.server 4173 --bind 127.0.0.1)",
+      "mcp__plugin_playwright_playwright__browser_snapshot"
+    ]
+  }
+}

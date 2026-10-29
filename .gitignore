@@ -1,0 +1,47 @@
+# Build output
+dist/
+*.tsbuildinfo
+.playwright-mcp/
+.trash/
+# Dependencies
+node_modules/
+
+# Disposable run artifacts (never authoritative state)
+runs/
+
+# Local environment — never commit credentials
+.env
+.env.*
+!.env.example
+
+# Editor / OS
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json
+
+# Tool caches for pinned native helpers
+.cache/
+.vite/
+.turbo/
+.eslintcache
+
+# Test / coverage output
+coverage/
+*.lcov
+
+# Local logs and temporary files
+*.log
+npm-debug.log*
+pnpm-debug.log*
+/tmp/
+/temp/
+*.tmp
+*.bak
+*.swp
+*.swo
+
+# Windows
+Desktop.ini
+$RECYCLE.BIN/
