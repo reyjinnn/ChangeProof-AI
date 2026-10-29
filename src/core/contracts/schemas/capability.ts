@@ -16,7 +16,7 @@ import { ProvenLevelSchema, SupportLevelSchema, type ProvenLevel } from '../voca
  * "Next.js 15" never implies "Next.js".
  */
 
-export const ECOSYSTEMS = ['typescript', 'python', 'jvm', 'go', 'php', 'dotnet'] as const;
+export const ECOSYSTEMS = ['typescript', 'python', 'go', 'php', 'dotnet'] as const;
 export const EcosystemSchema = z.enum(ECOSYSTEMS);
 export type Ecosystem = z.infer<typeof EcosystemSchema>;
 
@@ -83,7 +83,7 @@ export type CapabilityKey = z.infer<typeof CapabilityKeySchema>;
 
 export const CapabilityRecordSchema = z
   .strictObject({
-    schemaVersion: z.literal('1'),
+    schemaVersion: z.literal('2'),
     key: CapabilityKeySchema,
     targetLevel: SupportLevelSchema,
     provenLevel: ProvenLevelSchema,

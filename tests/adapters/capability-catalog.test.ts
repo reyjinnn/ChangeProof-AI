@@ -6,21 +6,17 @@ import {
   DOTNET_ADAPTER_RECORD,
   GO_ADAPTER,
   GO_ADAPTER_RECORD,
-  JVM_ADAPTER,
-  JVM_JAVA_RECORD,
-  JVM_KOTLIN_RECORD,
   PHP_ADAPTER,
   PYTHON_ADAPTER,
   TYPESCRIPT_ADAPTER,
 } from '../../src/modules/adapters/index.js';
 
-/** WP3-03: all six ecosystems registered; only measured evidence can promote. */
-describe('six-ecosystem capability catalog', () => {
+/** WP3-03: all five ecosystems registered; only measured evidence can promote. */
+describe('five-ecosystem capability catalog', () => {
   it('registers every required ecosystem', () => {
     const records = [
       ...TYPESCRIPT_ADAPTER.records,
       ...PYTHON_ADAPTER.records,
-      ...JVM_ADAPTER.records,
       ...PHP_ADAPTER.records,
       GO_ADAPTER_RECORD,
       DOTNET_ADAPTER_RECORD,
@@ -34,20 +30,12 @@ describe('six-ecosystem capability catalog', () => {
     const records = [
       ...TYPESCRIPT_ADAPTER.records,
       ...PYTHON_ADAPTER.records,
-      ...JVM_ADAPTER.records,
       ...PHP_ADAPTER.records,
       GO_ADAPTER_RECORD,
       DOTNET_ADAPTER_RECORD,
     ];
 
     expect(records.every((record) => record.provenLevel === 'none')).toBe(true);
-  });
-
-  it('keeps Kotlin as its own JVM capability record', () => {
-    expect(JVM_JAVA_RECORD.key.language).toBe('java');
-    expect(JVM_KOTLIN_RECORD.key.language).toBe('kotlin');
-    expect(JVM_JAVA_RECORD.key.framework).toBe(JVM_KOTLIN_RECORD.key.framework);
-    expect(JVM_KOTLIN_RECORD.provenLevel).toBe('none');
   });
 
   it('returns unsupported for Go without claiming a successful empty extraction', async () => {

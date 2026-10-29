@@ -38,7 +38,7 @@ export const DOTNET_KEY: CapabilityKey = {
 };
 
 export const DOTNET_ADAPTER_RECORD: CapabilityRecord = CapabilityRecordSchema.parse({
-  schemaVersion: '1',
+  schemaVersion: '2',
   key: DOTNET_KEY,
   targetLevel: 'L1',
   provenLevel: 'none',
@@ -70,7 +70,8 @@ internal static class Program
     public static async Task Main()
     {
         var input = await Console.In.ReadToEndAsync();
-        var entries = JsonSerializer.Deserialize<Entry[]>(input) ?? Array.Empty<Entry>();
+        var json = new JsonSerializerOptions { PropertyNameCaseInsensitive = true, PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
+        var entries = JsonSerializer.Deserialize<Entry[]>(input, json) ?? Array.Empty<Entry>();
         var facts = new List<Fact>();
         foreach (var entry in entries)
         {
@@ -107,7 +108,7 @@ internal static class Program
                     facts.Add(new Fact("type", entry.File, line, classDeclaration.Identifier.ValueText, "", "class"));
             }
         }
-        Console.WriteLine(JsonSerializer.Serialize(facts));
+        Console.WriteLine(JsonSerializer.Serialize(facts, json));
     }
 }
 `;
@@ -132,11 +133,14 @@ const ROSLYN_HELPER_PROJECT = (sdkDirectory: string): string => `
 
 export const DOTNET_ADAPTER: AdapterDefinition = {
   name: 'dotnet',
-  contractVersion: '1',
+  contractVersion: '2',
   key: DOTNET_KEY,
   records: [DOTNET_ADAPTER_RECORD],
 
   async extract(input: AdapterExtractInput): Promise<AdapterExtractResult> {
+    if (input.version.trim() === '' || input.version === 'unavailable') {
+      return unsupported(input, '.NET SDK unavailable: no pinned SDK version was provided.');
+    }
     const snapshot = snapshotId(input.root, input.version);
     const sources: { file: string; source: string }[] = [];
     const diagnostics: string[] = [];
@@ -173,7 +177,9 @@ export const DOTNET_ADAPTER: AdapterDefinition = {
         };
       }
       const sdkLine = sdkPath.split(/\r?\n/).find((line) => /10\.0\.403\s+\[(.+)\]/.test(line));
-      const sdkRoot = sdkLine?.match(/\[(.+)\]/)?.[1];
+      const sdkBase = sdkLine?.match(/\[(.+)\]/)?.[1];
+      // --list-sdks prints the SDK root; Roslyn ships under the versioned directory.
+      const sdkRoot = sdkBase === undefined ? undefined : join(sdkBase, '10.0.403');
       if (sdkRoot === undefined) {
         return {
           status: 'failed', graph: emptyGraph(snapshot), unknowns: ['pinned .NET SDK 10.0.403 was not found'],
@@ -210,6 +216,9 @@ export const DOTNET_ADAPTER: AdapterDefinition = {
       }
 
       const facts = (parseNativeJson(run.stdout) as DotnetFact[] | null) ?? [];
+      // L1 API discovery without an endpoint is not a result: a type-only graph
+      // carries no api-contract evidence, so it must not report success (NEG3-09).
+      const hasEndpoint = facts.some((fact) => fact.kind === 'endpoint');
       const nodes = new Map<string, GraphNode>();
       const edges: GraphEdge[] = [];
       const unknowns: string[] = [];
@@ -237,11 +246,22 @@ export const DOTNET_ADAPTER: AdapterDefinition = {
           runtimeObserved: false,
         });
       }
+      // Unknowns collected above are preserved; only proven API evidence is withheld.
+      if (!hasEndpoint) {
+        return {
+          status: 'unsupported',
+          graph: emptyGraph(snapshot),
+          unknowns,
+          unsupportedSurfaces: ['no supported ASP.NET endpoint syntax was found in the snapshot'],
+          diagnostics,
+          toolchainIdentity: `dotnet@10.0.403/roslyn`,
+        };
+      }
       return {
-        status: facts.length > 0 ? 'ok' : 'unsupported',
+        status: 'ok',
         graph: SystemGraphSchema.parse({ schemaVersion: '1', snapshot, nodes: [...nodes.values()], edges }),
         unknowns,
-        unsupportedSurfaces: facts.length > 0 ? [] : ['no supported ASP.NET endpoint/type syntax was found'],
+        unsupportedSurfaces: [],
         diagnostics,
         toolchainIdentity: `dotnet@10.0.403/roslyn`,
       };

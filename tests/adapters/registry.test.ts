@@ -36,7 +36,7 @@ function key(overrides: Partial<CapabilityKey> = {}): CapabilityKey {
 
 function record(overrides: Record<string, unknown> = {}) {
   return {
-    schemaVersion: '1',
+    schemaVersion: '2',
     key: key(),
     targetLevel: 'L3',
     provenLevel: 'none',
@@ -48,9 +48,9 @@ function record(overrides: Record<string, unknown> = {}) {
   };
 }
 
-describe('registry registers all six ecosystems', () => {
-  it('declares the six required ecosystems', () => {
-    expect(ECOSYSTEMS).toEqual(['typescript', 'python', 'jvm', 'go', 'php', 'dotnet']);
+describe('registry registers all five ecosystems', () => {
+  it('declares the five required ecosystems', () => {
+    expect(ECOSYSTEMS).toEqual(['typescript', 'python', 'go', 'php', 'dotnet']);
   });
 
   it('accepts a record for each ecosystem', () => {

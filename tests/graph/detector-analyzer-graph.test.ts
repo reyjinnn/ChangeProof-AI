@@ -166,6 +166,43 @@ describe('analyzer produces impacts with provenance and unknowns', () => {
       expect(['inferred', 'unresolved']).toContain(impact.resolution);
     }
   });
+
+  it('propagates a dependency change through depends_on edges', () => {
+    const dependencyGraph = SystemGraphSchema.parse({
+      schemaVersion: '1',
+      snapshot: 'snap-1',
+      nodes: [
+        { id: 'component:orders-api', kind: 'component', locator: 'svc/orders', snapshot: 'snap-1' },
+        { id: 'symbol:lib.parse', kind: 'symbol', locator: 'lib/parse.ts', snapshot: 'snap-1' },
+      ],
+      edges: [
+        {
+          id: 'edge-dep',
+          kind: 'depends_on',
+          from: 'component:orders-api',
+          to: 'symbol:lib.parse',
+          resolution: 'proven',
+          evidence: { locator: 'svc/orders/package.json', snapshot: 'snap-1', method: 'lockfile-reference' },
+          runtimeObserved: false,
+        },
+      ],
+    });
+
+    const result = analyseImpacts({
+      graph: dependencyGraph,
+      changes: [
+        change({
+          id: 'dep-change',
+          kind: 'dependency',
+          category: 'dependency',
+          relatedEntityIds: ['component:orders-api'],
+        }),
+      ],
+    });
+
+    expect(result.impacts.some((impact) => impact.subjectId === 'symbol:lib.parse')).toBe(true);
+    expect(result.coverageGaps).toHaveLength(0);
+  });
 });
 
 describe('graph keeps every resolution class distinguishable', () => {
