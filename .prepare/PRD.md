@@ -184,7 +184,7 @@ All values are finite, validated and frozen before the run. No unlimited default
 
 Acceptance: resume preserves usage; full proof is not skipped when budget is nearly exhausted; cancel/timeout cleans up all services; atomic checkpoints record provenance and terminal artifacts; the model cannot raise limits.
 
-Separate **proposal fixer**, **diagnostic probe**, and **verification campaign** budgets within one aggregate accounting; separation must not become a way to reset consumer/run limits. Forecasts include n repetitions, DB cloning/journal, fault teardown, browser/JVM warmup, telemetry volume, and full evidence reserve. Profiles unable to fit the entire mandatory campaign are rejected before acceptance or stop `unverified` with a resource blocker. Stricter runtime limits in execution instructions still apply.
+Separate **proposal fixer**, **diagnostic probe**, and **verification campaign** budgets within one aggregate accounting; separation must not become a way to reset consumer/run limits. Forecasts include n repetitions, DB cloning/journal, fault teardown, browser warmup, telemetry volume, and full evidence reserve. Profiles unable to fit the entire mandatory campaign are rejected before acceptance or stop `unverified` with a resource blocker. Stricter runtime limits in execution instructions still apply.
 
 ## 6. Verification and decisions
 
@@ -307,7 +307,7 @@ The trusted supervisor creates disposable sandbox topology. Non-root, resource c
 
 Dependency acquisition is performed by a broker/isolated build stage with a registry allowlist and immutable artifacts; runtime tests do not receive arbitrary egress. Test DB credentials are ephemeral and scoped only to disposable datasets.
 
-If using orchestration such as Testcontainers, Docker control remains with the trusted supervisor or isolated infrastructure boundary; do not give the host socket to untrusted test source. Spring supports integration tests against services in containers, but ChangeProof security integration must follow this boundary. [Spring Boot Testcontainers documentation](https://docs.spring.io/spring-boot/reference/testing/testcontainers.html)
+If using orchestration such as Testcontainers, Docker control remains with the trusted supervisor or isolated infrastructure boundary; do not give the host socket to untrusted test source. Frameworks support integration tests against services in containers, but ChangeProof security integration must follow this boundary.
 
 Acceptance: isolation probes for every runner profile; host/other-run/network escape is denied; crash/cancel cleans up services, volumes, network, temp credentials; required artifacts are persisted before cleanup.
 

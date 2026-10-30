@@ -43,7 +43,6 @@ changeproof/
 │   │   │   ├── registry/
 │   │   │   ├── typescript/     # JS/TS frameworks + schema/persistence adapters
 │   │   │   ├── python/
-│   │   │   ├── jvm/            # Java/Kotlin
 │   │   │   ├── go/
 │   │   │   ├── php/
 │   │   │   └── dotnet/

@@ -170,7 +170,7 @@ export function classifySupportLevel(evidence: CapabilityEvidence): ProvenLevel 
   return evidence.positiveCases >= 2 ? 'L3' : 'L2';
 }
 
-/** The six ecosystems that must be registered (MVP §3). */
+/** The five ecosystems that must be registered (MVP §3, as resolved in T-06). */
 export const REQUIRED_ECOSYSTEMS = ECOSYSTEMS;
 
 export function capabilityKeyDigestInput(key: CapabilityKey): Record<string, string> {

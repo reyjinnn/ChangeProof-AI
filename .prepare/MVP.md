@@ -15,7 +15,7 @@
 
 MVP is a hosted service with a complete flow: website/login → organization/GitHub App → project/readiness → intent/issue/PR and budget → durable queued run → graph/diagnosis → coordinated patches → real execution → independent verification → evidence-backed PR → outcome validation by the owner. The provider manages infrastructure/model credentials; customers do not need a server/native toolchain or BYOK for the hosted minimum.
 
-The product must prove depth on the flagship across Next.js, Spring Boot, FastAPI, PostgreSQL, and Redis; while also proving that the adapter contract can extend to other ecosystems with honest support levels.
+The product must prove depth on the flagship across Next.js, FastAPI, PostgreSQL, and Redis; while also proving that the adapter contract can extend to other ecosystems with honest support levels.
 
 MVP is not complete merely because an engine or adapter can be invoked. MVP is complete when minimum capabilities are certified, complex workflows recover, cases that cannot be proven are handled correctly, and organic problems in pilot applications are genuinely resolved.
 
@@ -28,7 +28,7 @@ Minimum numerical decisions in this document are marked `[DERIVED]`: initial des
 ### Included
 
 - Modular monolith TypeScript host, common contracts, capability registry, and adapter conformance.
-- Six ecosystem families: JS/TS, Python, JVM, Go, PHP, and .NET.
+- Five ecosystem families: JS/TS, Python, Go, PHP, and .NET.
 - L1/L2/L3 according to the matrix, for frozen versions and change categories.
 - Cross-stack graph with API, dependency, database, event, cache, and workflow edges.
 - One shared model engine with verified real provider integration.
@@ -51,7 +51,7 @@ There are no later-stage feature categories or post-release backlog in this scop
 
 This includes multi-region/consensus failure, exhaustive schedule/model checking within a finite registered model, long-soak leak qualification, TB-scale/cross-engine migration, qualified legacy recovery, framework/ORM qualification, multi-cloud deployment automation, self-host installation, standalone operator binary, BYOK, SAML/SCIM, non-GitHub repository providers and automated paid subscriptions/invoicing/refund. The public website, all account flows, templates/drafts, notification/search, evidence/audit exports, support/access requests, internal discussions and reviewer notes are also mandatory.
 
-The capability catalog must freeze all promised versions/ranges, frameworks/ORMs, databases/brokers, platforms, providers and deployment profiles before acceptance. The six ecosystems and all frameworks/libraries in the matrix remain covered. General terms such as all versions/databases do not mean unlimited support for undefined versions or products: every published entry must have scope, an adapter, positive/negative cases and evidence. Profiles not yet agreed/tested are blockers for the related completion, not features that may be deferred. Public repository submission is mandatory, with the same rights/admission/isolation checks; not a security bypass for arbitrary code.
+The capability catalog must freeze all promised versions/ranges, frameworks/ORMs, databases/brokers, platforms, providers and deployment profiles before acceptance. The five ecosystems and all frameworks/libraries in the matrix remain covered. General terms such as all versions/databases do not mean unlimited support for undefined versions or products: every published entry must have scope, an adapter, positive/negative cases and evidence. Profiles not yet agreed/tested are blockers for the related completion, not features that may be deferred. Public repository submission is mandatory, with the same rights/admission/isolation checks; not a security bypass for arbitrary code.
 
 There is no day-based cut line. Scope changes only through a recorded product decision before evaluation, and such changes must not disguise failed gates.
 
@@ -72,9 +72,6 @@ All values below are **targets**, while the initial proven level in a new regist
 | Other Python backend | Flask | L1 | Discovery, route/dependency extraction |
 | Python schema/persistence | Pydantic, SQLAlchemy | L3 | Selected validation/serialization, ORM mapping and migration integration |
 | Other Python persistence | Django ORM | L1 | Model/migration extraction; L3 Django API does not automatically cover the migration engine |
-| JVM backend | Spring Boot | L3 | API/service mapping and cross-service contracts |
-| JVM persistence | Hibernate/JPA | L3 | Selected entity/schema/mapping compatibility on PostgreSQL |
-| Other JVM frameworks | Quarkus, Micronaut, Ktor | L1 | Project/version/build, route/contract/dependency extraction |
 | Go backend | Gin, Fiber | L2 | API consumer/handler candidate patch and guard validation |
 | Other Go backend | Echo, net/http | L1 | Route/dependency/contract extraction |
 | Go persistence | GORM, Ent | L1 | Model/schema/dependency extraction |
@@ -82,7 +79,7 @@ All values below are **targets**, while the initial proven level in a new regist
 | Other PHP backend/persistence | Symfony, Eloquent, Doctrine | L1 | Discovery, routes/entities/migrations/dependencies |
 | .NET | ASP.NET Core, Entity Framework Core | L1 | Project/dependency, endpoint/entity/migration extraction |
 
-JVM coverage must include at least one Java project and one Kotlin project at L1. Java Spring Boot is the minimum L3 path; Kotlin L3 is not implied. JS and TS are distinguished in capability records.
+JVM (Java/Kotlin) is out of scope per the T-06 scope decision. JS and TS are distinguished in capability records.
 
 Each L3 framework/component has `[DERIVED]` at least two positive regression cases with different usage patterns, one negative/ambiguous case, and one non-breaking/no-impact control on real-runtime applications. One case may prove several capabilities if each assertion/provenance is separate. A “hello world + rename string” alone does not satisfy positive coverage.
 
@@ -112,7 +109,7 @@ Labels are not interchangeable. Real-runtime with a human reference patch proves
 
 | ID | Scenario | Required complexity | Success evidence |
 | --- | --- | --- | --- |
-| SC3-01 | Order contract + data + event change | Next.js + Spring Boot + FastAPI, ≥3 repos, PostgreSQL, Redis Streams | Order/reservation workflow recovers, old data correct, final and rollout states valid |
+| SC3-01 | Order contract + data + event change | Next.js + FastAPI, ≥2 repos, PostgreSQL, Redis Streams | Order/reservation workflow recovers, old data correct, final and rollout states valid |
 | SC3-02 | Dependency/framework upgrade | Direct+transitive incompatibility, manifest/lock, at least two interacting components | Native build/runtime pass, intended target version installed, no upgrade revert |
 | SC3-03 | Populated database migration | Active readers/writers, backfill/chunk commit races, interruption/resume, journal and constraints | No lost acknowledged writes, semantic reconciliation and recovery proven |
 | SC3-04 | Event/cache cascading failure | Duplicate delivery, relevant retry/out-of-order, stale serialization/key | No double effect; cache/event consumers compatible |
@@ -223,16 +220,16 @@ Work on one package whose prerequisites are ready. Each package may be broken in
 | --- | --- | --- | --- |
 | WP3-01 | — | `src/core/contracts`, `src/modules/policy`; engine+hosted schemas/ports, IDs, versioning, outcomes and bundle rules | Contract/precedence/identity tests pass, including target pass + failed edge; hosted grants/lease/usage contracts semantic validation ready |
 | WP3-02 | WP3-01 | Root toolchain, `src/orchestrator`, CLI, boundaries | One host package can build/run; forbidden imports rejected; explicit missing-config errors |
-| WP3-03 | WP3-02 | `modules/adapters`, inventory, capability registry | Six ecosystems registered; entire L1 matrix has positive/negative extraction proof |
+| WP3-03 | WP3-02 | `modules/adapters`, inventory, capability registry | Five ecosystems registered; entire L1 matrix has positive/negative extraction proof |
 | WP3-04 | WP3-02 | `modules/verifier`, trusted supervisor and dependency broker | Native builds/service topology, security probes and cleanup for all required profiles pass |
 | WP3-05 | WP3-01, WP3-03 | `modules/detector`, `modules/analyzer`, `modules/graph` | API/data/event/dependency changes enter shared graph with evidence and unknowns |
 | WP3-06 | WP3-04, WP3-05, WP3-16, WP3-17 | `modules/fixtures`, verifier stages, real applications | SC3-01 old valid/new attributed failure without fixer, repeated baseline receipts and approved intent; required dimension assessment available; oracle inaccessible to agent tools |
 | WP3-07 | WP3-06 | `modules/agent`, tools/gateway, model broker, planner | Actual model tools run, guarded patch, bounded attempts, Consumer/Target A closed loop |
 
-**Hackathon vertical-slice build mapping (not WP completion):** the competition build may select the dependency-ready portions of WP3-01/02/04/05/06/07/15/17 plus the smallest UI/evidence surface needed to run the BRD §21 demo. Each selected task still proves its own boundaries; no incomplete WP is called done. Do not claim WP3-03's full six-ecosystem matrix, WP3-08/09's remaining adapter matrix, WP3-10/11/18's full scenario portfolio, WP3-12's authorized PR/CI, WP3-13's release evaluation, WP3-14's organic pilot, or hosted WP/gates based on this vertical slice. The work-package DAG and final-release gates remain unchanged. The exact competition slice and acceptance sequence are in [MVP §23](#hackathon-build-scope).
-| WP3-08 | WP3-07 | JS/TS, Python, JVM L3 adapter implementations | All minimum L3 framework API/UI cases pass with native runtime |
+**Hackathon vertical-slice build mapping (not WP completion):** the competition build may select the dependency-ready portions of WP3-01/02/04/05/06/07/15/17 plus the smallest UI/evidence surface needed to run the BRD §21 demo. Each selected task still proves its own boundaries; no incomplete WP is called done. Do not claim WP3-03's full five-ecosystem matrix, WP3-08/09's remaining adapter matrix, WP3-10/11/18's full scenario portfolio, WP3-12's authorized PR/CI, WP3-13's release evaluation, WP3-14's organic pilot, or hosted WP/gates based on this vertical slice. The work-package DAG and final-release gates remain unchanged. The exact competition slice and acceptance sequence are in [MVP §23](#hackathon-build-scope).
+| WP3-08 | WP3-07 | JS/TS, Python L3 adapter implementations | All minimum L3 framework API/UI cases pass with native runtime |
 | WP3-09 | WP3-07 | Go/PHP L2, remaining conformance | Gin/Fiber/Laravel valid candidate + negative cases; honest unsupported verification |
-| WP3-10 | WP3-08 | `modules/migrations`, dependency adapters/broker | Prisma/SQLAlchemy/Hibernate/Pydantic capability cases and SC3-02/03 pass |
+| WP3-10 | WP3-08 | `modules/migrations`, dependency adapters/broker | Prisma/SQLAlchemy/Pydantic capability cases and SC3-02/03 pass |
 | WP3-11 | WP3-10, WP3-17 | `modules/graph`, orchestrator bundle/recovery, event adapters | SC3-01/04/05 actual repair, telemetry-supported retry diagnosis, no-progress stopping, mixed-version campaign |
 | WP3-12 | WP3-11, WP3-22 | `modules/evidence`, `modules/github`, viewer | Immutable all-trial/4D artifacts + full-campaign repro + authorized actual PR bundle/CI + idempotency |
 | WP3-13 | WP3-08, WP3-09, WP3-10, WP3-11, WP3-12, WP3-18 | `bench`, certification, security/regression suites | Complete matrix, mandatory negatives/campaigns, frozen evaluation release criteria pass |
@@ -342,7 +339,7 @@ Minimum release `[DERIVED]`:
 8. Hosted qualification `[DERIVED]`: at least three independent customer organizations with two identities/org, allowed/denied private repository scopes and real web onboarding. At least one organic repair via hosted remains mandatory. This is minimum proof, not an internet-scale claim.
 9. Frozen HostedServiceProfile, operator-funded model access, finite spending/usage controls, qualified hostile-code isolation, backup/deletion recovery and chosen open-source license/build records available. Free capped and paid launch must both be qualified; automated subscriptions, invoicing and payment reconciliation must not be deferred.
 
-When defining the dataset, the minimum ten fixable holdouts must cover SC3-01..05, SC3-07..08 and SC3-10..11 and all three L3 paths JS/TS, Python, JVM. Fixable labels are assigned by a trusted author with an independently validated reference solution before model results are known. The aggregate 80% does not override a failed mandatory repair acceptance, required dimension, or negative safety gate. SC3-09 diagnosis is reported separately from repair success; SC3-10/11 remain mandatory repair acceptance and are recorded in the case manifest/evaluation.
+When defining the dataset, the minimum ten fixable holdouts must cover SC3-01..05, SC3-07..08 and SC3-10..11 and both L3 paths JS/TS, Python. Fixable labels are assigned by a trusted author with an independently validated reference solution before model results are known. The aggregate 80% does not override a failed mandatory repair acceptance, required dimension, or negative safety gate. SC3-09 diagnosis is reported separately from repair success; SC3-10/11 remain mandatory repair acceptance and are recorded in the case manifest/evaluation.
 
 | Metric | Numerator / denominator and rules |
 | --- | --- |
@@ -755,7 +752,7 @@ The `scripts` folder was removed on 22 October 2026 as requested by the user. It
 | AC | Evidence | Status |
 | --- | --- | --- |
 | Initial modular monolith briefing | Mandate and structure in BRD/architecture | pass |
-| Multi-language/framework/stack | Six-ecosystem matrix and L1/L2/L3 capability tuple | pass |
+| Multi-language/framework/stack | Five-ecosystem matrix and L1/L2/L3 capability tuple | pass |
 | Complex remediation | SC3-01..06, migration, upgrade, event/cache, multi-repo and adaptive recovery | pass |
 | Real implementation success | G3-02..10, real-runtime proof and organic owner-validated pilot | pass |
 | Facilitates agent development | FR3-01..24, contracts, WP3-01..14, traceability and task format | pass |
@@ -767,7 +764,7 @@ The `scripts` folder was removed on 22 October 2026 as requested by the user. It
 - Definition and reference checks: 14 BR, 24 FR, 14 work packages, 10 gates; all FR covered by traceability; no undefined referenced ID.
 - Final recursive PowerShell check: exit code 0; six Markdown files, 23 local links/anchors stay within `.improvement`, balanced fences, work package dependencies valid and ordered.
 - Semantic review: target support separated from proven support, baseline/intent protected, target proof separated from bundle proof, resource caps separated from delivery timeline.
-- Primary technical references on Next.js/Playwright, FastAPI testing, Spring Boot/Testcontainers, and Prisma migration read; links placed in related requirements.
+- Primary technical references on Next.js/Playwright, FastAPI testing, Testcontainers, and Prisma migration read; links placed in related requirements.
 - Build, native tests, model calls, benchmark, pilot, and publication not run. This is specification preparation, not evidence of passed product gates.
 
 #### Decisions and continuation

@@ -106,7 +106,6 @@ All items below are **product targets**. An achieved level is recorded only afte
 | --- | --- | --- | --- |
 | JavaScript/TypeScript | React, Next.js, Vue, Nuxt, Angular, SvelteKit; Express, NestJS, Fastify, Hono | Prisma, TypeORM, Drizzle, Sequelize | Manifest/lockfile, compiler/build, native test runner, browser E2E |
 | Python | FastAPI, Django, Flask | SQLAlchemy, Django ORM, Pydantic | Environment/lock, pytest or project runner, Ruff/mypy when configured |
-| Java/Kotlin | Spring Boot, Quarkus, Micronaut, Ktor | Hibernate/JPA | Maven/Gradle, compiler, native tests |
 | Go | Gin, Fiber, Echo, net/http | GORM, Ent | Modules, compiler, go test |
 | PHP | Laravel, Symfony | Eloquent, Doctrine | Composer, PHPUnit/Pest according to the project |
 | C#/.NET | ASP.NET Core | Entity Framework Core | SDK/project graph, native build, xUnit/NUnit according to the project |
@@ -158,7 +157,7 @@ Correctness, performance, resilience, and data integrity are four different cond
 Build and use a real application consisting of:
 
 - Next.js/TypeScript as the frontend for creating and reading orders.
-- Spring Boot as the order service.
+- NestJS as the order service.
 - FastAPI as the inventory service.
 - PostgreSQL for business state and migrations.
 - Redis Streams for event delivery, plus Redis cache if the application actually uses one.
@@ -452,8 +451,8 @@ Before submission: read the current waiver and terms, verify usage/publication p
 
 | Keep in the core flow | Exclude from hackathon demo claims |
 |---|---|
-| One order → inventory case reproducible from a clean state | Full six-ecosystem/framework coverage and generic version support |
-| TypeScript/Next.js storefront plus **one** backend/service stack actually run; choose Spring Boot or FastAPI after verifying toolchains and available time | Repair across three repositories and Java + Python + TypeScript simultaneously, unless all are genuinely available and stable without compromising proof |
+| One order → inventory case reproducible from a clean state | Full five-ecosystem/framework coverage and generic version support |
+| TypeScript/Next.js storefront plus the FastAPI backend/service stack actually run | Repair across three repositories and Python + TypeScript simultaneously, unless all are genuinely available and stable without compromising proof |
 | An order API/contract change that breaks one consumer and has an observed initial failure | Complex online migration, dependency-upgrade portfolio, multi-region/consensus, TB/cross-engine, long-soak, and the full SC3 portfolio |
 | A small dependency/impact graph with clear provenance: contract → producer/consumer → business workflow | Full multi-tenant SaaS dashboard, billing, SAML/SCIM, BYOK, multi-cloud, self-host/binary, and all provider integrations |
 | Human-authored/reviewed intent and oracle before the run; patch limited to allowlisted files | Autonomous merge/deploy or production mutation |
@@ -462,7 +461,7 @@ Before submission: read the current waiver and terms, verify usage/publication p
 | Concise evidence dossier: failing baseline → candidate identity/diff → checks actually run → verdict/limits → clean reproduction | Credits, rate limits, runtime, customer adoption, or integrations not confirmed as available capabilities |
 | Simple demo UI that preserves AI disclosure, limitations, run status, evidence, and Meta attribution/provenance | Removal/concealment of watermark, labels, metadata, or provenance signals from Meta outputs |
 
-This document does **not** choose Spring Boot or FastAPI. Choose one based on the available fixture/repository and native toolchain; do not implement both backends just for breadth. Use OpenAPI/a fixed contract as an explicit boundary. If a stack cannot run, narrow the fixture or show the blocker; do not substitute mock results and claim they are native.
+The backend stack is FastAPI. Choose the fixture based on the available fixture/repository and native toolchain. Use OpenAPI/a fixed contract as an explicit boundary. If a stack cannot run, narrow the fixture or show the blocker; do not substitute mock results and claim they are native.
 
 ### Demo sequence and evidence
 
