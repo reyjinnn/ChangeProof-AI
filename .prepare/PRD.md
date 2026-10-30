@@ -1,6 +1,6 @@
 # ChangeProof AI 1.0 — Product Requirements Document
 
-**Active scope — 22 October 2026:** all features/modules mentioned in these four documents and `mockup.html` are mandatory in the complete release. No features are deferred to a later stage; implementation order follows dependencies. Design targets and mockup appearance remain no proof of implementation. Earlier scope decisions in MVP §19 history have been superseded.
+**Active scope — 22 October 2026:** all features/modules mentioned in these four documents and `.template-ui/mockup.html` are mandatory in the complete release. No features are deferred to a later stage; implementation order follows dependencies. Design targets and mockup appearance remain no proof of implementation. Earlier scope decisions in MVP §19 history have been superseded.
 
 **Type:** initial implementation brief. **Status:** normative 1.0 design target; not yet executable.  
 **References:** [BRD](BRD.md), [MVP](MVP.md), [Architecture](architecture.md).  
@@ -777,7 +777,7 @@ Errors include access revoked, unsupported, provider unavailable, quota exhauste
 <a id="19-complete-product-features-mockups-and-scope"></a>
 ## 19. Mockup features and complete product scope
 
-**Local design source:** [interactive mockup](mockup.html), reviewed from route definitions, forms, actions, template data and final overrides on 22 October 2026. All following features are mandatory. Existing mockup pages use browser state, illustrative data and simulated effects; that appearance makes no claim of real backend, email delivery, PR, billing or campaigns. All UI paths must use production APIs/services and persistence at acceptance. Hash routes are design references, not final URL contracts.
+**Local design source:** [interactive mockup](.template-ui/mockup.html), reviewed from route definitions, forms, actions, template data and final overrides on 22 October 2026. All following features are mandatory. Existing mockup pages use browser state, illustrative data and simulated effects; that appearance makes no claim of real backend, email delivery, PR, billing or campaigns. All UI paths must use production APIs/services and persistence at acceptance. Hash routes are design references, not final URL contracts.
 
 ### FR3-37 — Public website and product guides
 
@@ -915,7 +915,7 @@ Extend `VerificationPlan` with coverage-selection map/rule identity; `Environmen
 
 ## Seven-file package consolidation — 22 October 2026
 
-At the user's instruction, the requested final `` package structure contains only `BRD.md`, `PRD.md`, `MVP.md`, `architecture.md`, `SKILL.md`, `AGENTS.md`, and `mockup.html`. Seven references were merged in full into the Integrated references section in SKILL; identical skill copies have been verified. SVG logos, WOFF2 fonts, and OFL license text are stored in HTML; the reports folder was originally empty. Product scope, requirement IDs, schema, policy and acceptance gates are unchanged. Document consolidation is not evidence of implementation or gate passage.
+At the user's instruction, the requested final `` package structure contains only `BRD.md`, `PRD.md`, `MVP.md`, `architecture.md`, `SKILL.md`, `AGENTS.md`, and `.template-ui/mockup.html`. Seven references were merged in full into the Integrated references section in SKILL; identical skill copies have been verified. SVG logos, WOFF2 fonts, and OFL license text are stored in HTML; the reports folder was originally empty. Product scope, requirement IDs, schema, policy and acceptance gates are unchanged. Document consolidation is not evidence of implementation or gate passage.
 
 **Deletion status:** consolidation complete, but deletion of source files/folders was denied by automated policy checks. Source folders still exist; the seven-file structure has not been achieved.
 

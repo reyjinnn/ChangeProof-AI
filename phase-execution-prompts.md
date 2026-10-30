@@ -125,7 +125,7 @@ Complete only the selected phase's allocated scope. Do not declare a full WP, ga
 
 Execute only `phases/hackathon-slice.md` and its shared rules. This is **not** one of the seven release phases and does not alter the complete product scope, WP DAG or G3 gates. Follow [BRD §21](.prepare/BRD.md#hackathon-build-scope), [PRD §21](.prepare/PRD.md#hackathon-competition-compliance), [MVP §23](.prepare/MVP.md#hackathon-build-scope) and the architecture's competition slice. Preserve the core value — real cross-component business impact, visible Meta contribution, protected intent, independent verification and evidence — while limiting breadth to one reproducible scenario and one selected backend.
 
-Do not implement the full dashboard, every framework, full hosted platform, billing, enterprise integrations or all scenario campaigns for the competition slice. Do not claim full-product completion, organic pilot, framework certification, production readiness or a gate pass from this demo. Keep `mockup.html`'s visual design and CSS unchanged; only update text, route content and behavior required to explain and show the focused competition slice. Preserve the disclosure, limitations, human approval, data-mode, audience and Meta provenance/watermark obligations.
+Do not implement the full dashboard, every framework, full hosted platform, billing, enterprise integrations or all scenario campaigns for the competition slice. Do not claim full-product completion, organic pilot, framework certification, production readiness or a gate pass from this demo. Keep `.template-ui/mockup.html`'s visual design and CSS unchanged; only update text, route content and behavior required to explain and show the focused competition slice. Preserve the disclosure, limitations, human approval, data-mode, audience and Meta provenance/watermark obligations.
 
 Use commands actually present, keep mock/replay separate from live model/native runtime, do not call paid APIs or perform publication/deployment without explicit authorization, and report exact blockers. Build/demo completion does not complete a full WP or G3 gate.
 
@@ -271,7 +271,7 @@ Execute ChangeProof AI 1.0 `phase-6` according to `phases/phase-6.md` and the sh
 
 Implement all allocated product front-end tasks for **WP3-12, WP3-14, WP3-21, WP3-22, WP3-24, WP3-25, WP3-26, WP3-27, WP3-28, WP3-29, WP3-30, WP3-31 and WP3-32** (the front-end column of MVP §22).
 
-Use the actual `mockup.html` as the design source and PRD/MVP as the behavior specifications. Inspect relevant sections without printing embedded font data wholesale.
+Use the actual `.template-ui/mockup.html` as the design source and PRD/MVP as the behavior specifications. Inspect relevant sections without printing embedded font data wholesale.
 
 Build the complete public website, authentication/onboarding, dashboard/run journey, trace viewer, evidence/publication/outcome/evaluation surfaces, notifications/search, support/collaboration/operator console, billing/BYOK and enterprise/provider settings.
 

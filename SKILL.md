@@ -17,7 +17,7 @@ The core principle to always remember: **this product sells evidence, not code.*
 | Exact behavior, data contracts, policy, NFR | `.prepare/PRD.md` (FR3-xx, §8 data contracts, §9 NFR, §12 DEC3) |
 | What must be proven, work order, gates | `.prepare/MVP.md` (§3 matrix, §6 gates, §7 negatives, §8 WP, §17 campaign protocol) |
 | Which module, allowed imports, trust boundary | `.prepare/architecture.md` (§2 structure, §3 import matrix, §7 trust, §15–17 hosted) |
-| UI appearance | `mockup.html` + `SKILL.md#ref-ui-mockup-guide` |
+| UI appearance | `.template-ui/mockup.html` + `SKILL.md#ref-ui-mockup-guide` |
 | Concise WP/dependency/gate list | `SKILL.md#ref-work-packages` |
 | Requirement ID index | `SKILL.md#ref-requirements-index` |
 | Negative case list | `SKILL.md#ref-negative-cases` |
@@ -103,7 +103,7 @@ This package contains **no implementation**, so the environment's tooling skills
 | 2.7 | dashboard / UI | `frontend-ui` · `accessibility-inclusive-design` · `building-accessible-interfaces` · `reviewing-interface-quality` · `dataviz` (evidence/coverage charts) · `forms-inputs-checkout` (billing, BYOK) | Accessibility is an acceptance requirement (NFR3-14), not polish. Phase-6 owns all product UI. |
 | 2.8 | evidence & publication | `secret-serialization` · ⚠ `code-security` | Redaction, integrity, and no self-referential manifests. |
 
-**Deliberate non-binding:** do **not** load `claude-api`. It documents the Anthropic SDK and Claude pricing, while this product's target model is Meta **Muse Spark 1.3** through Meta Model API (`PRD` FR3-07, `BRD` §17/§20). Consulting Anthropic docs to integrate a Meta model is a wrong-source error. Likewise treat `mockup.html` as design input only — pair any UI work with `design-systems-frontend-architecture` rather than copying its layered CSS.
+**Deliberate non-binding:** do **not** load `claude-api`. It documents the Anthropic SDK and Claude pricing, while this product's target model is Meta **Muse Spark 1.3** through Meta Model API (`PRD` FR3-07, `BRD` §17/§20). Consulting Anthropic docs to integrate a Meta model is a wrong-source error. Likewise treat `.template-ui/mockup.html` as design input only — pair any UI work with `design-systems-frontend-architecture` rather than copying its layered CSS.
 
 > **Availability note.** The eight domain skills (`changeproof-task-execution`, `changeproof-contracts-policy`, `changeproof-detector-analyzer`, `changeproof-verifier-fixtures`, `changeproof-fix-agent`, `changeproof-sandbox-security`, `changeproof-evidence-publisher`, `changeproof-benchmark-eval`) live in the build repo at `changeproof/.agents/skills/`. They are **not present in this extracted package** — bind to them only when the working directory is that repo.
 
@@ -745,7 +745,7 @@ SC3-01..05 may share an application family, but triggers, interventions, oracles
 
 # UI guide: mockup → real dashboard
 
-Sources: `mockup.html`, PRD FR3-31, FR3-37..42, §18; architecture §18–19; DEC3-23. **The mockup is a design source, not implementation evidence.**
+Sources: `.template-ui/mockup.html`, PRD FR3-31, FR3-37..42, §18; architecture §18–19; DEC3-23. **The mockup is a design source, not implementation evidence.**
 
 ## Contents
 1. Status and ground rules
@@ -769,9 +769,9 @@ Sources: `mockup.html`, PRD FR3-31, FR3-37..42, §18; architecture §18–19; DE
 
 ## 2. How to read the mockup
 
-- `mockup.html` ±840 KB (base64-embedded fonts) and contains **multiple skin layers** overriding one another (many `!important`, layered selectors, class variants such as `.modern-design`). **Do not `cat` in full.** Strip data URIs before reading:
+- `.template-ui/mockup.html` ±840 KB (base64-embedded fonts) and contains **multiple skin layers** overriding one another (many `!important`, layered selectors, class variants such as `.modern-design`). **Do not `cat` in full.** Strip data URIs before reading:
   ```bash
-  sed -E 's/url\(data:[^)]{200,}\)/url(DATA)/g' mockup.html > /tmp/mock.html
+  sed -E 's/url\(data:[^)]{200,}\)/url(DATA)/g' .template-ui/mockup.html > /tmp/mock.html
   grep -n 'navigate(' /tmp/mock.html | head -50     # navigation between pages
   grep -n '<section' /tmp/mock.html                  # structure
   ```
@@ -780,8 +780,8 @@ Sources: `mockup.html`, PRD FR3-31, FR3-37..42, §18; architecture §18–19; DE
 
 ## 3. Design tokens, fonts, themes
 
-- Fonts: **Inter** (400–800; body, form, tables, labels) and **Plus Jakarta Sans** (500–800; heading, wordmark). SIL OFL 1.1 license. Assets `inter-latin-variable.woff2`, `plusjakartasans-latin-variable.woff2` and OFL licenses are embedded in `mockup.html`, in the `changeproof-source-assets` block. Self-host, **no external requests**; include licenses/attribution. Provide a real fallback stack.
-- Logo/mark: `changeproof-logo.svg`, `changeproof-mark.svg` embedded in the `changeproof-source-assets` block in `mockup.html`.
+- Fonts: **Inter** (400–800; body, form, tables, labels) and **Plus Jakarta Sans** (500–800; heading, wordmark). SIL OFL 1.1 license. Assets `inter-latin-variable.woff2`, `plusjakartasans-latin-variable.woff2` and OFL licenses are embedded in `.template-ui/mockup.html`, in the `changeproof-source-assets` block. Self-host, **no external requests**; include licenses/attribution. Provide a real fallback stack.
+- Logo/mark: `changeproof-logo.svg`, `changeproof-mark.svg` embedded in the `changeproof-source-assets` block in `.template-ui/mockup.html`.
 - **Light and dark** themes required (theme toggle in public navigation and shell). Define colors as tokens, not literals in components.
 - Status colors must be semantic and consistent with the vocabulary: verified/fixed (green), incomplete/partial/unverified (amber), blocked/failed/invalid (red), informational (blue). Do not rely on color alone — include text labels/icons (accessibility).
 

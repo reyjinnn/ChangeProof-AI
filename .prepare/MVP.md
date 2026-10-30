@@ -1,6 +1,6 @@
 # ChangeProof AI 1.0 — Minimum Viable Product and Development Brief
 
-**Active scope — 22 October 2026:** all features/modules mentioned in these four documents and `mockup.html` are mandatory in the complete release. No features are deferred to a later stage; implementation order follows dependencies. Design targets and mockup appearance remain no proof of implementation. Earlier scope decisions in MVP §19 history have been superseded.
+**Active scope — 22 October 2026:** all features/modules mentioned in these four documents and `.template-ui/mockup.html` are mandatory in the complete release. No features are deferred to a later stage; implementation order follows dependencies. Design targets and mockup appearance remain no proof of implementation. Earlier scope decisions in MVP §19 history have been superseded.
 
 **Type:** definition of a minimum product with real impact.  
 **Status:** all gates in this document are targets, not claims of passing.  
@@ -47,7 +47,7 @@ Minimum numerical decisions in this document are marked `[DERIVED]`: initial des
 
 ### All features are mandatory in the same release
 
-There are no later-stage feature categories or post-release backlog in this scope. All capabilities mentioned in the four documents and `mockup.html` must be implemented, connected to real services, tested and proven before the product is declared complete. Work order may be incremental according to dependencies; completion must not use a subset as a substitute for the complete scope.
+There are no later-stage feature categories or post-release backlog in this scope. All capabilities mentioned in the four documents and `.template-ui/mockup.html` must be implemented, connected to real services, tested and proven before the product is declared complete. Work order may be incremental according to dependencies; completion must not use a subset as a substitute for the complete scope.
 
 This includes multi-region/consensus failure, exhaustive schedule/model checking within a finite registered model, long-soak leak qualification, TB-scale/cross-engine migration, qualified legacy recovery, framework/ORM qualification, multi-cloud deployment automation, self-host installation, standalone operator binary, BYOK, SAML/SCIM, non-GitHub repository providers and automated paid subscriptions/invoicing/refund. The public website, all account flows, templates/drafts, notification/search, evidence/audit exports, support/access requests, internal discussions and reviewer notes are also mandatory.
 
@@ -718,7 +718,7 @@ Final documentation task checks:
 | `node 'C:\Users\user\AppData\Local\Temp\changeproof-doc-review-eb3faf1d215d49688b4575c12865e5f2\document-check.cjs'` | 0 — seven files, five changed files, 94 valid local links, 218 canonical IDs preserved, 34-WP DAG remains cycle-free | Document structure/link/preservation checks; not product behavior acceptance |
 | Semantics and public source review | No process exit code; sources/dates/qualifications in BRD §20 | Independent oracle, fresh proof, tenant scope, fair comparator and full release scope retained; account balances not verified |
 
-The initial validator exited 1 because it required a literal phrase that did not match exactly; prose matching checks were replaced with manual review, not treated as behavior proof. Link, ID, DAG and file preservation checks still ran. `AGENTS.md` and `mockup.html` were identical to pre-edit copies; `SKILL.md` only received references/guidance for further detail. No files added to the seven-file package.
+The initial validator exited 1 because it required a literal phrase that did not match exactly; prose matching checks were replaced with manual review, not treated as behavior proof. Link, ID, DAG and file preservation checks still ran. `AGENTS.md` and `.template-ui/mockup.html` were identical to pre-edit copies; `SKILL.md` only received references/guidance for further detail. No files added to the seven-file package.
 
 **Mock vs native / missing checks:** no mock or native product tests run. `pnpm typecheck`, `pnpm lint`, unit/integration and model/runner/browser/CI/provider acceptance **not run** because changes were documentation-only; no passing results claimed. No paid API, publication or application changes. Runtime contracts/policy not edited; new target schemas and evaluation design revision recorded in PRD §20. All implementation, economics, B2/ablation, onboarding and live Meta evidence still must be produced by related WPs; this review does not change product gate status.
 
@@ -914,7 +914,7 @@ All work packages WP3-01..34 and gates G3-01..17 are mandatory. No free-only, si
 
 ### Mockup → requirement → work → gate coverage
 
-| Surface/route group in `mockup.html` | Requirement | Work | Gate / evidence |
+| Surface/route group in `.template-ui/mockup.html` | Requirement | Work | Gate / evidence |
 | --- | --- | --- | --- |
 | landing, product, pricing, guides, changelog, roadmap, templates, tutorials, sample-report, help/FAQ, privacy-policy, integrations, impact-overview, verification, evidence-overview, collaboration, terms | FR3-37 | WP3-27 | G3-15: every public route/CTA and static sample separate from private tenant data |
 | login, register, verify-email, forgot-password, check-email, reset-password, session-expired, account | FR3-29, FR3-38, FR3-44 | WP3-21, WP3-28, WP3-32 | G3-12/13/15/16: actual auth/email/IdP, invalid/replayed tokens and session revocation |
@@ -991,7 +991,7 @@ The metrics study freezes event definitions, idle handling, observation window, 
 
 ## 22. Seven development and testing phases
 
-**Active decision — 24 October 2026, execution-plan revision 2:** the user's restructuring request replaces the five-phase allocation. Phases 1–5 focus on back-end development, phase-6 develops the entire front-end from [mockup.html](mockup.html), and phase-7 performs whole-system testing and qualification. This edit does not execute any phase. One complete release still includes every feature, WP and gate; no scope, threshold, policy, schema, budget or full-WP dependency changes.
+**Active decision — 24 October 2026, execution-plan revision 2:** the user's restructuring request replaces the five-phase allocation. Phases 1–5 focus on back-end development, phase-6 develops the entire front-end from [.template-ui/mockup.html](.template-ui/mockup.html), and phase-7 performs whole-system testing and qualification. This edit does not execute any phase. One complete release still includes every feature, WP and gate; no scope, threshold, policy, schema, budget or full-WP dependency changes.
 
 The specification directory is the directory containing this MVP and its sibling documents. Conventionally it is ``, with the application root above it; in this extracted ChangeProof-AI package it is the project root itself. All Markdown links resolve relative to their files. `phases/` is alongside this MVP; implementation and `docs/phase-reports/` belong at the application root. Do not create duplicate specification trees.
 
@@ -1113,7 +1113,7 @@ Mock/native: not run. Missing application checks: strict typecheck, lint/boundar
 
 ## Seven-file package consolidation — 22 October 2026
 
-Per user instruction, the requested final `` package contains only `BRD.md`, `PRD.md`, `MVP.md`, `architecture.md`, `SKILL.md`, `AGENTS.md`, and `mockup.html`. Seven references merged in full into the Unified references section in SKILL; identical skill copies verified. SVG logo, WOFF2 fonts, and OFL license text stored in HTML; reports folder originally empty. Product scope, requirement IDs, schema, policy and acceptance gates unchanged. Document consolidation is not proof of implementation or passed gates.
+Per user instruction, the requested final `` package contains only `BRD.md`, `PRD.md`, `MVP.md`, `architecture.md`, `SKILL.md`, `AGENTS.md`, and `.template-ui/mockup.html`. Seven references merged in full into the Unified references section in SKILL; identical skill copies verified. SVG logo, WOFF2 fonts, and OFL license text stored in HTML; reports folder originally empty. Product scope, requirement IDs, schema, policy and acceptance gates unchanged. Document consolidation is not proof of implementation or passed gates.
 
 **Deletion status:** consolidation complete, but deletion of source files/folders denied by automated policy check. Source folders still exist; seven-file layout not yet achieved.
 

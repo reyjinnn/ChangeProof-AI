@@ -18,7 +18,7 @@ Prerequisite evidence: package reviewed; BRD/PRD/MVP/architecture/SKILL/AGENTS/p
                        participant-provided event terms index available in the session
 Allowed source/config changes: .prepare/BRD.md, .prepare/PRD.md, .prepare/MVP.md,
                                .prepare/architecture.md, SKILL.md, phases/hackathon-slice.md,
-                               phase-execution-prompts.md, mockup.html, this report
+                               phase-execution-prompts.md, .template-ui/mockup.html, this report
 Input snapshot + intended intervention: record the supplied event terms as dated, sourced
                                        data without elevating them to verified official facts
 Acceptance checks (positive, negative, native): exact cross-document consistency, provenance
@@ -54,7 +54,7 @@ The participant-reported event details were recorded consistently in the followi
 | `.prepare/architecture.md` | Competition-slice architecture and provenance/authorization constraints |
 | `phases/hackathon-slice.md` | Execution playbook, required real-runtime proof, blockers, and task reporting |
 | `phase-execution-prompts.md` | Prompt scope, source-of-truth hierarchy, and execution boundaries |
-| `mockup.html` | English translation of the competition compliance text; the mockup remains illustrative, not product evidence |
+| `.template-ui/mockup.html` | English translation of the competition compliance text; the mockup remains illustrative, not product evidence |
 
 Any disagreement between a participant-reported label and official terminology remains explicitly unresolved until checked against current official terms. Do not present a proposed label as confirmed.
 
