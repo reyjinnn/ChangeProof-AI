@@ -205,6 +205,133 @@ describe('analyzer produces impacts with provenance and unknowns', () => {
   });
 });
 
+describe('T-03 event-flow impact acceptance', () => {
+  // Synthetic extraction facts, not evidence of native broker execution.
+  const eventGraph = SystemGraphSchema.parse({
+    schemaVersion: '1',
+    snapshot: 'snap-1',
+    nodes: [
+      { id: 'component:orders-publisher', kind: 'component', locator: 'services/orders/publisher.ts', snapshot: 'snap-1' },
+      { id: 'event:OrderCreated', kind: 'event', locator: 'schemas/OrderCreated.v2.json', snapshot: 'snap-1' },
+      { id: 'component:inventory-consumer', kind: 'component', locator: 'services/inventory/subscriber.ts', snapshot: 'snap-1' },
+      { id: 'workflow:reserve-inventory', kind: 'business_workflow', locator: 'workflows/reserve-inventory.json', snapshot: 'snap-1' },
+    ],
+    edges: [
+      {
+        id: 'edge:order-published',
+        kind: 'publishes',
+        from: 'component:orders-publisher',
+        to: 'event:OrderCreated',
+        resolution: 'proven',
+        evidence: { locator: 'services/orders/publisher.ts:24', snapshot: 'snap-1', method: 'publisher-registration' },
+        runtimeObserved: false,
+      },
+      {
+        id: 'edge:inventory-subscription',
+        kind: 'consumes',
+        from: 'component:inventory-consumer',
+        to: 'event:OrderCreated',
+        resolution: 'proven',
+        evidence: { locator: 'services/inventory/subscriber.ts:18', snapshot: 'snap-1', method: 'subscription-registration' },
+        runtimeObserved: false,
+      },
+      {
+        id: 'edge:reservation-workflow',
+        kind: 'depends_on',
+        from: 'workflow:reserve-inventory',
+        to: 'component:inventory-consumer',
+        resolution: 'proven',
+        evidence: { locator: 'workflows/reserve-inventory.json#/consumer', snapshot: 'snap-1', method: 'workflow-contract-reference' },
+        runtimeObserved: false,
+      },
+    ],
+  });
+  const eventChange = change({
+    id: 'event-change',
+    kind: 'event_schema',
+    category: 'event',
+    beforeRef: 'schemas/OrderCreated.v1.json',
+    afterRef: 'schemas/OrderCreated.v2.json',
+    semanticIntent: 'OrderCreated now carries the order amount in minor units.',
+    provenance: [{ snapshot: 'snap-1', locator: 'schemas/OrderCreated.v2.json', method: 'event-schema-diff' }],
+    relatedEntityIds: ['event:OrderCreated'],
+    rawEvidenceRefs: ['runs/r1/events/OrderCreated.diff.json'],
+  });
+
+  it('reaches the publisher, consumer and workflow with edge evidence and inferred impacts', () => {
+    const built = buildSystemGraph({ snapshot: 'snap-1', graph: eventGraph });
+    // Only the changed event is a seed; the publisher and consumer/workflow
+    // must be discovered through publishes, consumes and depends_on edges.
+    const result = analyseImpacts({ graph: built.graph, changes: [eventChange] });
+
+    expect(built.graph.edges).toEqual(eventGraph.edges);
+    expect(built.graph.edges.map((edge) => edge.evidence)).toEqual([
+      { locator: 'services/orders/publisher.ts:24', snapshot: 'snap-1', method: 'publisher-registration' },
+      { locator: 'services/inventory/subscriber.ts:18', snapshot: 'snap-1', method: 'subscription-registration' },
+      { locator: 'workflows/reserve-inventory.json#/consumer', snapshot: 'snap-1', method: 'workflow-contract-reference' },
+    ]);
+    expect(result.impacts.map((impact) => impact.subjectId)).toEqual([
+      'component:inventory-consumer',
+      'component:orders-publisher',
+      'workflow:reserve-inventory',
+    ]);
+    for (const impact of result.impacts) {
+      expect(impact).toMatchObject({
+        changeId: 'event-change',
+        resolution: 'inferred',
+        evidenceRefs: ['runs/r1/events/OrderCreated.diff.json'],
+      });
+    }
+    expect(built.coverageGaps).toEqual([]);
+    expect(result.coverageGaps).toEqual([]);
+
+    // The same schema change can be anchored at its evidenced publisher.
+    // This also exercises the forward publishes step before reaching consumers.
+    const publisherResult = analyseImpacts({
+      graph: built.graph,
+      changes: [{ ...eventChange, relatedEntityIds: ['component:orders-publisher'] }],
+    });
+    expect(publisherResult.impacts.map(({ subjectId, resolution }) => ({ subjectId, resolution }))).toEqual([
+      { subjectId: 'component:inventory-consumer', resolution: 'inferred' },
+      { subjectId: 'event:OrderCreated', resolution: 'inferred' },
+      { subjectId: 'workflow:reserve-inventory', resolution: 'inferred' },
+    ]);
+    expect(publisherResult.coverageGaps).toEqual([]);
+  });
+
+  it('retains an unresolved subscription and its reason as a gap rather than a proven or unaffected consumer', () => {
+    const unresolvedSubscription: GraphEdge = {
+      id: 'edge:inventory-subscription',
+      kind: 'consumes',
+      from: 'component:inventory-consumer',
+      to: 'event:OrderCreated',
+      resolution: 'unresolved',
+      unresolvedReason: 'Subscription topic is computed from tenant configuration.',
+      runtimeObserved: false,
+    };
+    const graph = SystemGraphSchema.parse({
+      ...eventGraph,
+      edges: eventGraph.edges.map((edge) =>
+        edge.id === unresolvedSubscription.id ? unresolvedSubscription : edge,
+      ),
+    });
+    const built = buildSystemGraph({ snapshot: 'snap-1', graph });
+    const result = analyseImpacts({ graph: built.graph, changes: [eventChange] });
+
+    expect(built.coverageGaps).toEqual(['edge:inventory-subscription']);
+    // Graph gaps identify edges; their records retain the explanation.
+    expect(built.graph.edges.filter((edge) => built.coverageGaps.includes(edge.id))).toEqual([
+      unresolvedSubscription,
+    ]);
+    // Analyzer gaps identify subjects. The consumer remains explicitly unknown,
+    // and traversal cannot claim an impact on it or the workflow beyond it.
+    expect(result.coverageGaps).toEqual(['component:inventory-consumer']);
+    expect(result.impacts.map((impact) => impact.subjectId)).toEqual(['component:orders-publisher']);
+    expect(result.impacts[0]?.resolution).toBe('inferred');
+    expect(built.graph.nodes.map((node) => node.id)).toContain('workflow:reserve-inventory');
+  });
+});
+
 describe('graph keeps every resolution class distinguishable', () => {
   it('preserves proven, inferred and unresolved as separate classes', () => {
     const edges: GraphEdge[] = [
