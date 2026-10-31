@@ -2,7 +2,7 @@
 
 **Plan revision:** 2 (24 October 2026)  
 
-**Coordination status last reconciled:** 30 October 2026 (assignment index T-02..T-60 added; see §4)
+**Coordination status last reconciled:** 31 October 2026 (T-03..T-06 completion confirmed; see §4)
 
 **Purpose:** Coordinate work between Reyn and Hoang while preserving the repository's dependency order, verification rules, and honest status reporting.  
 
@@ -39,7 +39,7 @@ The latest recorded status is Phase-2 report revision 2, dated 30 October 2026. 
 |---|---|---|
 | Phase-1: WP3-01 contracts and policy (T1-1/T1-2) | `in_progress` | Complete contract/conformance and semantic audit; final policy purity and precedence review. |
 | Phase-1: WP3-02 toolchain and boundaries (T1-3) | T1-3 `done`; full WP `in_progress` | Full package/run composition acceptance remains. |
-| Phase-1: WP3-03 adapters and registry (T1-4/T1-5) | `in_progress` | The Phase-2 report records five ecosystems after owner-directed JVM removal, while the specification still requires six. Resolve this scope divergence before claiming the adapter matrix complete. |
+| Phase-1: WP3-03 adapters and registry (T1-4/T1-5) | `in_progress` | T-06 resolves scope to five ecosystems and updates the governing documents. Per-tuple L1 acceptance remains before the adapter matrix is complete. |
 | Phase-1: WP3-04 runner and dependency broker (T1-6/T1-7) | `in_progress`; T1-7 preparation `done` | Runner evidence is `container_only`, not qualified VM/microVM-equivalent isolation. Native dependency acquisition and build-sandbox proof remain missing. |
 | Phase-1: WP3-05 detector, analyzer, and graph (T1-8) | `in_progress` | Some normalization coverage exists across API/data/event/dependency/config. The full acceptance matrix is not complete; preserve `proven`, `inferred`, and `unresolved`. |
 | Phase-2: WP3-15/16/17 (T2-1/T2-2/T2-3) | Preparation `done`; full WPs `in_progress` | Full acceptance depends on incomplete predecessors and required native proof. |
@@ -63,13 +63,13 @@ Every phase task has exactly one named owner. Owners alternate deliberately (Rey
 | — | T1-3 / WP3-02 | Toolchain and boundaries | — | `done` (allocated task) | Full WP3-02 stays `in_progress` (package/run composition acceptance). |
 | — | T1-7 / WP3-04 | Dependency broker preparation | — | `done` (allocated task) | Full WP3-04 stays `in_progress` (native acquisition/build-sandbox proof missing). |
 | T-02 | T1-8 / WP3-05 | Acceptance-matrix audit and scope lock | **Reyn** | `done` | Recorded below; Reyn owns any scope change. |
-| T-03 | T1-8 / WP3-05 | Event-flow acceptance tests | **Hoang** | `not_started` | Ready; bounded scope recorded by T-02. |
-| T-04 | T1-1 / WP3-01 | Contracts: complete conformance matrix + semantic audit | **Reyn** | `in_progress` | Ready; existing coverage in `tests/contracts/`. |
-| T-05 | T1-2 / WP3-01 | Policy: final purity/boundary review + precedence audit | **Hoang** | `in_progress` | Ready; policy semantic changes need Reyn approval. |
-| T-06 | T1-4 / WP3-03 | Registry: resolve six-vs-five ecosystem scope divergence | **Reyn** | `in_progress` | Scope decision required (owner-directed JVM removal vs six-ecosystem specification) before the matrix can be called complete. |
-| T-07 | T1-5 / WP3-03 | Adapter L1 remainder: Kotlin/JVM resolution + per-tuple matrix | **Hoang** | `blocked` | `kotlinc` uninstallable in current environment; also waits on the T-06 scope decision. |
+| T-03 | T1-8 / WP3-05 | Event-flow acceptance tests | **Hoang** | `done` | Positive/negative event-flow tests are recorded in `tests/graph/detector-analyzer-graph.test.ts`; T-09 is now ready. |
+| T-04 | T1-1 / WP3-01 | Contracts: complete conformance matrix + semantic audit | **Reyn** | `done` | Completion confirmed; matrix/tests are in `tests/contracts/`. |
+| T-05 | T1-2 / WP3-01 | Policy: final purity/boundary review + precedence audit | **Hoang** | `done` | Completion confirmed; precedence coverage is in `tests/policy/precedence.test.ts`. |
+| T-06 | T1-4 / WP3-03 | Registry: resolve six-vs-five ecosystem scope divergence | **Reyn** | `done` | Five-ecosystem decision and governing-document updates are recorded in `docs/decisions/phase1-ecosystem-scope-resolution.md`. |
+| T-07 | T1-5 / WP3-03 | Adapter L1 remainder: per-tuple matrix for the decided scope | **Hoang** | `not_started` | T-06 resolved scope to five ecosystems; Kotlin/JVM is out of scope. Per-tuple L1 acceptance remains. |
 | T-08 | T1-6 / WP3-04 | Runner: qualified VM/microVM-equivalent isolation proof | **Reyn** | `blocked` | Container-only evidence; no Hyper-V on current host; `scripts/runner-security-probes.mjs` missing. |
-| T-09 | T1-8 / WP3-05 | Graph acceptance-matrix remainder after T-03 | **Hoang** | `not_started` | Starts only after T-03 review; scope confirmed per row of the T-02 matrix. |
+| T-09 | T1-8 / WP3-05 | Graph acceptance-matrix remainder after T-03 | **Hoang** | `not_started` | Ready; T-03 event-flow tests are complete and remaining rows are scoped by the T-02 matrix. |
 | T-10 | T2-1 / WP3-15 | Observability full acceptance | **Reyn** | `in_progress` | Preparation `done`; needs WP3-02/04/05 completion + native proof. |
 | T-11 | T2-2 / WP3-16 | Verifier campaign full acceptance | **Hoang** | `in_progress` | Preparation `done`; same predecessor and native-proof requirements. |
 | T-12 | T2-3 / WP3-17 | Measurement reducers full acceptance | **Reyn** | `in_progress` | Preparation `done`; same predecessor and native-proof requirements. |
@@ -131,7 +131,7 @@ Both assignments below sit under T1-8 / WP3-05. T-03 depends on T-02. Neither as
 | Assignment | Owner | Parent task / WP | Status | Prerequisite / handoff |
 |---|---|---|---|---|
 | **T-02: WP3-05 acceptance-matrix audit and scope lock** | **Reyn** | T1-8 / WP3-05 | `done` | The current graph-test audit is recorded below. Reyn owns any scope change before Hoang starts. |
-| **T-03: WP3-05 event-flow acceptance tests** | **Hoang** | T1-8 / WP3-05 | `not_started` | T-02 has recorded the event-flow gap and bounded scope. Do not assume event coverage is absent; existing tests already cover event-schema normalization. |
+| **T-03: WP3-05 event-flow acceptance tests** | **Hoang** | T1-8 / WP3-05 | `done` | Positive and negative event-flow acceptance tests are present in `tests/graph/detector-analyzer-graph.test.ts`; full WP3-05 remains `in_progress`. |
 
 ### T-02: Reyn
 
@@ -158,7 +158,7 @@ Acceptance-matrix audit:
 | Dependency | `tests/graph/detector-analyzer-graph.test.ts`: dependency normalization and impact propagation through `depends_on`. | Broader extraction cases remain outside this event-flow task. | No |
 | Config | `tests/graph/detector-analyzer-graph.test.ts`: configuration normalization. | No config/deployment requirement edge or impact path is demonstrated by the graph test matrix. | No |
 
-Shared graph negatives already cover unresolved/proven/inferred distinctions, dangling endpoints, and unknowns retained as coverage gaps. T-03 must add the missing event-flow path without duplicating those general cases.
+Shared graph negatives cover unresolved/proven/inferred distinctions, dangling endpoints, and unknowns retained as coverage gaps. T-03 adds the missing event-flow path without duplicating those general cases.
 
 ### T-03: Hoang
 
@@ -170,8 +170,8 @@ Outcome: Positive and negative event-flow acceptance tests for the exact gaps co
 Prerequisites: T-02 matrix is recorded; task-level inputs for the affected adapter/graph path. Incomplete full WPs do not become complete through this split.
 Allowed source/config changes: tests/graph/detector-analyzer-graph.test.ts; corresponding detector/analyzer/graph implementation only when required by a failing test. No policy/oracle/threshold changes.
 Acceptance checks: Tests first. Positive case: an event-schema change traverses publisher -> publishes -> event -> consumes -> consumer/workflow with edge evidence locators; resulting analyzer impacts remain `inferred`. Negative case: an unresolved consumer subscription remains a coverage gap with its reason and is not reported as unaffected or as a proven impact. Run pnpm test:graph, pnpm typecheck, pnpm lint, and pnpm test after source changes; record commands and exit codes. Synthetic tests are not native/runtime proof.
-Status: not_started
-Next: Open a reviewable PR with the task header, diff, test results, and remaining gaps. Reyn reviews before integration.
+Status: done
+Next: T-09 is ready to address the remaining data/config acceptance-matrix rows. Full WP3-05 remains in progress.
 ```
 
 ### T-04: Reyn
@@ -184,8 +184,8 @@ Outcome: The contract/conformance matrix is complete and audited: every versione
 Prerequisite evidence: Phase-1 report T1-1 row — versioned Zod schemas, semantic validation, and negative tests already exist under tests/contracts/; complete matrix and final review remain.
 Allowed source/config changes: src/core/contracts and tests/contracts only. Any contract semantic change requires a schema version bump and a decision record in docs/decisions/. No policy, oracle, threshold, or specification changes.
 Acceptance checks: Failure-path tests first for each uncovered conformance row. Each matrix row maps to an existing or new test reference — no row is closed on inspection alone. Run pnpm typecheck, pnpm lint, pnpm test after changes; record commands and exit codes.
-Status: not_started
-Next: Open a reviewable PR with the task header, the completed matrix, and test results. Hoang peer-reviews; Reyn integrates.
+Status: done
+Next: T-04 completion is recorded; full WP3-01 remains in progress until all original acceptance criteria are met.
 ```
 
 ### T-05: Hoang
@@ -198,8 +198,8 @@ Outcome: Final policy purity and precedence review is recorded: policy stays pur
 Prerequisite evidence: Phase-1 report T1-2 row — deterministic target/bundle reducer with precedence tests exists under tests/policy/; final purity/boundary review and policy contract audit remain.
 Allowed source/config changes: src/modules/policy and tests/policy only. No verdict-rule changes without Reyn's approval and a decision record; adding an adapter/framework must not change verdict rules.
 Acceptance checks: Failure-path tests first. Run pnpm typecheck, pnpm lint, pnpm test, and the boundary check after changes; record commands and exit codes.
-Status: not_started
-Next: Open a reviewable PR with the task header, audit notes, and test results. Reyn reviews policy semantics before integration.
+Status: done
+Next: T-05 completion is recorded; full WP3-01 remains in progress until all original acceptance criteria are met.
 ```
 
 ### T-06: Reyn
@@ -208,12 +208,12 @@ Next: Open a reviewable PR with the task header, audit notes, and test results. 
 Task ID / parent WP: T-06 / T1-4 / WP3-03
 Owner: Reyn
 Requirement IDs: FR3-01/02; NEG3-02/09
-Outcome: The six-versus-five ecosystem scope divergence is resolved one way or the other: either the specification documents are updated to match the owner-directed JVM removal (all four documents, per the conflict rule), or the JVM ecosystem is reinstated and T-07 is unblocked. The decision is recorded in docs/decisions/ and the registry/capability tuples match the decision.
+Outcome: The six-versus-five ecosystem scope divergence is resolved in favor of five ecosystems; all four governing documents and registry/capability tuples match the owner-directed JVM removal. The decision is recorded in `docs/decisions/phase1-ecosystem-scope-resolution.md`.
 Prerequisite evidence: docs/decisions/phase1-jvm-removal.md (owner-directed removal); Phase-2 report recording five ecosystems against the six-ecosystem specification target; tests/adapters/registry.test.ts.
 Allowed source/config changes: decision record + governing document updates; src/modules/adapters/registry only if the decision reinstates or removes tuples. New records start with provenLevel = none regardless of the decision.
 Acceptance checks: The recorded decision, the documents, and the registered tuples agree. Run pnpm test:adapters, pnpm typecheck, pnpm lint after any registry change; record commands and exit codes.
-Status: not_started
-Next: Record the decision, then hand the resulting adapter scope to T-07.
+Status: done
+Next: T-07 may proceed against the five-ecosystem scope recorded in the decision; no JVM/Kotlin case is required.
 ```
 
 ### T-07: Hoang
@@ -223,11 +223,11 @@ Task ID / parent WP: T-07 / T1-5 / WP3-03
 Owner: Hoang
 Requirement IDs: FR3-01/02; NEG3-02/09
 Outcome: Per-tuple L1 acceptance is complete for every ecosystem in the scope decided by T-06: at least one positive extraction and one negative/unsupported case per (ecosystem, framework, version, feature) tuple on a pinned version, including the unresolved Kotlin/JVM case or its recorded removal.
-Prerequisite evidence: Phase-1 report T1-5 row — native positive/negative tests pass for TypeScript, Python, Java, PHP, Go (go1.27.3) and .NET (SDK 10.0.403); Kotlin blocked (kotlinc uninstallable). T-06 scope decision recorded.
+Prerequisite evidence: Phase-1 report T1-5 row — native positive/negative tests pass for TypeScript, Python, Java, PHP, Go (go1.27.3) and .NET (SDK 10.0.403). The historical Kotlin toolchain blocker is no longer applicable: T-06 removed JVM/Kotlin from scope.
 Allowed source/config changes: src/modules/adapters/* and tests/adapters/* only. No provenLevel promotion without evidence; unsupported cases must not return a generic verified.
 Acceptance checks: Failure-path tests first; native toolchain checks run where the toolchain exists and are reported separately from mock/replay results. Run pnpm test:adapters, pnpm typecheck, pnpm lint, pnpm test after changes; record commands and exit codes. A missing toolchain is a recorded blocker, not a skipped check.
-Status: blocked (waits on T-06 scope decision and kotlinc availability)
-Next: Once T-06 is recorded and the toolchain question is resolved, open a reviewable PR with the task header and per-tuple matrix. Reyn reviews before integration.
+Status: not_started
+Next: Start per-tuple L1 acceptance for the five ecosystems and report native results separately; no Kotlin/JVM toolchain is required.
 ```
 
 ### T-08: Reyn
@@ -254,7 +254,7 @@ Outcome: The remaining rows of the T-02 acceptance matrix are closed: data (tabl
 Prerequisite evidence: T-02 acceptance matrix recorded above; T-03 reviewed and integrated; existing tests/graph/detector-analyzer-graph.test.ts coverage.
 Allowed source/config changes: tests/graph/* and the corresponding detector/analyzer/graph implementation only when a failing test demonstrates the need. No policy/oracle/threshold changes.
 Acceptance checks: Tests first, positive and negative per matrix row. Run pnpm test:graph, pnpm typecheck, pnpm lint, pnpm test after changes; record commands and exit codes. Synthetic tests are not native/runtime proof.
-Status: not_started (starts after T-03 review; scope confirmed per matrix row)
+Status: not_started (ready; T-03 event-flow acceptance is complete)
 Next: Open a reviewable PR with the task header, matrix rows closed, and test results. Reyn reviews before integration.
 ```
 
@@ -266,7 +266,7 @@ All remaining work now has a named owner in the assignment index above. The inde
 
 - Maintain the task board/status table in this file or an agreed tracker, including owner, status, prerequisite evidence, and next action.
 - Own specification traceability and decisions that change contracts, policy semantics, threat boundaries, support claims, or proof scope. Record approved technical decisions in `docs/decisions/` and update governing documents when required.
-- Coordinate the unresolved six-versus-five ecosystem scope, qualified guest runner, native dependency-resolution/build-sandbox environment, and Phase-2 service blockers. Record the specific access or decision needed; do not substitute simulations.
+- Coordinate the resolved five-ecosystem scope, qualified guest runner, native dependency-resolution/build-sandbox environment, and Phase-2 service blockers. Record the specific access or decision needed; do not substitute simulations.
 - Review Hoang's task header, diff, failure-path tests, boundary impact, and evidence before integration.
 - Run or coordinate final integration checks and update the applicable phase report only after actual execution. Keep allocated task status distinct from full-WP status.
 
@@ -330,12 +330,12 @@ pnpm test:identity:native
 
 ## 7. Immediate next actions
 
-1. Reyn shares the recorded T-03 assignment and acceptance matrix with Hoang.
-2. Hoang implements/tests the event-flow subset and opens a PR for review.
-3. After the T-03 review, owners pick up their Phase-1 remainder assignments (T-04 Reyn, T-05 Hoang, T-06 Reyn, T-09 Hoang — T-07/T-08 stay `blocked` on their recorded blockers) in dependency order, each opened with a §5 task header. `tentative` tasks in the index do not start without Reyn confirming scope and prerequisites.
-4. Keep the affected full WP3-05 and both phases `in_progress` unless their complete acceptance criteria are independently proven.
+1. T-03 through T-06 are recorded `done`; T-03 event-flow tests, T-04 contract matrix, T-05 policy audit, and the T-06 five-ecosystem decision have corresponding repository evidence.
+2. T-09 is ready for the remaining WP3-05 data/config acceptance-matrix rows. T-07 is ready for per-tuple L1 acceptance across the five ecosystems; JVM/Kotlin is out of scope per T-06.
+3. Keep full WP3-01, WP3-03, WP3-05 and both phases `in_progress` until their complete acceptance criteria are independently proven. T-08 remains `blocked` on qualified guest isolation.
+4. `tentative` tasks do not start without Reyn confirming scope and prerequisites. Record actual commands, exit codes, mock/native distinction, blockers, and the next dependency-ready task.
 5. Track Phase-2 blockers separately. T2-5 RLS (T-14, Reyn) is the next documented native candidate and should only be resumed if the Docker container-start issue can be addressed safely; do not treat preparation tests as native proof.
-6. After each task, record actual commands, exit codes, mock/native distinction, blockers, and the next dependency-ready task. Do not set a daily task or phase quota or start the next phase automatically.
+6. Do not set a daily task or phase quota or start the next phase automatically.
 
 ## 8. Source-of-truth references
 
@@ -345,7 +345,7 @@ pnpm test:identity:native
 - [`docs/phase-reports/phase-1.md`](docs/phase-reports/phase-1.md): recorded phase-1 results and remaining gaps.
 - [`phases/phase-2.md`](phases/phase-2.md): phase-2 scope, task breakdown, prerequisites, and acceptance checks.
 - [`docs/phase-reports/phase-2.md`](docs/phase-reports/phase-2.md): latest recorded preparation work, verification, and blockers.
-- [`docs/decisions/phase1-jvm-removal.md`](docs/decisions/phase1-jvm-removal.md): owner-directed JVM removal and unresolved mismatch with the six-ecosystem specification target.
+- [`docs/decisions/phase1-jvm-removal.md`](docs/decisions/phase1-jvm-removal.md): initial owner-directed JVM removal, superseded for the spec mismatch by [`docs/decisions/phase1-ecosystem-scope-resolution.md`](docs/decisions/phase1-ecosystem-scope-resolution.md).
 - [`.prepare/BRD.md`](.prepare/BRD.md), [`.prepare/PRD.md`](.prepare/PRD.md), [`.prepare/MVP.md`](.prepare/MVP.md), [`.prepare/architecture.md`](.prepare/architecture.md): normative product and architecture specifications.
 
 When documents conflict, do not guess. Reyn resolves the conflict and records the decision before work depending on it proceeds.
