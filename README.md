@@ -244,13 +244,7 @@ pnpm test           # run the test suite once
 pnpm test:watch     # rerun tests as files change
 ```
 
-To run the native runner security probes, install and start Docker Desktop first, then run:
-
-```powershell
-pnpm test:runner-security:native
-```
-
-That command exercises runner security probes; it does not launch the product UI or qualify a VM/microVM boundary.
+Native runner security probes run on a Modal Sandbox via `pnpm test:runner-security:native` (needs `MODAL_TOKEN_ID` / `MODAL_TOKEN_SECRET`; `--dry-run` spends nothing and proves wiring only). Until the probes run with receipts on Modal and a new boundary decision is recorded, qualification stays blocked (see `docs/decisions/phase1-runner-qualification-blocked.md`) — never a pass, and container-only evidence does not qualify a VM/microVM boundary.
 
 ### Open the project in VS Code
 
@@ -303,7 +297,6 @@ Actual scripts from `package.json`:
 | Impact graph | `pnpm test:graph` | `tests/graph` |
 | Dependency capabilities | `pnpm test:dependencies` | `tests/dependencies` |
 | Security | `pnpm test:security` | `tests/security` |
-| Native runner probes | `pnpm test:runner-security:native` | `node scripts/runner-security-probes.mjs` |
 | Full verification | `pnpm verify` | `typecheck && lint && test` |
 | Cleanup | `pnpm clean` | removes `dist/` |
 

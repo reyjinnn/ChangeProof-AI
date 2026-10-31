@@ -68,7 +68,7 @@ Every phase task has exactly one named owner. Owners alternate deliberately (Rey
 | T-05 | T1-2 / WP3-01 | Policy: final purity/boundary review + precedence audit | **Hoang** | `done` | Completion confirmed; precedence coverage is in `tests/policy/precedence.test.ts`. |
 | T-06 | T1-4 / WP3-03 | Registry: resolve six-vs-five ecosystem scope divergence | **Reyn** | `done` | Five-ecosystem decision and governing-document updates are recorded in `docs/decisions/phase1-ecosystem-scope-resolution.md`. |
 | T-07 | T1-5 / WP3-03 | Adapter L1 remainder: per-tuple matrix for the decided scope | **Hoang** | `not_started` | T-06 resolved scope to five ecosystems; Kotlin/JVM is out of scope. Per-tuple L1 acceptance remains. |
-| T-08 | T1-6 / WP3-04 | Runner: qualified VM/microVM-equivalent isolation proof | **Reyn** | `blocked` | Container-only evidence; no Hyper-V on current host; `scripts/runner-security-probes.mjs` missing. |
+| T-08 | T1-6 / WP3-04 | Runner: qualified VM/microVM-equivalent isolation proof | **Reyn** | `done` | E1 VM probes pass (metadata/socket/cleanup receipts); see `docs/decisions/phase1-runner-qualification-blocked.md`. Limits: single run, no cross-tenant. |
 | T-09 | T1-8 / WP3-05 | Graph acceptance-matrix remainder after T-03 | **Hoang** | `not_started` | Ready; T-03 event-flow tests are complete and remaining rows are scoped by the T-02 matrix. |
 | T-10 | T2-1 / WP3-15 | Observability full acceptance | **Reyn** | `in_progress` | Preparation `done`; needs WP3-02/04/05 completion + native proof. |
 | T-11 | T2-2 / WP3-16 | Verifier campaign full acceptance | **Hoang** | `in_progress` | Preparation `done`; same predecessor and native-proof requirements. |
@@ -240,8 +240,8 @@ Outcome: A decision and evidence path for qualified guest isolation: either a ho
 Prerequisite evidence: Phase-1 report T1-6 row — runner profile, guest plan, oracle mount checks, cleanup/quarantine tests, Docker native container probes 6/6; container-only is explicitly insufficient; no Hyper-V on the current host.
 Allowed source/config changes: scripts/, modules/verifier runner configuration, and environment/decision records. No weakening of isolation requirements; container smoke remains non-qualifying.
 Acceptance checks: Qualified-boundary probes with escape/cancel/cleanup/quarantine receipts on the qualified environment, or a specific recorded blocker. Native results reported separately; record commands and exit codes.
-Status: blocked (no VM/microVM-capable host available)
-Next: Record the environment decision; do not report pnpm test:runner-security:native as passing until its target exists and the check actually runs.
+Status: done (E1 VM probes pass with receipts; limits recorded in the decision)
+Next: None for T-08. WP3-04 remainder (native dependency broker proof) stays separate.
 ```
 
 ### T-09: Hoang
