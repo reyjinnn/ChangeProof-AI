@@ -332,6 +332,178 @@ describe('T-03 event-flow impact acceptance', () => {
   });
 });
 
+describe('T-09 data-schema impact acceptance', () => {
+  // Synthetic extraction facts; no database or migration is executed.
+  const dataGraph = SystemGraphSchema.parse({
+    schemaVersion: '1',
+    snapshot: 'snap-1',
+    nodes: [
+      { id: 'db_table:orders', kind: 'db_table', locator: 'schema/orders.v2.sql:1', snapshot: 'snap-1' },
+      { id: 'db_column:orders.total_cents', kind: 'db_column', locator: 'schema/orders.v2.sql:4', snapshot: 'snap-1' },
+      { id: 'symbol:orders.loadTotal', kind: 'symbol', locator: 'services/orders/read.ts:12', snapshot: 'snap-1' },
+      { id: 'symbol:orders.saveTotal', kind: 'symbol', locator: 'services/orders/write.ts:20', snapshot: 'snap-1' },
+      { id: 'workflow:checkout', kind: 'business_workflow', locator: 'workflows/checkout.json', snapshot: 'snap-1' },
+    ],
+    edges: [
+      {
+        id: 'edge:orders-total-column', kind: 'depends_on',
+        from: 'db_table:orders', to: 'db_column:orders.total_cents', resolution: 'proven',
+        evidence: { locator: 'schema/orders.v2.sql:4', snapshot: 'snap-1', method: 'ddl-column-definition' },
+        runtimeObserved: false,
+      },
+      {
+        id: 'edge:read-order-total', kind: 'reads',
+        from: 'symbol:orders.loadTotal', to: 'db_column:orders.total_cents', resolution: 'proven',
+        evidence: { locator: 'services/orders/read.ts:12', snapshot: 'snap-1', method: 'sql-column-reference' },
+        runtimeObserved: false,
+      },
+      {
+        id: 'edge:write-orders', kind: 'writes',
+        from: 'symbol:orders.saveTotal', to: 'db_table:orders', resolution: 'proven',
+        evidence: { locator: 'services/orders/write.ts:20', snapshot: 'snap-1', method: 'sql-table-reference' },
+        runtimeObserved: false,
+      },
+      {
+        id: 'edge:checkout-total', kind: 'depends_on',
+        from: 'workflow:checkout', to: 'symbol:orders.loadTotal', resolution: 'proven',
+        evidence: { locator: 'workflows/checkout.json#/total', snapshot: 'snap-1', method: 'workflow-contract-reference' },
+        runtimeObserved: false,
+      },
+    ],
+  });
+  const dataChange = change({
+    id: 'data-change', kind: 'data_schema', category: 'schema',
+    beforeRef: 'schema/orders.v1.sql:4', afterRef: 'schema/orders.v2.sql:4',
+    semanticIntent: 'Order totals now use a wider integer column.',
+    provenance: [{ snapshot: 'snap-1', locator: 'schema/orders.v2.sql:4', method: 'ddl-schema-diff' }],
+    relatedEntityIds: ['db_column:orders.total_cents'],
+    rawEvidenceRefs: ['runs/r1/data/orders.diff.json'],
+  });
+
+  it('reaches the table, reader, writer and workflow from the changed column with preserved evidence', () => {
+    const detected = detectChanges({ snapshot: 'snap-1', changes: [dataChange] });
+    const built = buildSystemGraph({ snapshot: 'snap-1', graph: dataGraph });
+    const result = analyseImpacts({ graph: built.graph, changes: [...detected.changes] });
+
+    expect(detected.changes).toEqual([dataChange]);
+    expect(built.graph.nodes).toEqual(dataGraph.nodes);
+    expect(built.graph.edges).toEqual(dataGraph.edges);
+    expect(result.impacts.map((impact) => impact.subjectId)).toEqual([
+      'db_table:orders', 'symbol:orders.loadTotal', 'symbol:orders.saveTotal', 'workflow:checkout',
+    ]);
+    for (const impact of result.impacts) {
+      expect(impact).toMatchObject({
+        changeId: 'data-change', resolution: 'inferred', evidenceRefs: ['runs/r1/data/orders.diff.json'],
+      });
+    }
+    expect(built.coverageGaps).toEqual([]);
+    expect(result.coverageGaps).toEqual([]);
+  });
+
+  it('retains an unresolved column reader as an explained gap and does not infer its downstream workflow', () => {
+    const unresolvedRead: GraphEdge = {
+      id: 'edge:read-order-total', kind: 'reads',
+      from: 'symbol:orders.loadTotal', to: 'db_column:orders.total_cents', resolution: 'unresolved',
+      unresolvedReason: 'Column selection is computed at services/orders/read.ts:12.',
+      runtimeObserved: false,
+    };
+    const graph = SystemGraphSchema.parse({
+      ...dataGraph,
+      edges: dataGraph.edges.map((edge) => edge.id === unresolvedRead.id ? unresolvedRead : edge),
+    });
+    const detected = detectChanges({ snapshot: 'snap-1', changes: [dataChange] });
+    const built = buildSystemGraph({ snapshot: 'snap-1', graph });
+    const result = analyseImpacts({ graph: built.graph, changes: [...detected.changes] });
+
+    expect(built.coverageGaps).toEqual(['edge:read-order-total']);
+    expect(built.graph.edges.filter((edge) => built.coverageGaps.includes(edge.id))).toEqual([unresolvedRead]);
+    expect(built.graph.edges.find((edge) => edge.id === unresolvedRead.id)?.evidence).toBeUndefined();
+    expect(built.graph.nodes.find((node) => node.id === unresolvedRead.from)).toMatchObject({
+      locator: 'services/orders/read.ts:12', snapshot: 'snap-1',
+    });
+    expect(result.coverageGaps).toEqual(['symbol:orders.loadTotal']);
+    expect(result.impacts.map((impact) => impact.subjectId)).toEqual(['db_table:orders', 'symbol:orders.saveTotal']);
+    expect(result.impacts.every((impact) => impact.resolution === 'inferred')).toBe(true);
+    expect(built.graph.nodes.map((node) => node.id)).toContain('workflow:checkout');
+  });
+});
+
+describe('T-09 deployment/configuration impact acceptance', () => {
+  // Synthetic manifest relationships, not execution of a deployment.
+  const configGraph = SystemGraphSchema.parse({
+    schemaVersion: '1',
+    snapshot: 'snap-1',
+    nodes: [
+      { id: 'config:orders-database-url', kind: 'config', locator: 'deploy/orders.v2.yaml#/env/DATABASE_URL', snapshot: 'snap-1' },
+      { id: 'component:orders-api', kind: 'component', locator: 'services/orders', snapshot: 'snap-1' },
+      { id: 'workflow:checkout', kind: 'business_workflow', locator: 'workflows/checkout.json', snapshot: 'snap-1' },
+    ],
+    edges: [
+      {
+        id: 'edge:orders-database-requirement', kind: 'deployment_requires',
+        from: 'component:orders-api', to: 'config:orders-database-url', resolution: 'proven',
+        evidence: { locator: 'deploy/orders.v2.yaml#/env/DATABASE_URL', snapshot: 'snap-1', method: 'deployment-env-reference' },
+        runtimeObserved: false,
+      },
+      {
+        id: 'edge:checkout-orders-api', kind: 'depends_on',
+        from: 'workflow:checkout', to: 'component:orders-api', resolution: 'proven',
+        evidence: { locator: 'workflows/checkout.json#/orders', snapshot: 'snap-1', method: 'workflow-contract-reference' },
+        runtimeObserved: false,
+      },
+    ],
+  });
+  const configChange = change({
+    id: 'config-change', kind: 'configuration', category: 'config',
+    beforeRef: 'deploy/orders.v1.yaml#/env/DATABASE_URL', afterRef: 'deploy/orders.v2.yaml#/env/DATABASE_URL',
+    semanticIntent: 'The orders deployment switches to a new database endpoint.',
+    provenance: [{ snapshot: 'snap-1', locator: 'deploy/orders.v2.yaml#/env/DATABASE_URL', method: 'deployment-config-diff' }],
+    relatedEntityIds: ['config:orders-database-url'],
+    rawEvidenceRefs: ['runs/r1/config/orders.diff.json'],
+  });
+
+  it('follows deployment_requires from the changed config to its component and workflow with inferred impacts', () => {
+    const detected = detectChanges({ snapshot: 'snap-1', changes: [configChange] });
+    const built = buildSystemGraph({ snapshot: 'snap-1', graph: configGraph });
+    const result = analyseImpacts({ graph: built.graph, changes: [...detected.changes] });
+
+    expect(detected.changes).toEqual([configChange]);
+    expect(built.graph.nodes).toEqual(configGraph.nodes);
+    expect(built.graph.edges).toEqual(configGraph.edges);
+    expect(result.impacts.map((impact) => impact.subjectId)).toEqual(['component:orders-api', 'workflow:checkout']);
+    for (const impact of result.impacts) {
+      expect(impact).toMatchObject({
+        changeId: 'config-change', resolution: 'inferred', evidenceRefs: ['runs/r1/config/orders.diff.json'],
+      });
+    }
+    expect(built.coverageGaps).toEqual([]);
+    expect(result.coverageGaps).toEqual([]);
+  });
+
+  it('retains an unresolved deployment requirement without treating the component or workflow as unaffected', () => {
+    const unresolvedRequirement: GraphEdge = {
+      id: 'edge:orders-database-requirement', kind: 'deployment_requires',
+      from: 'component:orders-api', to: 'config:orders-database-url', resolution: 'unresolved',
+      unresolvedReason: 'The database binding uses runtime secret references in deploy/orders.v2.yaml.',
+      runtimeObserved: false,
+    };
+    const graph = SystemGraphSchema.parse({
+      ...configGraph,
+      edges: configGraph.edges.map((edge) => edge.id === unresolvedRequirement.id ? unresolvedRequirement : edge),
+    });
+    const detected = detectChanges({ snapshot: 'snap-1', changes: [configChange] });
+    const built = buildSystemGraph({ snapshot: 'snap-1', graph });
+    const result = analyseImpacts({ graph: built.graph, changes: [...detected.changes] });
+
+    expect(built.coverageGaps).toEqual(['edge:orders-database-requirement']);
+    expect(built.graph.edges.filter((edge) => built.coverageGaps.includes(edge.id))).toEqual([unresolvedRequirement]);
+    expect(built.graph.edges.find((edge) => edge.id === unresolvedRequirement.id)?.evidence).toBeUndefined();
+    expect(result.coverageGaps).toEqual(['component:orders-api']);
+    expect(result.impacts).toEqual([]);
+    expect(built.graph.nodes).toEqual(configGraph.nodes);
+  });
+});
+
 describe('graph keeps every resolution class distinguishable', () => {
   it('preserves proven, inferred and unresolved as separate classes', () => {
     const edges: GraphEdge[] = [
