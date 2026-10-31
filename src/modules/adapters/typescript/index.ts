@@ -4,18 +4,20 @@ import { join, relative } from 'node:path';
 import type * as Ts from 'typescript';
 
 import {
+  CapabilityRecordSchema,
   SystemGraphSchema,
   type CapabilityKey,
   type CapabilityRecord,
   type GraphEdge,
   type GraphNode,
 } from '../../../core/index.js';
+import { AdapterRegistry } from '../registry/index.js';
 import { snapshotId, type AdapterDefinition, type AdapterExtractInput, type AdapterExtractResult } from '../types.js';
 
 /**
  * TypeScript adapter (L1: discovery and extraction).
  *
- * Uses the TypeScript compiler API that ships with the pinned Node toolchain, so
+ * Uses the trusted, pinned TypeScript compiler API, so
  * the extraction is done by the real parser rather than by a text heuristic.
  *
  * Two properties are deliberate:
@@ -27,7 +29,7 @@ import { snapshotId, type AdapterDefinition, type AdapterExtractInput, type Adap
  *    a fact (FR3-04).
  */
 
-export const TYPESCRIPT_ADAPTER_VERSION = '1.0.0';
+export const TYPESCRIPT_ADAPTER_VERSION = '1.0.1';
 
 export const TYPESCRIPT_KEY: CapabilityKey = {
   ecosystem: 'typescript',
@@ -54,6 +56,8 @@ export const TYPESCRIPT_ADAPTER_RECORD: CapabilityRecord = {
   ],
   toolchainIdentities: {},
 };
+
+const registeredCapabilities = new AdapterRegistry([TYPESCRIPT_ADAPTER_RECORD]);
 
 interface ReferenceFact {
   readonly fromFile: string;
@@ -82,6 +86,21 @@ export const TYPESCRIPT_ADAPTER: AdapterDefinition = {
   async extract(input: AdapterExtractInput): Promise<AdapterExtractResult> {
     const snapshot = snapshotId(input.root, input.version);
     const ts = (await import('typescript'));
+
+    const capability = CapabilityRecordSchema.safeParse(input.capability);
+    if (!capability.success || registeredCapabilities.get(capability.data.key) === null) {
+      const reason = capability.success
+        ? `Unregistered TypeScript capability tuple: ${JSON.stringify(capability.data.key)}`
+        : 'Invalid TypeScript capability record: expected CapabilityRecord v2 for a registered tuple.';
+      return {
+        status: 'unsupported',
+        graph: emptyGraph(snapshot),
+        unknowns: [reason],
+        unsupportedSurfaces: [reason],
+        diagnostics: [],
+        toolchainIdentity: `typescript@${ts.version}`,
+      };
+    }
 
     const nodes = new Map<string, GraphNode>();
     const edges: GraphEdge[] = [];
@@ -273,7 +292,9 @@ export const TYPESCRIPT_ADAPTER: AdapterDefinition = {
       const exported = knownExports.get(targetModule);
       const resolved = exported?.has(fact.imported) ?? false;
 
-      if (exported !== undefined && !nodes.has(targetId)) {
+      // Preserve the observed import reference even when its definition is
+      // outside this snapshot. Its edge remains explicitly unresolved below.
+      if (!nodes.has(targetId)) {
         nodes.set(targetId, {
           id: targetId,
           kind: 'symbol',
