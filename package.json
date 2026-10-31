@@ -26,8 +26,8 @@
     "test:negative": "vitest run tests/negative",
     "test:dependencies": "vitest run tests/dependencies",
     "test:security": "vitest run tests/security",
-    "test:runner-security:native": "node scripts/runner-security-probes.mjs",
     "test:identity:native": "vitest run tests/native/identity-rls.test.ts",
+    "test:runner-security:native": "node scripts/runner-security-probes.mjs",
     "verify": "pnpm typecheck && pnpm lint && pnpm test"
   },
   "dependencies": {
