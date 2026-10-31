@@ -47,6 +47,38 @@ export interface TargetFacts {
   readonly hasProgress: boolean;
 }
 
+// Keep runtime admission aligned with the existing fact interface. Extra fields
+// must not silently turn an averaging, voting or model payload into policy facts.
+const TARGET_FACT_FIELDS = {
+  subject: true,
+  runState: true,
+  evidenceValidity: true,
+  oracleMatchesFrozen: true,
+  regressionAttributed: true,
+  exactPatchApplied: true,
+  protectedProofComplete: true,
+  intentPreserved: true,
+  scopeFrozen: true,
+  guardPassed: true,
+  identitiesFresh: true,
+  requiredDimensions: true,
+  unresolvedRequiredEdges: true,
+  skippedRequiredChecks: true,
+  coverageSufficient: true,
+  hasProgress: true,
+} as const satisfies Record<keyof TargetFacts, true>;
+
+function assertSupportedFactFields(
+  facts: object,
+  fields: Readonly<Record<string, true>>,
+  subject: 'target' | 'bundle',
+): void {
+  const unsupported = Object.keys(facts).filter((field) => !Object.hasOwn(fields, field)).sort();
+  if (unsupported.length > 0) {
+    throw new TypeError(`Unsupported ${subject} policy fact fields: ${unsupported.join(', ')}`);
+  }
+}
+
 export interface PolicyTargetAssessment extends Omit<TargetAssessment, 'schemaVersion'> {
   readonly schemaVersion: '1';
 }
@@ -116,6 +148,7 @@ function coverageFacts(facts: TargetFacts): NonNullable<TargetAssessment['covera
  * precedence order and never contain time-dependent values.
  */
 export function assessTarget(facts: TargetFacts): PolicyTargetAssessment {
+  assertSupportedFactFields(facts, TARGET_FACT_FIELDS, 'target');
   const coverage = coverageFacts(facts);
 
   // 1. Run state withholds a verdict. State is intentionally not an outcome.
@@ -216,11 +249,27 @@ export interface BundleFacts {
   readonly runState?: 'active' | 'stale' | 'cancelled' | 'completed';
 }
 
+const BUNDLE_FACT_FIELDS = {
+  schemaVersion: true,
+  candidateBundleDigest: true,
+  requiredTargets: true,
+  policyVersion: true,
+  targetOutcomes: true,
+  requiredEdgesPassed: true,
+  requiredInvariantsPassed: true,
+  mixedVersionChecksPassed: true,
+  intentFulfilled: true,
+  identitiesFresh: true,
+  blockingReasons: true,
+  runState: true,
+} as const satisfies Record<keyof BundleFacts, true>;
+
 /**
  * Assess a bundle using the normative order: invalid → blocked → incomplete →
  * verified. Target outcomes never vote or average into a bundle verdict.
  */
 export function assessBundle(facts: BundleFacts): BundleAssessment {
+  assertSupportedFactFields(facts, BUNDLE_FACT_FIELDS, 'bundle');
   const targetOutcomes = facts.targetOutcomes;
   const invalid = targetOutcomes.some((target) => target.outcome === 'unverified' &&
     target.reasons.some((reason) => reason === 'evidence_invalid' || reason === 'oracle_invalid' || reason === 'identity_drift'));
