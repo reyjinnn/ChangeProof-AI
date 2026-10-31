@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import {
   BundleAssessmentSchema,
@@ -31,6 +31,12 @@ import {
  */
 
 const digest = (seed: string): string => seed.repeat(64).slice(0, 64);
+
+const unsupportedDecisionInputs: readonly { field: string; value: unknown }[] = [
+  { field: 'averaging', value: { aggregateScore: 1 } },
+  { field: 'votes', value: ['fixed', 'fixed', 'fixed'] },
+  { field: 'modelConfidence', value: 1 },
+];
 
 function dimension(overrides: Partial<DimensionAssessment> = {}): DimensionAssessment {
   return DimensionAssessmentSchema.parse({
@@ -72,7 +78,9 @@ function outcomeOf(input: TargetFacts): string {
 
 describe('policy precedence — stale and cancelled withhold a verdict', () => {
   it('does not report a fix for a stale run', () => {
-    expect(outcomeOf(facts({ runState: 'stale' }))).toBe('unverified');
+    const assessment = assessTarget(facts({ runState: 'stale' }));
+    expect(assessment.outcome).toBe('unverified');
+    expect(assessment.reasons).toEqual(['run_stale']);
   });
 
   it('does not report a fix for a cancelled run', () => {
@@ -98,6 +106,15 @@ describe('policy precedence — invalid evidence outranks a pass', () => {
   it('does not let a full pass rescue an invalid oracle', () => {
     const assessment = assessTarget(facts({ oracleMatchesFrozen: false }));
     expect(assessment.outcome).not.toBe('fixed');
+  });
+
+  it('does not let otherwise partial progress rescue an invalid oracle (NEG3-03)', () => {
+    const progress = facts({ exactPatchApplied: false, hasProgress: true });
+    expect(assessTarget(progress).outcome).toBe('partial');
+
+    const assessment = assessTarget({ ...progress, oracleMatchesFrozen: false });
+    expect(assessment.outcome).toBe('unverified');
+    expect(assessment.reasons).toEqual(['oracle_invalid']);
   });
 
   it('reports unverified on inconclusive evidence', () => {
@@ -135,7 +152,10 @@ describe('policy precedence — required edges and skipped checks are coverage g
   it('does not report fixed when a required edge is unresolved (NEG3-06)', () => {
     // A target that passes locally while a required cross-system edge is
     // unresolved is exactly the "local pass + edge fail" row.
-    expect(outcomeOf(facts({ unresolvedRequiredEdges: ['edge-1'] }))).not.toBe('fixed');
+    const assessment = assessTarget(facts({ unresolvedRequiredEdges: ['edge-1'] }));
+    expect(assessment.outcome).toBe('unverified');
+    expect(assessment.reasons).toEqual(['coverage_gap_unresolved']);
+    expect(assessment.coverage?.unresolvedEdges).toBe(1);
   });
 
   it('does not report fixed when a required check was skipped', () => {
@@ -162,6 +182,7 @@ describe('policy precedence — dimensions are assessed separately, never averag
       }),
     );
     expect(assessment.outcome).toBe('unverified');
+    expect(assessment.reasons).toEqual(['dimension_inconclusive']);
   });
 
   it('withholds assurance when a required dimension failed', () => {
@@ -263,17 +284,38 @@ describe('policy precedence — partial and failed', () => {
 
 describe('policy is deterministic and model-free', () => {
   it('produces the same verdict for the same input', () => {
-    const first = assessTarget(facts());
-    const second = assessTarget(facts());
+    const input = facts();
+    const before = structuredClone(input);
+    const first = assessTarget(input);
+    const second = assessTarget(input);
     expect(first.outcome).toBe(second.outcome);
     expect(first.reasons).toEqual(second.reasons);
+    expect(first).toEqual(second);
+    expect(input).toEqual(before);
   });
 
-  it('never consults a model confidence value', () => {
-    // The facts type has no confidence field at all: there is nowhere for a
-    // model's self-assessment to enter.
-    const assessment = assessTarget(facts());
-    expect(assessment.outcome).toBe('fixed');
+  it('does not read the clock while reducing supported facts', () => {
+    const inputs = [
+      facts(),
+      facts({ runState: 'stale' }),
+      facts({ exactPatchApplied: false }),
+    ];
+    const clock = vi.spyOn(Date, 'now');
+    try {
+      const outcomes = inputs.map((input) => assessTarget(input).outcome);
+      const clockReads = clock.mock.calls.length;
+      expect(clockReads).toBe(0);
+      expect(outcomes).toEqual(['fixed', 'unverified', 'partial']);
+    } finally {
+      clock.mockRestore();
+    }
+  });
+
+  it.each(unsupportedDecisionInputs)('rejects $field at the target policy boundary', ({ field, value }) => {
+    // A structurally assignable variable can carry extra runtime fields even
+    // though TargetFacts does not declare them. TypeScript alone cannot reject it.
+    const input = { ...facts(), [field]: value };
+    expect(() => assessTarget(input)).toThrow();
   });
 });
 
@@ -347,7 +389,7 @@ describe('bundle assessment precedence', () => {
     expect(result.state).toBe('verified');
   });
 
-  it('does not verify a bundle when one target passed and another did not (mixed candidates)', () => {
+  it('does not verify a bundle when one target passed and another did not', () => {
     const result = assessBundle({
       ...base,
       requiredTargets: [
@@ -369,6 +411,32 @@ describe('bundle assessment precedence', () => {
     expect(result.state).not.toBe('verified');
   });
 
+  it('invalidates bundle proof when a member has a mismatched candidate identity', () => {
+    // Policy consumes the coordinator's identity facts, not raw commits.
+    const mismatchedMember = assessTarget(facts({
+      subject: { kind: 'consumer', id: 'consumer-b' },
+      identitiesFresh: false,
+    }));
+    expect(mismatchedMember.outcome).toBe('unverified');
+    expect(mismatchedMember.reasons).toEqual(['identity_drift']);
+
+    const result = assessBundle({
+      ...base,
+      requiredTargets: [
+        ...base.requiredTargets,
+        { kind: 'consumer', id: 'consumer-b' },
+      ],
+      targetOutcomes: [assessTarget(facts()), mismatchedMember],
+      requiredEdgesPassed: true,
+      requiredInvariantsPassed: true,
+      mixedVersionChecksPassed: true,
+      intentFulfilled: true,
+      identitiesFresh: true,
+      blockingReasons: [],
+    });
+    expect(result.state).toBe('invalid');
+  });
+
   it('does not verify a bundle whose required edge failed', () => {
     const result = assessBundle({
       ...base,
@@ -381,7 +449,23 @@ describe('bundle assessment precedence', () => {
       blockingReasons: [],
     });
 
-    expect(result.state).not.toBe('verified');
+    expect(result.state).toBe('blocked');
+    expect(result.blockingReasons).toContain('required edge failed');
+  });
+
+  it.each(unsupportedDecisionInputs)('rejects $field at the bundle policy boundary', ({ field, value }) => {
+    const input = {
+      ...base,
+      targetOutcomes: [assessTarget(facts())],
+      requiredEdgesPassed: true,
+      requiredInvariantsPassed: true,
+      mixedVersionChecksPassed: true,
+      intentFulfilled: true,
+      identitiesFresh: true,
+      blockingReasons: [],
+      [field]: value,
+    };
+    expect(() => assessBundle(input)).toThrow();
   });
 
   it('does not verify a bundle with stale identities', () => {
