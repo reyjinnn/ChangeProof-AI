@@ -236,3 +236,33 @@ Fresh verification on Windows PowerShell:
 - `pnpm typecheck` exit 0.
 - `pnpm lint` exit 0 (42 modules / 97 dependencies, zero violations).
 - `pnpm test` exit 0 (190 tests / 15 files; the 4 removed JVM/Kotlin cases account for 194 → 190).
+
+## Addendum — 1 November 2026 (T-07/T-08/T-09 task-status reconciliation)
+
+The allocated tasks T-07, T-08, and T-09 are recorded `done` in
+[`task-brief.md`](../../task-brief.md). This updates allocated-task status only;
+full WP3-03, WP3-04, WP3-05 and Phase 1 remain `in_progress`.
+
+- **T-07 / WP3-03:** five-ecosystem L1 positive/negative tuple acceptance is
+  covered by the adapter acceptance and native extraction tests. JVM/Kotlin is
+  out of scope under the T-06 decision.
+- **T-08 / WP3-04:** one bounded E1 VM probe has metadata, socket-absence, and
+  termination receipts in
+  [`phase1-runner-qualification-blocked.md`](../decisions/phase1-runner-qualification-blocked.md).
+  It does not establish cross-tenant or cancel-mid-workload qualification;
+  broader runner qualification and native dependency-acquisition/build-sandbox
+  proof remain open. Hosted readiness remains withheld.
+- **T-09 / WP3-05:** positive/negative data-schema and deployment/config impact
+  paths plus unresolved-edge coverage are in the graph tests. These are
+  synthetic graph tests, not database or deployment runtime proof.
+
+Fresh local verification on 1 November 2026:
+
+| Command | Exit | Result / scope |
+|---|---:|---|
+| `pnpm test:graph` | 0 | 22 graph tests passed; synthetic graph evidence. |
+| `pnpm test:adapters` | 0 | 75 adapter tests passed across 6 files, including native extraction for the five in-scope ecosystems. |
+| `pnpm typecheck` | 0 | Strict TypeScript check passed. |
+| `pnpm lint` | not run | Missing check for this status update. |
+
+These checks do not complete the full work packages or any G3 gate.

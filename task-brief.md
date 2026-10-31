@@ -2,7 +2,7 @@
 
 **Plan revision:** 2 (24 October 2026)  
 
-**Coordination status last reconciled:** 31 October 2026 (T-03..T-06 completion confirmed; see §4)
+**Coordination status last reconciled:** 1 November 2026 (T-03..T-09 task statuses reconciled; see §4)
 
 **Purpose:** Coordinate work between Reyn and Hoang while preserving the repository's dependency order, verification rules, and honest status reporting.  
 
@@ -39,9 +39,9 @@ The latest recorded status is Phase-2 report revision 2, dated 30 October 2026. 
 |---|---|---|
 | Phase-1: WP3-01 contracts and policy (T1-1/T1-2) | `in_progress` | Complete contract/conformance and semantic audit; final policy purity and precedence review. |
 | Phase-1: WP3-02 toolchain and boundaries (T1-3) | T1-3 `done`; full WP `in_progress` | Full package/run composition acceptance remains. |
-| Phase-1: WP3-03 adapters and registry (T1-4/T1-5) | `in_progress` | T-06 resolves scope to five ecosystems and updates the governing documents. Per-tuple L1 acceptance remains before the adapter matrix is complete. |
-| Phase-1: WP3-04 runner and dependency broker (T1-6/T1-7) | `in_progress`; T1-7 preparation `done` | Runner evidence is `container_only`, not qualified VM/microVM-equivalent isolation. Native dependency acquisition and build-sandbox proof remain missing. |
-| Phase-1: WP3-05 detector, analyzer, and graph (T1-8) | `in_progress` | Some normalization coverage exists across API/data/event/dependency/config. The full acceptance matrix is not complete; preserve `proven`, `inferred`, and `unresolved`. |
+| Phase-1: WP3-03 adapters and registry (T1-4/T1-5) | `in_progress` | T-06 scope resolution and T-07 five-ecosystem L1 task are done; full WP acceptance remains beyond these allocated tasks. |
+| Phase-1: WP3-04 runner and dependency broker (T1-6/T1-7) | `in_progress` | T-08's bounded E1 VM probe is done; its single-run limitations and missing broader qualification/native dependency-acquisition proof remain. |
+| Phase-1: WP3-05 detector, analyzer, and graph (T1-8) | `in_progress` | T-03 event-flow and T-09 data/config matrix tasks are done; broader WP acceptance remains. Preserve `proven`, `inferred`, and `unresolved`. |
 | Phase-2: WP3-15/16/17 (T2-1/T2-2/T2-3) | Preparation `done`; full WPs `in_progress` | Full acceptance depends on incomplete predecessors and required native proof. |
 | Phase-2: WP3-06 (T2-4) | Preparation `done`; full WP `blocked` | No frozen oracle or real application/database/broker proof. |
 | Phase-2: WP3-21 (T2-5) | Preparation `done`; native proof `blocked` | RLS migration and native test exist, but PostgreSQL container startup did not complete. `pnpm test:identity:native` remains unrun. |
@@ -67,9 +67,9 @@ Every phase task has exactly one named owner. Owners alternate deliberately (Rey
 | T-04 | T1-1 / WP3-01 | Contracts: complete conformance matrix + semantic audit | **Reyn** | `done` | Completion confirmed; matrix/tests are in `tests/contracts/`. |
 | T-05 | T1-2 / WP3-01 | Policy: final purity/boundary review + precedence audit | **Hoang** | `done` | Completion confirmed; precedence coverage is in `tests/policy/precedence.test.ts`. |
 | T-06 | T1-4 / WP3-03 | Registry: resolve six-vs-five ecosystem scope divergence | **Reyn** | `done` | Five-ecosystem decision and governing-document updates are recorded in `docs/decisions/phase1-ecosystem-scope-resolution.md`. |
-| T-07 | T1-5 / WP3-03 | Adapter L1 remainder: per-tuple matrix for the decided scope | **Hoang** | `not_started` | T-06 resolved scope to five ecosystems; Kotlin/JVM is out of scope. Per-tuple L1 acceptance remains. |
-| T-08 | T1-6 / WP3-04 | Runner: qualified VM/microVM-equivalent isolation proof | **Reyn** | `done` | E1 VM probes pass (metadata/socket/cleanup receipts); see `docs/decisions/phase1-runner-qualification-blocked.md`. Limits: single run, no cross-tenant. |
-| T-09 | T1-8 / WP3-05 | Graph acceptance-matrix remainder after T-03 | **Hoang** | `not_started` | Ready; T-03 event-flow tests are complete and remaining rows are scoped by the T-02 matrix. |
+| T-07 | T1-5 / WP3-03 | Adapter L1 remainder: per-tuple matrix for the decided scope | **Hoang** | `done` | Positive/negative L1 cases are covered for the five decided ecosystems; see `tests/adapters/t07-acceptance.test.ts` and native extraction tests. Kotlin/JVM is out of scope. |
+| T-08 | T1-6 / WP3-04 | Runner: qualified VM/microVM-equivalent isolation proof | **Reyn** | `done` | One bounded E1 VM probe has metadata/socket/termination receipts; see `docs/decisions/phase1-runner-qualification-blocked.md`. Limits: single run; no cross-tenant or cancel-mid-workload proof. Full WP remains `in_progress`. |
+| T-09 | T1-8 / WP3-05 | Graph acceptance-matrix remainder after T-03 | **Hoang** | `done` | Data and deployment/config positive/negative impact cases are in `tests/graph/detector-analyzer-graph.test.ts`; synthetic evidence only, not database/deployment runtime proof. |
 | T-10 | T2-1 / WP3-15 | Observability full acceptance | **Reyn** | `in_progress` | Preparation `done`; needs WP3-02/04/05 completion + native proof. |
 | T-11 | T2-2 / WP3-16 | Verifier campaign full acceptance | **Hoang** | `in_progress` | Preparation `done`; same predecessor and native-proof requirements. |
 | T-12 | T2-3 / WP3-17 | Measurement reducers full acceptance | **Reyn** | `in_progress` | Preparation `done`; same predecessor and native-proof requirements. |
@@ -171,7 +171,7 @@ Prerequisites: T-02 matrix is recorded; task-level inputs for the affected adapt
 Allowed source/config changes: tests/graph/detector-analyzer-graph.test.ts; corresponding detector/analyzer/graph implementation only when required by a failing test. No policy/oracle/threshold changes.
 Acceptance checks: Tests first. Positive case: an event-schema change traverses publisher -> publishes -> event -> consumes -> consumer/workflow with edge evidence locators; resulting analyzer impacts remain `inferred`. Negative case: an unresolved consumer subscription remains a coverage gap with its reason and is not reported as unaffected or as a proven impact. Run pnpm test:graph, pnpm typecheck, pnpm lint, and pnpm test after source changes; record commands and exit codes. Synthetic tests are not native/runtime proof.
 Status: done
-Next: T-09 is ready to address the remaining data/config acceptance-matrix rows. Full WP3-05 remains in progress.
+Next: T-09 completed the remaining data/config acceptance-matrix rows. Full WP3-05 remains in progress.
 ```
 
 ### T-04: Reyn
@@ -222,12 +222,13 @@ Next: T-07 may proceed against the five-ecosystem scope recorded in the decision
 Task ID / parent WP: T-07 / T1-5 / WP3-03
 Owner: Hoang
 Requirement IDs: FR3-01/02; NEG3-02/09
-Outcome: Per-tuple L1 acceptance is complete for every ecosystem in the scope decided by T-06: at least one positive extraction and one negative/unsupported case per (ecosystem, framework, version, feature) tuple on a pinned version, including the unresolved Kotlin/JVM case or its recorded removal.
-Prerequisite evidence: Phase-1 report T1-5 row — native positive/negative tests pass for TypeScript, Python, Java, PHP, Go (go1.27.3) and .NET (SDK 10.0.403). The historical Kotlin toolchain blocker is no longer applicable: T-06 removed JVM/Kotlin from scope.
+Outcome: Per-tuple L1 acceptance is complete for the five ecosystems decided by T-06, with positive extraction and negative/unsupported cases on pinned toolchains. JVM/Kotlin is out of scope.
+Prerequisite evidence: Phase-1 report T1-5 row and T-06 decision — native positive/negative tests pass for TypeScript, Python, PHP, Go (go1.27.3), and .NET (SDK 10.0.403). Java/Kotlin are out of scope after the five-ecosystem decision.
 Allowed source/config changes: src/modules/adapters/* and tests/adapters/* only. No provenLevel promotion without evidence; unsupported cases must not return a generic verified.
 Acceptance checks: Failure-path tests first; native toolchain checks run where the toolchain exists and are reported separately from mock/replay results. Run pnpm test:adapters, pnpm typecheck, pnpm lint, pnpm test after changes; record commands and exit codes. A missing toolchain is a recorded blocker, not a skipped check.
-Status: not_started
-Next: Start per-tuple L1 acceptance for the five ecosystems and report native results separately; no Kotlin/JVM toolchain is required.
+Status: done
+Evidence: `tests/adapters/t07-acceptance.test.ts` covers the five ecosystem tuples; `tests/adapters/l1-extraction.test.ts` and `tests/adapters/go-dotnet-extraction.test.ts` include native TypeScript, Python, PHP, Go, and .NET extraction cases. Fresh `pnpm test:adapters` passed 75 tests across six files.
+Next: Full WP3-03 acceptance remains separate from this allocated task.
 ```
 
 ### T-08: Reyn
@@ -236,12 +237,12 @@ Next: Start per-tuple L1 acceptance for the five ecosystems and report native re
 Task ID / parent WP: T-08 / T1-6 / WP3-04
 Owner: Reyn
 Requirement IDs: NFR3-04..08; NEG3-10/24
-Outcome: A decision and evidence path for qualified guest isolation: either a host with VM/microVM capability is provisioned and the qualification probes run there, or the requirement is recorded as blocked with the exact missing environment. Includes implementing the missing scripts/runner-security-probes.mjs target or removing the dangling script declaration.
-Prerequisite evidence: Phase-1 report T1-6 row — runner profile, guest plan, oracle mount checks, cleanup/quarantine tests, Docker native container probes 6/6; container-only is explicitly insufficient; no Hyper-V on the current host.
+Outcome: A bounded E1 VM probe was executed and recorded, and its limits are explicit. This closes the allocated T-08 decision/evidence task; it does not qualify hosted readiness or complete full WP3-04.
+Prerequisite evidence: Runner profile, guest plan, oracle mount checks, cleanup/quarantine tests, Docker container probes, and the E1 VM probe receipts recorded in `docs/decisions/phase1-runner-qualification-blocked.md`.
 Allowed source/config changes: scripts/, modules/verifier runner configuration, and environment/decision records. No weakening of isolation requirements; container smoke remains non-qualifying.
 Acceptance checks: Qualified-boundary probes with escape/cancel/cleanup/quarantine receipts on the qualified environment, or a specific recorded blocker. Native results reported separately; record commands and exit codes.
-Status: done (E1 VM probes pass with receipts; limits recorded in the decision)
-Next: None for T-08. WP3-04 remainder (native dependency broker proof) stays separate.
+Status: done (one bounded E1 VM probe; no cross-tenant or cancel-mid-workload proof)
+Next: Broader runner qualification and native dependency broker proof remain WP3-04 work.
 ```
 
 ### T-09: Hoang
@@ -250,12 +251,13 @@ Next: None for T-08. WP3-04 remainder (native dependency broker proof) stays sep
 Task ID / parent WP: T-09 / T1-8 / WP3-05
 Owner: Hoang
 Requirement IDs: BR3-02; FR3-04/05/06; NEG3-02/06
-Outcome: The remaining rows of the T-02 acceptance matrix are closed: data (table/column relationship and impact cases) and config (deployment-requirement edge and impact path) acceptance tests, plus any rows T-03 leaves open. proven, inferred, and unresolved stay visible; unknowns are never dropped or silently promoted.
+Outcome: The remaining data (table/column relationship and impact) and config (deployment-requirement edge and impact) acceptance rows are covered by positive and negative graph tests. `proven`, `inferred`, and `unresolved` remain distinct; unknowns are not dropped or promoted.
 Prerequisite evidence: T-02 acceptance matrix recorded above; T-03 reviewed and integrated; existing tests/graph/detector-analyzer-graph.test.ts coverage.
 Allowed source/config changes: tests/graph/* and the corresponding detector/analyzer/graph implementation only when a failing test demonstrates the need. No policy/oracle/threshold changes.
 Acceptance checks: Tests first, positive and negative per matrix row. Run pnpm test:graph, pnpm typecheck, pnpm lint, pnpm test after changes; record commands and exit codes. Synthetic tests are not native/runtime proof.
-Status: not_started (ready; T-03 event-flow acceptance is complete)
-Next: Open a reviewable PR with the task header, matrix rows closed, and test results. Reyn reviews before integration.
+Status: done
+Evidence: `tests/graph/detector-analyzer-graph.test.ts` covers data-schema and deployment/configuration impact paths and unresolved-edge gaps. Fresh `pnpm test:graph` passed 22 tests; cases are synthetic, not native database/deployment proof.
+Next: Full WP3-05 acceptance remains separate from this allocated task.
 ```
 
 All remaining work now has a named owner in the assignment index above. The index assigns ownership, not permission to run tasks out of dependency order: starting any task marked `tentative` still requires Reyn to confirm exact scope, prerequisite evidence, and file ownership first, and Hoang should not start a second task without agreement.
@@ -331,8 +333,8 @@ pnpm test:identity:native
 ## 7. Immediate next actions
 
 1. T-03 through T-06 are recorded `done`; T-03 event-flow tests, T-04 contract matrix, T-05 policy audit, and the T-06 five-ecosystem decision have corresponding repository evidence.
-2. T-09 is ready for the remaining WP3-05 data/config acceptance-matrix rows. T-07 is ready for per-tuple L1 acceptance across the five ecosystems; JVM/Kotlin is out of scope per T-06.
-3. Keep full WP3-01, WP3-03, WP3-05 and both phases `in_progress` until their complete acceptance criteria are independently proven. T-08 remains `blocked` on qualified guest isolation.
+2. T-07, T-08, and T-09 are recorded `done` as allocated tasks. T-07's five-ecosystem L1 matrix and T-09's data/config graph rows are covered by tests. T-08 records one bounded E1 VM probe; its limitations remain explicit.
+3. Keep full WP3-01, WP3-03, WP3-04, WP3-05 and both phases `in_progress` until their complete acceptance criteria are independently proven. T-08 task completion does not mean hosted runner qualification or WP3-04 completion.
 4. `tentative` tasks do not start without Reyn confirming scope and prerequisites. Record actual commands, exit codes, mock/native distinction, blockers, and the next dependency-ready task.
 5. Track Phase-2 blockers separately. T2-5 RLS (T-14, Reyn) is the next documented native candidate and should only be resumed if the Docker container-start issue can be addressed safely; do not treat preparation tests as native proof.
 6. Do not set a daily task or phase quota or start the next phase automatically.
