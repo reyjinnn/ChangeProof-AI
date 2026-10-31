@@ -1,5 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { z } from 'zod';
 
 import {
   CapabilityRecordSchema,
@@ -10,6 +11,7 @@ import {
   type GraphNode,
 } from '../../../core/index.js';
 import { snapshotId, type AdapterDefinition, type AdapterExtractInput, type AdapterExtractResult } from '../types.js';
+import { AdapterRegistry } from '../registry/index.js';
 
 /**
  * PHP adapter (L1: discovery and extraction).
@@ -23,7 +25,7 @@ import { snapshotId, type AdapterDefinition, type AdapterExtractInput, type Adap
  * an empty *success*, because an empty graph reads as "no impact" (NEG3-09).
  */
 
-export const PHP_ADAPTER_VERSION = '1.0.0';
+export const PHP_ADAPTER_VERSION = '1.0.1';
 
 export const PHP_KEY: CapabilityKey = {
   ecosystem: 'php',
@@ -50,29 +52,48 @@ export const PHP_ADAPTER_RECORD: CapabilityRecord = CapabilityRecordSchema.parse
   ],
   toolchainIdentities: {},
 });
+const registeredCapabilities = new AdapterRegistry([PHP_ADAPTER_RECORD]);
 
 /** The reviewed helper that tokenises the snapshot with PHP's own lexer. */
 const TOKENISE_HELPER = `
 $payload = json_decode(stream_get_contents(STDIN), true);
 $out = [];
+$errors = [];
 foreach ($payload as $entry) {
-    $tokens = token_get_all($entry['source']);
+    try { $tokens = token_get_all($entry['source'], TOKEN_PARSE); }
+    catch (ParseError $error) { $errors[] = $entry['file'] . ':' . $error->getLine() . ': ' . $error->getMessage(); continue; }
+    $tokens = array_values(array_filter($tokens, fn($t) => !is_array($t) || !in_array($t[0], [T_WHITESPACE, T_COMMENT, T_DOC_COMMENT], true)));
     $count = count($tokens);
     for ($i = 0; $i < $count; $i++) {
         $token = $tokens[$i];
         if (!is_array($token)) { continue; }
         [$id, $text, $line] = $token;
 
+        if ($id === T_STRING && strtolower($text) === 'app' && ($tokens[$i + 1] ?? null) === '(') {
+            $out[] = ['kind' => 'dynamic', 'file' => $entry['file'], 'line' => $line,
+                      'name' => 'app', 'detail' => 'dynamic container lookup'];
+        }
+
         if ($id === T_STRING && in_array(strtolower($text), ['get', 'post', 'put', 'delete', 'patch'], true)) {
+            $separator = $tokens[$i - 1] ?? null;
+            $receiver = $tokens[$i - 2] ?? null;
+            if (!is_array($separator) || $separator[0] !== T_DOUBLE_COLON || !is_array($receiver) ||
+                    !in_array(ltrim($receiver[1], chr(92)), ['Route', 'Illuminate'.chr(92).'Support'.chr(92).'Facades'.chr(92).'Route'], true)) continue;
             $j = $i + 1;
             while ($j < $count && is_array($tokens[$j]) && in_array($tokens[$j][0], [T_WHITESPACE], true)) { $j++; }
             if ($j < $count && $tokens[$j] === '(') {
                 $k = $j + 1;
                 while ($k < $count && is_array($tokens[$k]) && $tokens[$k][0] === T_WHITESPACE) { $k++; }
-                if ($k < $count && is_array($tokens[$k]) && $tokens[$k][0] === T_CONSTANT_ENCAPSED_STRING) {
+                // A literal prefix is not a literal argument (for example, '/orders/' . $id).
+                $argumentEnd = $tokens[$k + 1] ?? null;
+                if ($k < $count && is_array($tokens[$k]) && $tokens[$k][0] === T_CONSTANT_ENCAPSED_STRING &&
+                        ($argumentEnd === ',' || $argumentEnd === ')')) {
                     $route = trim($tokens[$k][1], "'\\"");
                     $out[] = ['kind' => 'route', 'file' => $entry['file'], 'line' => $line,
                               'name' => $route, 'detail' => strtoupper($text)];
+                } else {
+                    $out[] = ['kind' => 'dynamic', 'file' => $entry['file'], 'line' => $line,
+                              'name' => $text, 'detail' => 'non-literal Laravel route'];
                 }
             }
         }
@@ -83,16 +104,14 @@ foreach ($payload as $entry) {
         }
     }
 }
-echo json_encode($out);
+echo json_encode(['schemaVersion' => '1', 'phpVersion' => PHP_VERSION, 'facts' => $out, 'errors' => $errors]);
 `;
 
-interface PhpFact {
-  readonly kind: 'route' | 'controller';
-  readonly file: string;
-  readonly line: number;
-  readonly name: string;
-  readonly detail: string;
-}
+const PhpParseResultSchema = z.object({
+  schemaVersion: z.literal('1'), phpVersion: z.string(), errors: z.array(z.string()),
+  facts: z.array(z.object({ kind: z.enum(['route', 'controller', 'dynamic']), file: z.string(),
+    line: z.number().int().positive(), name: z.string(), detail: z.string() })),
+});
 
 export const PHP_ADAPTER: AdapterDefinition = {
   name: 'php',
@@ -102,6 +121,10 @@ export const PHP_ADAPTER: AdapterDefinition = {
 
   async extract(input: AdapterExtractInput): Promise<AdapterExtractResult> {
     const snapshot = snapshotId(input.root, input.version);
+    const capability = CapabilityRecordSchema.safeParse(input.capability);
+    if (!capability.success || registeredCapabilities.get(capability.data.key) === null) {
+      return unsupported(input, 'Unregistered or invalid PHP capability tuple.');
+    }
     const diagnostics: string[] = [];
 
     // Framework gate: an unsupported framework is refused explicitly.
@@ -157,11 +180,22 @@ export const PHP_ADAPTER: AdapterDefinition = {
         unknowns: [`php exited with code ${run.exitCode}`],
         unsupportedSurfaces: [],
         diagnostics: [run.stderr.slice(0, 2000)],
-        toolchainIdentity: `php@${input.version}`,
+        toolchainIdentity: 'php@unobserved',
       };
     }
 
-    const facts = (parseNativeJson(run.stdout) as PhpFact[] | null) ?? [];
+    const parsed = PhpParseResultSchema.safeParse(parseNativeJson(run.stdout));
+    if (!parsed.success) {
+      return { status: 'failed', graph: emptyGraph(snapshot), unknowns: ['Invalid PHP parser result.'],
+        unsupportedSurfaces: [], diagnostics: [parsed.error.message], toolchainIdentity: 'php@unobserved' };
+    }
+    const { facts, errors, phpVersion } = parsed.data;
+    const toolchainIdentity = `php@${phpVersion}`;
+    if (phpVersion !== input.version || errors.length > 0) {
+      return { status: 'failed', graph: emptyGraph(snapshot),
+        unknowns: phpVersion !== input.version ? [`PHP toolchain mismatch: requested ${input.version}, observed ${phpVersion}.`] : errors,
+        unsupportedSurfaces: [], diagnostics: [...diagnostics, ...errors], toolchainIdentity };
+    }
     const nodes = new Map<string, GraphNode>();
     const edges: GraphEdge[] = [];
     const unknowns: string[] = [];
@@ -180,6 +214,16 @@ export const PHP_ADAPTER: AdapterDefinition = {
     for (const fact of facts) {
       const fromId = `component:${fact.file}`;
       if (!nodes.has(fromId)) continue;
+
+      if (fact.kind === 'dynamic') {
+        const locator = `${fact.file}:${fact.line}`;
+        const target = `symbol:dynamic:${locator}:${fact.name}`;
+        const reason = `${fact.detail} at ${locator} cannot be resolved statically`;
+        nodes.set(target, { id: target, kind: 'symbol', locator, snapshot, label: fact.name });
+        edges.push({ id: `edge:${fromId}->${target}`, kind: 'calls', from: fromId, to: target,
+          resolution: 'unresolved', unresolvedReason: reason, runtimeObserved: false });
+        unknowns.push(reason);
+      }
 
       if (fact.kind === 'route') {
         const endpointId = `endpoint:${fact.detail} ${fact.name}`;
@@ -207,12 +251,12 @@ export const PHP_ADAPTER: AdapterDefinition = {
     }
 
     return {
-      status: 'ok',
+      status: edges.length > 0 ? 'ok' : 'unsupported',
       graph: SystemGraphSchema.parse({ schemaVersion: '1', snapshot, nodes: [...nodes.values()], edges }),
       unknowns,
-      unsupportedSurfaces: [],
+      unsupportedSurfaces: edges.length > 0 ? [] : ['No supported Laravel route syntax was found.'],
       diagnostics,
-      toolchainIdentity: `php@${input.version}`,
+      toolchainIdentity,
     };
   },
 };
@@ -230,7 +274,7 @@ function unsupported(input: AdapterExtractInput, reason: string): AdapterExtract
     unknowns: [],
     unsupportedSurfaces: [reason],
     diagnostics: [],
-    toolchainIdentity: `php@${input.version}`,
+    toolchainIdentity: 'php@unobserved',
   };
 }
 

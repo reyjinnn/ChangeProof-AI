@@ -1,5 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { z } from 'zod';
 
 import {
   CapabilityRecordSchema,
@@ -10,6 +11,7 @@ import {
   type GraphNode,
 } from '../../../core/index.js';
 import { snapshotId, type AdapterDefinition, type AdapterExtractInput, type AdapterExtractResult } from '../types.js';
+import { AdapterRegistry } from '../registry/index.js';
 
 /**
  * Python adapter (L1: discovery and extraction).
@@ -25,7 +27,7 @@ import { snapshotId, type AdapterDefinition, type AdapterExtractInput, type Adap
  * (NEG3-02).
  */
 
-export const PYTHON_ADAPTER_VERSION = '1.0.0';
+export const PYTHON_ADAPTER_VERSION = '1.0.1';
 
 export const PYTHON_KEY: CapabilityKey = {
   ecosystem: 'python',
@@ -52,15 +54,23 @@ export const PYTHON_ADAPTER_RECORD: CapabilityRecord = CapabilityRecordSchema.pa
   ],
   toolchainIdentities: {},
 });
+const registeredCapabilities = new AdapterRegistry([PYTHON_ADAPTER_RECORD]);
 
-interface PythonFact {
-  readonly kind: 'route' | 'model' | 'import' | 'dynamic';
-  readonly file: string;
-  readonly line: number;
-  readonly name: string;
-  readonly detail: string;
-  readonly resolved: boolean;
-}
+// Private helper protocol: the identity is emitted by the same interpreter
+// process that parsed the source, rather than copied from the requested pin.
+const PythonParseResultSchema = z.object({
+  schemaVersion: z.literal('1'),
+  pythonVersion: z.string().regex(/^\d+\.\d+\.\d+$/),
+  errors: z.array(z.string()),
+  facts: z.array(z.object({
+    kind: z.enum(['route', 'model', 'import', 'dynamic']),
+    file: z.string(),
+    line: z.number().int().positive(),
+    name: z.string(),
+    detail: z.string(),
+    resolved: z.boolean(),
+  })),
+});
 
 /** The reviewed helper that parses the snapshot with CPython's own grammar. */
 const PARSE_HELPER = `
@@ -72,6 +82,13 @@ def analyse(path, source):
         tree = ast.parse(source, filename=path)
     except SyntaxError as error:
         return facts, str(error)
+
+    import_module_bindings = {
+        alias.asname or alias.name
+        for node in ast.walk(tree)
+        if isinstance(node, ast.ImportFrom) and node.module == 'importlib'
+        for alias in node.names if alias.name == 'import_module'
+    }
 
     for node in ast.walk(tree):
         if isinstance(node, (ast.Import, ast.ImportFrom)):
@@ -113,7 +130,8 @@ def analyse(path, source):
                     'name': func.id, 'detail': 'dynamic attribute or module binding',
                     'resolved': False,
                 })
-            if isinstance(func, ast.Attribute) and func.attr == 'import_module':
+            if ((isinstance(func, ast.Attribute) and func.attr == 'import_module') or
+                    (isinstance(func, ast.Name) and func.id in import_module_bindings)):
                 facts.append({
                     'kind': 'dynamic', 'file': path, 'line': node.lineno,
                     'name': 'import_module', 'detail': 'runtime module import',
@@ -122,11 +140,19 @@ def analyse(path, source):
     return facts, None
 
 results = []
+errors = []
 for entry in json.loads(sys.stdin.read()):
     facts, error = analyse(entry['file'], entry['source'])
     results.extend(facts)
+    if error:
+        errors.append(entry['file'] + ': ' + error)
 
-print(json.dumps(results))
+print(json.dumps({
+    'schemaVersion': '1',
+    'pythonVersion': '.'.join(map(str, sys.version_info[:3])),
+    'facts': results,
+    'errors': errors,
+}))
 `;
 
 export const PYTHON_ADAPTER: AdapterDefinition = {
@@ -137,6 +163,12 @@ export const PYTHON_ADAPTER: AdapterDefinition = {
 
   async extract(input: AdapterExtractInput): Promise<AdapterExtractResult> {
     const snapshot = snapshotId(input.root, input.version);
+    const capability = CapabilityRecordSchema.safeParse(input.capability);
+    if (!capability.success || registeredCapabilities.get(capability.data.key) === null) {
+      const reason = 'Unregistered or invalid Python capability tuple.';
+      return { status: 'unsupported', graph: emptyGraph(snapshot), unknowns: [reason],
+        unsupportedSurfaces: [reason], diagnostics: [], toolchainIdentity: 'python@unobserved' };
+    }
     const nodes = new Map<string, GraphNode>();
     const edges: GraphEdge[] = [];
     const unknowns: string[] = [];
@@ -144,6 +176,7 @@ export const PYTHON_ADAPTER: AdapterDefinition = {
 
     const entries: { file: string; source: string }[] = [];
     for (const file of input.files) {
+      if (!file.endsWith('.py')) continue;
       try {
         entries.push({ file, source: readFileSync(join(input.root, file), 'utf8') });
       } catch (error) {
@@ -158,7 +191,7 @@ export const PYTHON_ADAPTER: AdapterDefinition = {
         unknowns: ['no source file could be read'],
         unsupportedSurfaces: [],
         diagnostics,
-        toolchainIdentity: `python@${input.version}`,
+        toolchainIdentity: 'python@unobserved',
       };
     }
 
@@ -181,11 +214,37 @@ export const PYTHON_ADAPTER: AdapterDefinition = {
         unknowns: [`python interpreter exited with code ${run.exitCode}`],
         unsupportedSurfaces: [],
         diagnostics: [run.stderr.slice(0, 2000)],
-        toolchainIdentity: `python@${input.version}`,
+        toolchainIdentity: 'python@unobserved',
       };
     }
 
-    const facts = (parseNativeJson(run.stdout) as PythonFact[] | null) ?? [];
+    const parsed = PythonParseResultSchema.safeParse(parseNativeJson(run.stdout));
+    if (!parsed.success) {
+      return {
+        status: 'failed',
+        graph: emptyGraph(snapshot),
+        unknowns: ['Python helper did not return a valid parser result and interpreter identity.'],
+        unsupportedSurfaces: [],
+        diagnostics: [parsed.error.message],
+        toolchainIdentity: 'python@unobserved',
+      };
+    }
+    const { facts, pythonVersion, errors } = parsed.data;
+    const toolchainIdentity = `python@${pythonVersion}`;
+    if (pythonVersion !== input.version) {
+      return {
+        status: 'failed',
+        graph: emptyGraph(snapshot),
+        unknowns: [`Python toolchain mismatch: requested ${input.version}, observed ${pythonVersion}; select the pinned interpreter before retrying.`],
+        unsupportedSurfaces: [],
+        diagnostics,
+        toolchainIdentity,
+      };
+    }
+    if (errors.length > 0) {
+      return { status: 'failed', graph: emptyGraph(snapshot), unknowns: errors,
+        unsupportedSurfaces: [], diagnostics: [...diagnostics, ...errors], toolchainIdentity };
+    }
 
     for (const entry of entries) {
       const moduleId = `component:${entry.file}`;
@@ -322,7 +381,7 @@ export const PYTHON_ADAPTER: AdapterDefinition = {
       unknowns,
       unsupportedSurfaces: [],
       diagnostics,
-      toolchainIdentity: `python@${input.version}`,
+      toolchainIdentity,
     };
   },
 };
