@@ -43,3 +43,6 @@ pnpm-debug.log*
 # Windows
 Desktop.ini
 $RECYCLE.BIN/
+
+# Project-local Python venv (Modal probe helper lives here; never commit it)
+.venv/
