@@ -40,7 +40,7 @@ export const PYTHON_KEY: CapabilityKey = {
 };
 
 export const PYTHON_ADAPTER_RECORD: CapabilityRecord = CapabilityRecordSchema.parse({
-  schemaVersion: '1',
+  schemaVersion: '2',
   key: PYTHON_KEY,
   targetLevel: 'L3',
   provenLevel: 'none',
@@ -131,7 +131,7 @@ print(json.dumps(results))
 
 export const PYTHON_ADAPTER: AdapterDefinition = {
   name: 'python',
-  contractVersion: '1',
+  contractVersion: '2',
   key: PYTHON_KEY,
   records: [PYTHON_ADAPTER_RECORD],
 

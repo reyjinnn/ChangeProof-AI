@@ -111,7 +111,7 @@ changeproof/
 ├── .prepare/            BRD · PRD · MVP · architecture  (specification package)
 ├── phases/              phase-1 … phase-7 playbooks + hackathon-slice
 ├── scripts/             native runner security probes
-└── mockup.html          UI design source (~1.1 MB, embedded fonts)
+└── .template-ui/mockup.html          UI design source (~1.1 MB, embedded fonts)
 ```
 
 ### Boundary rules — enforced by `dependency-cruiser`, ESLint, and prohibited-import tests
@@ -147,7 +147,7 @@ Customer application code runs in an isolated guest per job. Egress is closed by
 | `.prepare/PRD.md` | Behavior, `FR3-01..45`, `NFR3-01..15`, `DEC3-01..23`, data contracts — *what* |
 | `.prepare/MVP.md` | Scope, capability matrix, `WP3-01..34`, gates `G3-01..17`, `NEG3-01..40`, `SC3-01..11` — *when done* |
 | `.prepare/architecture.md` | Module structure, import matrix, hosted topology — *where and how constrained* |
-| `mockup.html` | UI **design source**, not implementation evidence |
+| `.template-ui/mockup.html` | UI **design source**, not implementation evidence |
 | `AGENTS.md` | Working contract for every AI agent in this repository |
 | `SKILL.md` | Step-by-step playbook + requirement index (`changeproof-development`) |
 | `phases/phase-N.md` | Execution playbooks for the active full release |
@@ -184,7 +184,7 @@ Conflicts between documents are *not* guessed at: record the conflict and resolv
 | Authoritative state (target) | **PostgreSQL** + private content-addressed object storage | local JSON is not hosted authority |
 | GitHub integration (target) | **Octokit** behind a broker | no customer credentials in guests |
 | Language toolchains (target) | pinned natively per adapter (ts-morph for TS, native CLIs elsewhere) | interface stays language-neutral |
-| UI | `mockup.html` → `apps/dashboard`, `apps/trace-viewer` (phase-6) | Inter + Plus Jakarta Sans, self-hosted WOFF2, SIL OFL 1.1 |
+| UI | `.template-ui/mockup.html` → `apps/dashboard`, `apps/trace-viewer` (phase-6) | Inter + Plus Jakarta Sans, self-hosted WOFF2, SIL OFL 1.1 |
 
 Workspaces, HTML framework, and database driver arrive with their work packages; nothing is added speculatively.
 
@@ -344,7 +344,7 @@ Hard rules:
 | [`docs/phase-reports/`](docs/phase-reports/) | Per-phase proof: commands, exit codes, artifacts, blockers |
 | [`docs/decisions/`](docs/decisions/) | Decision records, schema/policy versions, license notice |
 | [`docs/phase-plan-revision.md`](docs/phase-plan-revision.md) | Plan revision 2 |
-| [`mockup.html`](mockup.html) | UI design source (design tokens extracted to one source; layered `!important` skins are not copied) |
+| [`.template-ui/mockup.html`](.template-ui/mockup.html) | UI design source (design tokens extracted to one source; layered `!important` skins are not copied) |
 
 **Runtime UI language is English** (FR3-40): Indonesian specification documents do not imply an Indonesian UI.
 
@@ -421,4 +421,4 @@ Publishing `verified` bundle results, or reporting any figure the specification 
 
 Declared in `package.json` as `SEE LICENSE IN docs/decisions/`. Report the exact license status from `docs/decisions/` before redistribution — no license has been chosen by assumption here.
 
-Bundled fonts **Inter** and **Plus Jakarta Sans** are **SIL Open Font License 1.1**, self-hosted with zero external requests, license notices embedded in `mockup.html` under `changeproof-source-assets`.
+Bundled fonts **Inter** and **Plus Jakarta Sans** are **SIL Open Font License 1.1**, self-hosted with zero external requests, license notices embedded in `.template-ui/mockup.html` under `changeproof-source-assets`.

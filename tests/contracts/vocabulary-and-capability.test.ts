@@ -51,7 +51,7 @@ describe('status vocabulary is exact', () => {
 
 describe('capability records keep target and proven level separate (NEG3-09)', () => {
   const record = (overrides: Record<string, unknown> = {}) => ({
-    schemaVersion: '1' as const,
+    schemaVersion: '2' as const,
     key: {
       ecosystem: 'typescript',
       language: 'typescript',

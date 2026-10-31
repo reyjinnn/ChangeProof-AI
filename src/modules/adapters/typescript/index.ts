@@ -42,7 +42,7 @@ export const TYPESCRIPT_KEY: CapabilityKey = {
 };
 
 export const TYPESCRIPT_ADAPTER_RECORD: CapabilityRecord = {
-  schemaVersion: '1',
+  schemaVersion: '2',
   key: TYPESCRIPT_KEY,
   targetLevel: 'L3',
   provenLevel: 'none',
@@ -75,7 +75,7 @@ interface EndpointFact {
 
 export const TYPESCRIPT_ADAPTER: AdapterDefinition = {
   name: 'typescript',
-  contractVersion: '1',
+  contractVersion: '2',
   key: TYPESCRIPT_KEY,
   records: [TYPESCRIPT_ADAPTER_RECORD],
 

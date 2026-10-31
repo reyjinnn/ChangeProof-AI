@@ -114,50 +114,6 @@ export const PYTHON_SERVICE = {
   ].join('\n'),
 } as const;
 
-/** A Spring Boot-style JVM service with a Java controller and a Kotlin service. */
-export const JVM_SERVICE = {
-  'pom.xml': [
-    '<project>',
-    '  <modelVersion>4.0.0</modelVersion>',
-    '  <groupId>com.acme</groupId>',
-    '  <artifactId>orders-service</artifactId>',
-    '  <version>1.0.0</version>',
-    '  <properties>',
-    '    <maven.compiler.source>21</maven.compiler.source>',
-    '    <maven.compiler.target>21</maven.compiler.target>',
-    '    <kotlin.version>2.1.0</kotlin.version>',
-    '  </properties>',
-    '</project>',
-  ].join('\n'),
-  'src/main/java/com/acme/OrderController.java': [
-    'package com.acme;',
-    '',
-    'import org.springframework.web.bind.annotation.GetMapping;',
-    'import org.springframework.web.bind.annotation.PathVariable;',
-    'import org.springframework.web.bind.annotation.RestController;',
-    '',
-    '@RestController',
-    'public class OrderController {',
-    '  @GetMapping("/api/orders/{orderId}")',
-    '  public OrderDto getOrder(@PathVariable String orderId) {',
-    '    return new OrderDto(orderId, 100L);',
-    '  }',
-    '}',
-  ].join('\n'),
-  'src/main/java/com/acme/OrderDto.java': [
-    'package com.acme;',
-    '',
-    'public record OrderDto(String id, long totalCents) {}',
-  ].join('\n'),
-  'src/main/kotlin/com/acme/OrderService.kt': [
-    'package com.acme',
-    '',
-    'class OrderService {',
-    '  suspend fun totalCents(orderId: String): Long = 100L',
-    '}',
-  ].join('\n'),
-} as const;
-
 /** A Laravel-style PHP service with a controller and a route file. */
 export const PHP_SERVICE = {
   'composer.json': JSON.stringify(

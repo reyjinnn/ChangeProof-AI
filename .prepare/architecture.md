@@ -1,6 +1,6 @@
 # ChangeProof AI 1.0 — Hosted SaaS Modular Monolith Architecture
 
-**Active scope:** all features/modules mentioned in these four documents and `mockup.html` are mandatory in the complete release. No features are deferred to a later phase; implementation order follows dependencies. Design targets and mockup displays remain non-proof of implementation. Legacy scope decisions in the history of MVP §19 have been superseded.
+**Active scope:** all features/modules mentioned in these four documents and `.template-ui/mockup.html` are mandatory in the complete release. No features are deferred to a later phase; implementation order follows dependencies. Design targets and mockup displays remain non-proof of implementation. Legacy scope decisions in the history of MVP §19 have been superseded.
 
 **Status:** initial design for 1.0 implementation; the following structure is a target.  
 **Reference:** [BRD](BRD.md), [PRD](PRD.md), [MVP](MVP.md).
@@ -43,7 +43,6 @@ changeproof/
 │   │   │   ├── registry/
 │   │   │   ├── typescript/     # JS/TS frameworks + schema/persistence adapters
 │   │   │   ├── python/
-│   │   │   ├── jvm/            # Java/Kotlin
 │   │   │   ├── go/
 │   │   │   ├── php/
 │   │   │   └── dotnet/
@@ -363,13 +362,13 @@ Following passage of all gates, public access remains bounded by supported scope
 - **Plus Jakarta Sans** (500–800): headings and wordmarks in the HTML interface.
 
 Both fonts use the SIL Open Font License 1.1. The original copyright/license files
-and original WOFF2 assets are embedded in `mockup.html` in the `changeproof-source-assets` JSON block; stylesheet font data remains embedded.
+and original WOFF2 assets are embedded in `.template-ui/mockup.html` in the `changeproof-source-assets` JSON block; stylesheet font data remains embedded.
 Source: [Inter](https://github.com/google/fonts/tree/main/ofl/inter) and
 [Plus Jakarta Sans](https://github.com/google/fonts/tree/main/ofl/plusjakartasans).
 
 The Latin variable WOFF2 files were retrieved through the official Google Fonts
 CSS service. The standalone HTML retains their embedded data URLs.
-The current `mockup.html` embeds these fonts without any external request.
+The current `.template-ui/mockup.html` embeds these fonts without any external request.
 
 
 ## 19. Modules and Boundaries for All Key Features

@@ -24,7 +24,7 @@ If evidence is insufficient, the product **must** produce a diagnosis + specific
 | `.prepare/PRD.md` | Behavior, FR3-01..45, NFR3-01..15, DEC3-01..23, data contracts, problem profiles PC3-01..08, hosted customer journey | Understand *what* and the contracts |
 | `.prepare/MVP.md` | Minimum scope, capability matrix, work packages WP3-01..34, gates G3-01..17, negative cases NEG3-01..40, scenarios SC3-01..11, campaign protocol | Understand *when it is done* and *work order* |
 | `.prepare/architecture.md` | Module structure, import matrix, trust boundary, hosted topology, operations, font assets | Understand *where* and *how it is constrained* |
-| `mockup.html` | UI design (design source, **not** implementation evidence) | Build `apps/dashboard` |
+| `.template-ui/mockup.html` | UI design (design source, **not** implementation evidence) | Build `apps/dashboard` |
 
 Required reading order for a new task: BRD → PRD → MVP → architecture → a dependency-ready work package.
 
@@ -219,9 +219,9 @@ Rules:
 
 ## 11. UI / dashboard
 
-`mockup.html` is a **design source, not evidence**. Copy/figures/credits/roadmap/testimonials/timing/retention in the mockup are illustrative until the service profile is calibrated and approved. Every CTA, form, menu, filter, export, and collaboration preview must have real service behavior before acceptance — no decorative buttons.
+`.template-ui/mockup.html` is a **design source, not evidence**. Copy/figures/credits/roadmap/testimonials/timing/retention in the mockup are illustrative until the service profile is calibrated and approved. Every CTA, form, menu, filter, export, and collaboration preview must have real service behavior before acceptance — no decorative buttons.
 
-- Fonts: **Inter** (body/forms/tables/labels) and **Plus Jakarta Sans** (headings/wordmark), SIL OFL 1.1 license; WOFF2 files + licenses embedded in `mockup.html` (`changeproof-source-assets` block). Self-host, no external requests; include license notices.
+- Fonts: **Inter** (body/forms/tables/labels) and **Plus Jakarta Sans** (headings/wordmark), SIL OFL 1.1 license; WOFF2 files + licenses embedded in `.template-ui/mockup.html` (`changeproof-source-assets` block). Self-host, no external requests; include license notices.
 - The mockup contains multiple skin layers overriding each other. Do not copy layered CSS/`!important`; extract tokens from the active skin into one design-token source, support light/dark themes, and shared components (responsive shell, custom select/file picker, keyboard focus).
 - The mockup file is large (~840 KB, embedded fonts): do not `cat` the entire file; read sections (`grep`/`sed`).
 - Browser persistence only: theme, sidebar, account-scoped non-secret drafts. **Do not** store file bytes, passwords, sessions, BYOK, tokens.

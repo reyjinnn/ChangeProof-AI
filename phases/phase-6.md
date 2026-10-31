@@ -6,7 +6,7 @@
 **Outcome:** The complete ChangeProof public site, dashboard and trace viewer match the active final mockup and operate through real authorized services.
 
 **Competition slice:** the Meta hackathon build is a separate bounded playbook, [hackathon-slice](hackathon-slice.md). It is not an eighth release phase and does not change this phase's scope, work packages or gates. A competition demo does not make any WP or G3 gate complete.
-**Design source:** [mockup.html](../mockup.html), equivalent to `mockup.html` when the package is in ``. Read sections only; do not print embedded fonts/data URIs wholesale. Follow [skill UI guide](../SKILL.md#ref-ui-mockup-guide), PRD FR3-31/37..45 and §20, MVP §20/21/22, architecture §18–20.
+**Design source:** [.template-ui/mockup.html](../.template-ui/mockup.html), equivalent to `.template-ui/mockup.html` when the package is in ``. Read sections only; do not print embedded fonts/data URIs wholesale. Follow [skill UI guide](../SKILL.md#ref-ui-mockup-guide), PRD FR3-31/37..45 and §20, MVP §20/21/22, architecture §18–20.
 
 ## Prerequisites and front-end work
 
@@ -47,7 +47,7 @@ Contributes to G3-07..10/12..16. Phase-7 performs the complete cross-system regr
 | Visual polish per page | `antislop-ui`, `ui-visual-composition` | — |
 | **Final gate before handoff** | `reviewing-interface-quality` | Required — runs after implementation, before the report |
 
-Full binding matrix: `SKILL.md` §1 *Skill bindings*. `mockup.html` remains a **design source, not evidence** — do not copy its layered `!important` CSS; extract tokens into one source (see `SKILL.md#ref-ui-mockup-guide`).
+Full binding matrix: `SKILL.md` §1 *Skill bindings*. `.template-ui/mockup.html` remains a **design source, not evidence** — do not copy its layered `!important` CSS; extract tokens into one source (see `SKILL.md#ref-ui-mockup-guide`).
 
 ## Task breakdown — browser tests first where the risk is
 

@@ -29,7 +29,7 @@ export const GO_KEY: CapabilityKey = {
 };
 
 export const GO_ADAPTER_RECORD: CapabilityRecord = CapabilityRecordSchema.parse({
-  schemaVersion: '1',
+  schemaVersion: '2',
   key: GO_KEY,
   targetLevel: 'L2',
   provenLevel: 'none',
@@ -86,10 +86,13 @@ func main() {
 
 export const GO_ADAPTER: AdapterDefinition = {
   name: 'go',
-  contractVersion: '1',
+  contractVersion: '2',
   key: GO_KEY,
   records: [GO_ADAPTER_RECORD],
   async extract(input: AdapterExtractInput): Promise<AdapterExtractResult> {
+    if (input.version.trim() === '' || input.version === 'unavailable') {
+      return unsupported(input, 'Go toolchain unavailable: no pinned toolchain version was provided.');
+    }
     const snapshot = snapshotId(input.root, input.version);
     const diagnostics: string[] = [];
     const entries: { file: string; source: string }[] = [];
@@ -118,6 +121,11 @@ export const GO_ADAPTER: AdapterDefinition = {
         };
       }
       const facts = (parseNativeJson(result.stdout) as GoFact[] | null) ?? [];
+      // An empty extraction is not a result: without facts there is no evidence,
+      // so report unsupported instead of a successful empty graph (NEG3-09).
+      if (facts.length === 0) {
+        return unsupported(input, 'No supported Go route/type syntax was found in the snapshot.');
+      }
       const nodes = new Map<string, GraphNode>();
       const edges: GraphEdge[] = [];
       for (const entry of entries) {

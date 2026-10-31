@@ -16,7 +16,7 @@ import { ProvenLevelSchema, SupportLevelSchema, type ProvenLevel } from '../voca
  * "Next.js 15" never implies "Next.js".
  */
 
-export const ECOSYSTEMS = ['typescript', 'python', 'jvm', 'go', 'php', 'dotnet'] as const;
+export const ECOSYSTEMS = ['typescript', 'python', 'go', 'php', 'dotnet'] as const;
 export const EcosystemSchema = z.enum(ECOSYSTEMS);
 export type Ecosystem = z.infer<typeof EcosystemSchema>;
 
@@ -83,7 +83,7 @@ export type CapabilityKey = z.infer<typeof CapabilityKeySchema>;
 
 export const CapabilityRecordSchema = z
   .strictObject({
-    schemaVersion: z.literal('1'),
+    schemaVersion: z.literal('2'),
     key: CapabilityKeySchema,
     targetLevel: SupportLevelSchema,
     provenLevel: ProvenLevelSchema,
@@ -170,7 +170,7 @@ export function classifySupportLevel(evidence: CapabilityEvidence): ProvenLevel 
   return evidence.positiveCases >= 2 ? 'L3' : 'L2';
 }
 
-/** The six ecosystems that must be registered (MVP §3). */
+/** The five ecosystems that must be registered (MVP §3, as resolved in T-06). */
 export const REQUIRED_ECOSYSTEMS = ECOSYSTEMS;
 
 export function capabilityKeyDigestInput(key: CapabilityKey): Record<string, string> {

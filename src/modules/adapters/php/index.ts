@@ -38,7 +38,7 @@ export const PHP_KEY: CapabilityKey = {
 };
 
 export const PHP_ADAPTER_RECORD: CapabilityRecord = CapabilityRecordSchema.parse({
-  schemaVersion: '1',
+  schemaVersion: '2',
   key: PHP_KEY,
   targetLevel: 'L2',
   provenLevel: 'none',
@@ -96,7 +96,7 @@ interface PhpFact {
 
 export const PHP_ADAPTER: AdapterDefinition = {
   name: 'php',
-  contractVersion: '1',
+  contractVersion: '2',
   key: PHP_KEY,
   records: [PHP_ADAPTER_RECORD],
 

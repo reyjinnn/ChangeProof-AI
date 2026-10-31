@@ -1,6 +1,6 @@
 # ChangeProof AI 1.0: Business Requirements Document
 
-**Active scope, 22 October 2026:** Every feature and module named in these four documents and `mockup.html` is required for the complete release. No feature is deferred to a later phase; implementation order follows dependencies. Design targets and mockup appearance are not evidence of implementation. The former scope decision in MVP §19 has been superseded.
+**Active scope, 22 October 2026:** Every feature and module named in these four documents and `.template-ui/mockup.html` is required for the complete release. No feature is deferred to a later phase; implementation order follows dependencies. Design targets and mockup appearance are not evidence of implementation. The former scope decision in MVP §19 has been superseded.
 
 **Document type:** Initial product-development brief.  
 **Status:** Target specification; not a claim that any capability has been implemented.  
@@ -106,7 +106,6 @@ All items below are **product targets**. An achieved level is recorded only afte
 | --- | --- | --- | --- |
 | JavaScript/TypeScript | React, Next.js, Vue, Nuxt, Angular, SvelteKit; Express, NestJS, Fastify, Hono | Prisma, TypeORM, Drizzle, Sequelize | Manifest/lockfile, compiler/build, native test runner, browser E2E |
 | Python | FastAPI, Django, Flask | SQLAlchemy, Django ORM, Pydantic | Environment/lock, pytest or project runner, Ruff/mypy when configured |
-| Java/Kotlin | Spring Boot, Quarkus, Micronaut, Ktor | Hibernate/JPA | Maven/Gradle, compiler, native tests |
 | Go | Gin, Fiber, Echo, net/http | GORM, Ent | Modules, compiler, go test |
 | PHP | Laravel, Symfony | Eloquent, Doctrine | Composer, PHPUnit/Pest according to the project |
 | C#/.NET | ASP.NET Core | Entity Framework Core | SDK/project graph, native build, xUnit/NUnit according to the project |
@@ -158,7 +157,7 @@ Correctness, performance, resilience, and data integrity are four different cond
 Build and use a real application consisting of:
 
 - Next.js/TypeScript as the frontend for creating and reading orders.
-- Spring Boot as the order service.
+- NestJS as the order service.
 - FastAPI as the inventory service.
 - PostgreSQL for business state and migrations.
 - Redis Streams for event delivery, plus Redis cache if the application actually uses one.
@@ -322,7 +321,7 @@ Document checks cover links/anchors, ID consistency, traceability, and the depen
 
 ## 19. Scope from the documentation and mockup
 
-The user's 22 October 2026 instruction makes every feature in the four documents and the [mockup](mockup.html) mandatory product scope. No expansion list may be deferred until after the product is declared complete. Delivery order still follows dependencies and readiness; missing access, budget, vendor/pricing/license decisions, or qualification results become specific blockers, not reasons to remove features from acceptance.
+The user's 22 October 2026 instruction makes every feature in the four documents and the [mockup](.template-ui/mockup.html) mandatory product scope. No expansion list may be deferred until after the product is declared complete. Delivery order still follows dependencies and readiness; missing access, budget, vendor/pricing/license decisions, or qualification results become specific blockers, not reasons to remove features from acceptance.
 
 The complete product experience includes the public website; GitHub/email/SAML identity and recovery; organizations/members/grants; projects/environments/templates/drafts; hosted runs through independent evidence/PR/outcome; notifications/search/audit; internal discussion/reviewer notes; support/access requests and incident/operator operations; free and paid subscriptions; privacy/deletion; self-host/BYOK/binary/multi-cloud; and repository providers frozen in the catalog. Behavior and mapping to the existing engine are in [PRD §19](PRD.md#19-complete-product-features-mockups-and-scope).
 
@@ -415,7 +414,7 @@ Credits are provider-specific and conditional. Do not add them up as an availabl
 
 ## Seven-file package consolidation, 22 October 2026
 
-At the user's request, the intended final `` package contained only `BRD.md`, `PRD.md`, `MVP.md`, `architecture.md`, `SKILL.md`, `AGENTS.md`, and `mockup.html`. Seven references were merged into the unified references section in SKILL; identical skill copies were verified. The SVG logo, WOFF2 fonts, and OFL license text were stored in HTML; the reports folder was initially empty. Product scope, requirement IDs, schema, policy, and acceptance gates did not change. Document consolidation is not evidence of implementation or passing gates.
+At the user's request, the intended final `` package contained only `BRD.md`, `PRD.md`, `MVP.md`, `architecture.md`, `SKILL.md`, `AGENTS.md`, and `.template-ui/mockup.html`. Seven references were merged into the unified references section in SKILL; identical skill copies were verified. The SVG logo, WOFF2 fonts, and OFL license text were stored in HTML; the reports folder was initially empty. Product scope, requirement IDs, schema, policy, and acceptance gates did not change. Document consolidation is not evidence of implementation or passing gates.
 
 **Deletion status:** consolidation was complete, but an automated policy check denied deletion of the source files/folders. Those source folders remained; the seven-file layout was not achieved.
 
@@ -452,8 +451,8 @@ Before submission: read the current waiver and terms, verify usage/publication p
 
 | Keep in the core flow | Exclude from hackathon demo claims |
 |---|---|
-| One order → inventory case reproducible from a clean state | Full six-ecosystem/framework coverage and generic version support |
-| TypeScript/Next.js storefront plus **one** backend/service stack actually run; choose Spring Boot or FastAPI after verifying toolchains and available time | Repair across three repositories and Java + Python + TypeScript simultaneously, unless all are genuinely available and stable without compromising proof |
+| One order → inventory case reproducible from a clean state | Full five-ecosystem/framework coverage and generic version support |
+| TypeScript/Next.js storefront plus the FastAPI backend/service stack actually run | Repair across three repositories and Python + TypeScript simultaneously, unless all are genuinely available and stable without compromising proof |
 | An order API/contract change that breaks one consumer and has an observed initial failure | Complex online migration, dependency-upgrade portfolio, multi-region/consensus, TB/cross-engine, long-soak, and the full SC3 portfolio |
 | A small dependency/impact graph with clear provenance: contract → producer/consumer → business workflow | Full multi-tenant SaaS dashboard, billing, SAML/SCIM, BYOK, multi-cloud, self-host/binary, and all provider integrations |
 | Human-authored/reviewed intent and oracle before the run; patch limited to allowlisted files | Autonomous merge/deploy or production mutation |
@@ -462,7 +461,7 @@ Before submission: read the current waiver and terms, verify usage/publication p
 | Concise evidence dossier: failing baseline → candidate identity/diff → checks actually run → verdict/limits → clean reproduction | Credits, rate limits, runtime, customer adoption, or integrations not confirmed as available capabilities |
 | Simple demo UI that preserves AI disclosure, limitations, run status, evidence, and Meta attribution/provenance | Removal/concealment of watermark, labels, metadata, or provenance signals from Meta outputs |
 
-This document does **not** choose Spring Boot or FastAPI. Choose one based on the available fixture/repository and native toolchain; do not implement both backends just for breadth. Use OpenAPI/a fixed contract as an explicit boundary. If a stack cannot run, narrow the fixture or show the blocker; do not substitute mock results and claim they are native.
+The backend stack is FastAPI. Choose the fixture based on the available fixture/repository and native toolchain. Use OpenAPI/a fixed contract as an explicit boundary. If a stack cannot run, narrow the fixture or show the blocker; do not substitute mock results and claim they are native.
 
 ### Demo sequence and evidence
 

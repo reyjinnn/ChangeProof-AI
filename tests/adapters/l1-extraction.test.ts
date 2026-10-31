@@ -3,9 +3,8 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { AdapterRegistry } from '../../src/modules/adapters/index.js';
 import { TYPESCRIPT_ADAPTER } from '../../src/modules/adapters/typescript/index.js';
 import { PYTHON_ADAPTER } from '../../src/modules/adapters/python/index.js';
-import { JVM_ADAPTER } from '../../src/modules/adapters/jvm/index.js';
 import { PHP_ADAPTER } from '../../src/modules/adapters/php/index.js';
-import { createFixture, JVM_SERVICE, PHP_SERVICE, PYTHON_SERVICE, TYPESCRIPT_CONSUMER } from './fixtures.js';
+import { createFixture, PHP_SERVICE, PYTHON_SERVICE, TYPESCRIPT_CONSUMER } from './fixtures.js';
 
 /**
  * WP3-03 / T1-5 — L1 positive + negative extraction per ecosystem.
@@ -24,7 +23,6 @@ afterEach(() => {
 const registry = new AdapterRegistry([
   ...TYPESCRIPT_ADAPTER.records,
   ...PYTHON_ADAPTER.records,
-  ...JVM_ADAPTER.records,
   ...PHP_ADAPTER.records,
 ]);
 
@@ -98,54 +96,6 @@ describe('Python L1 extraction (Python 3.10.0)', () => {
 
     expect(result.unknowns.some((unknown) => /dynamic|reflection|import/i.test(unknown))).toBe(true);
     expect(result.graph.edges.every((edge) => edge.resolution !== 'proven' || edge.evidence !== undefined)).toBe(true);
-  });
-});
-
-describe('JVM L1 extraction (Java 21, Maven 3.10)', () => {
-  it('extracts a positive Spring route and DTO from Java source', async () => {
-    const fixture = createFixture(JVM_SERVICE);
-    fixtures.push(fixture);
-
-    const result = await JVM_ADAPTER.extract({
-      root: fixture.root,
-      files: Object.keys(JVM_SERVICE),
-      language: 'java',
-      version: '21',
-      capability: registry.require(JVM_ADAPTER.key),
-    });
-
-    expect(result.graph.nodes.some((node) => node.kind === 'endpoint')).toBe(true);
-    expect(result.graph.nodes.some((node) => node.kind === 'dto')).toBe(true);
-  }, 30_000);
-
-  it('keeps unresolved reflection visible in Java source', async () => {
-    const fixture = createFixture({
-      'pom.xml': '<project><groupId>com.acme</groupId><artifactId>reflection</artifactId><version>1</version></project>',
-      'src/main/java/com/acme/Loader.java': [
-        'package com.acme;',
-        'class Loader {',
-        '  Object load(String name) throws Exception {',
-        '    return Class.forName(name).getDeclaredConstructor().newInstance();',
-        '  }',
-        '}',
-      ].join('\n'),
-    });
-    fixtures.push(fixture);
-
-    const result = await JVM_ADAPTER.extract({
-      root: fixture.root,
-      files: ['pom.xml', 'src/main/java/com/acme/Loader.java'],
-      language: 'java',
-      version: '21',
-      capability: registry.require(JVM_ADAPTER.key),
-    });
-
-    expect(result.unknowns.some((unknown) => /reflection|Class\.forName/i.test(unknown))).toBe(true);
-  }, 30_000);
-
-  it('does not claim Kotlin proven when kotlinc is unavailable', () => {
-    expect(JVM_ADAPTER.kotlinAvailable).toBe(false);
-    expect(JVM_ADAPTER.kotlinRecord.provenLevel).toBe('none');
   });
 });
 

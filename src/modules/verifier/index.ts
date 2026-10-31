@@ -246,6 +246,9 @@ export class GuestRunner {
   }
 }
 
+export * from './campaign.js';
+export * from './reducers.js';
+
 /** Explicitly throw when a required runner setting is missing. */
 export function requireRunnerImage(value: string | undefined): string {
   if (value === undefined || value.trim().length === 0) {

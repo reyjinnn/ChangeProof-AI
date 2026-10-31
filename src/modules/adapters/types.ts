@@ -12,7 +12,7 @@ import type { CapabilityKey, CapabilityRecord, SystemGraph } from '../../core/in
  * would silently shrink the coverage denominator (NEG3-09).
  */
 
-export const ADAPTER_CONTRACT_VERSION = '1';
+export const ADAPTER_CONTRACT_VERSION = '2';
 
 export type ExtractStatus = 'ok' | 'unsupported' | 'failed';
 
@@ -25,8 +25,6 @@ export interface AdapterExtractInput {
   readonly version: string;
   /** The capability tuple this extraction was performed under. */
   readonly capability: CapabilityRecord;
-  /** JVM adapters need to know which language the sources are in. */
-  readonly language?: string;
 }
 
 export interface AdapterExtractResult {

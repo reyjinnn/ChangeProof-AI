@@ -1,6 +1,6 @@
 # ChangeProof AI 1.0 — Product Requirements Document
 
-**Active scope — 22 October 2026:** all features/modules mentioned in these four documents and `mockup.html` are mandatory in the complete release. No features are deferred to a later stage; implementation order follows dependencies. Design targets and mockup appearance remain no proof of implementation. Earlier scope decisions in MVP §19 history have been superseded.
+**Active scope — 22 October 2026:** all features/modules mentioned in these four documents and `.template-ui/mockup.html` are mandatory in the complete release. No features are deferred to a later stage; implementation order follows dependencies. Design targets and mockup appearance remain no proof of implementation. Earlier scope decisions in MVP §19 history have been superseded.
 
 **Type:** initial implementation brief. **Status:** normative 1.0 design target; not yet executable.  
 **References:** [BRD](BRD.md), [MVP](MVP.md), [Architecture](architecture.md).  
@@ -184,7 +184,7 @@ All values are finite, validated and frozen before the run. No unlimited default
 
 Acceptance: resume preserves usage; full proof is not skipped when budget is nearly exhausted; cancel/timeout cleans up all services; atomic checkpoints record provenance and terminal artifacts; the model cannot raise limits.
 
-Separate **proposal fixer**, **diagnostic probe**, and **verification campaign** budgets within one aggregate accounting; separation must not become a way to reset consumer/run limits. Forecasts include n repetitions, DB cloning/journal, fault teardown, browser/JVM warmup, telemetry volume, and full evidence reserve. Profiles unable to fit the entire mandatory campaign are rejected before acceptance or stop `unverified` with a resource blocker. Stricter runtime limits in execution instructions still apply.
+Separate **proposal fixer**, **diagnostic probe**, and **verification campaign** budgets within one aggregate accounting; separation must not become a way to reset consumer/run limits. Forecasts include n repetitions, DB cloning/journal, fault teardown, browser warmup, telemetry volume, and full evidence reserve. Profiles unable to fit the entire mandatory campaign are rejected before acceptance or stop `unverified` with a resource blocker. Stricter runtime limits in execution instructions still apply.
 
 ## 6. Verification and decisions
 
@@ -307,7 +307,7 @@ The trusted supervisor creates disposable sandbox topology. Non-root, resource c
 
 Dependency acquisition is performed by a broker/isolated build stage with a registry allowlist and immutable artifacts; runtime tests do not receive arbitrary egress. Test DB credentials are ephemeral and scoped only to disposable datasets.
 
-If using orchestration such as Testcontainers, Docker control remains with the trusted supervisor or isolated infrastructure boundary; do not give the host socket to untrusted test source. Spring supports integration tests against services in containers, but ChangeProof security integration must follow this boundary. [Spring Boot Testcontainers documentation](https://docs.spring.io/spring-boot/reference/testing/testcontainers.html)
+If using orchestration such as Testcontainers, Docker control remains with the trusted supervisor or isolated infrastructure boundary; do not give the host socket to untrusted test source. Frameworks support integration tests against services in containers, but ChangeProof security integration must follow this boundary.
 
 Acceptance: isolation probes for every runner profile; host/other-run/network escape is denied; crash/cancel cleans up services, volumes, network, temp credentials; required artifacts are persisted before cleanup.
 
@@ -777,7 +777,7 @@ Errors include access revoked, unsupported, provider unavailable, quota exhauste
 <a id="19-complete-product-features-mockups-and-scope"></a>
 ## 19. Mockup features and complete product scope
 
-**Local design source:** [interactive mockup](mockup.html), reviewed from route definitions, forms, actions, template data and final overrides on 22 October 2026. All following features are mandatory. Existing mockup pages use browser state, illustrative data and simulated effects; that appearance makes no claim of real backend, email delivery, PR, billing or campaigns. All UI paths must use production APIs/services and persistence at acceptance. Hash routes are design references, not final URL contracts.
+**Local design source:** [interactive mockup](.template-ui/mockup.html), reviewed from route definitions, forms, actions, template data and final overrides on 22 October 2026. All following features are mandatory. Existing mockup pages use browser state, illustrative data and simulated effects; that appearance makes no claim of real backend, email delivery, PR, billing or campaigns. All UI paths must use production APIs/services and persistence at acceptance. Hash routes are design references, not final URL contracts.
 
 ### FR3-37 — Public website and product guides
 
@@ -915,7 +915,7 @@ Extend `VerificationPlan` with coverage-selection map/rule identity; `Environmen
 
 ## Seven-file package consolidation — 22 October 2026
 
-At the user's instruction, the requested final `` package structure contains only `BRD.md`, `PRD.md`, `MVP.md`, `architecture.md`, `SKILL.md`, `AGENTS.md`, and `mockup.html`. Seven references were merged in full into the Integrated references section in SKILL; identical skill copies have been verified. SVG logos, WOFF2 fonts, and OFL license text are stored in HTML; the reports folder was originally empty. Product scope, requirement IDs, schema, policy and acceptance gates are unchanged. Document consolidation is not evidence of implementation or gate passage.
+At the user's instruction, the requested final `` package structure contains only `BRD.md`, `PRD.md`, `MVP.md`, `architecture.md`, `SKILL.md`, `AGENTS.md`, and `.template-ui/mockup.html`. Seven references were merged in full into the Integrated references section in SKILL; identical skill copies have been verified. SVG logos, WOFF2 fonts, and OFL license text are stored in HTML; the reports folder was originally empty. Product scope, requirement IDs, schema, policy and acceptance gates are unchanged. Document consolidation is not evidence of implementation or gate passage.
 
 **Deletion status:** consolidation complete, but deletion of source files/folders was denied by automated policy checks. Source folders still exist; the seven-file structure has not been achieved.
 

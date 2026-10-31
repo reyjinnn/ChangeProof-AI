@@ -1,8 +1,6 @@
 # Build output
 dist/
 *.tsbuildinfo
-.playwright-mcp/
-.trash/
 # Dependencies
 node_modules/
 

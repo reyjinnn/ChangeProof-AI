@@ -27,16 +27,20 @@
     "test:dependencies": "vitest run tests/dependencies",
     "test:security": "vitest run tests/security",
     "test:runner-security:native": "node scripts/runner-security-probes.mjs",
+    "test:identity:native": "vitest run tests/native/identity-rls.test.ts",
     "verify": "pnpm typecheck && pnpm lint && pnpm test"
   },
   "dependencies": {
+    "pg": "^8.23.1",
     "typescript": "5.9.3",
     "zod": "4.6.7"
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",
     "@types/node": "24.8.0",
+    "@types/pg": "^8.23.1",
     "dependency-cruiser": "18.6.0",
+    "embedded-postgres": "18.4.0-beta.17",
     "eslint": "10.13.0",
     "typescript-eslint": "8.71.2",
     "vitest": "5.0.5"

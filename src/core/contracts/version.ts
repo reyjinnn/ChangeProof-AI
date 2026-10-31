@@ -16,7 +16,7 @@ export const SCHEMA_VERSIONS = {
   ChangeIntent: '1',
   InterventionManifest: '1',
   ProjectInventory: '1',
-  CapabilityRecord: '1',
+  CapabilityRecord: '2',
   SystemGraph: '1',
   VerificationPlan: '1',
   RepairPlan: '1',
@@ -59,7 +59,7 @@ export type ContractName = keyof typeof SCHEMA_VERSIONS;
 export const POLICY_VERSION = '1' as const;
 
 /** The version of the adapter contract surface (FR3-02). */
-export const ADAPTER_CONTRACT_VERSION = '1' as const;
+export const ADAPTER_CONTRACT_VERSION = '2' as const;
 
 export type SchemaVersion = (typeof SCHEMA_VERSIONS)[ContractName];
 
