@@ -117,6 +117,18 @@ describe('a fault that never heals invalidates the experiment (NEG3-17)', () => 
     expect(summary.verdict).toBe('experiment_invalid');
   });
 
+  it('reports experiment_invalid when the injector recorded its own failure as an exclusion', () => {
+    const excluded = receipt({
+      result: 'excluded',
+      exclusionReason: 'injector fault did not heal within the window',
+    });
+
+    const summary = summarizeCampaign([excluded, receipt(), receipt()], plan());
+
+    expect(summary.verdict).toBe('experiment_invalid');
+    expect(summary.reasonCode).toBe('experiment_invalid');
+  });
+
   it('fails closed on a malformed receipt instead of accounting around it', () => {
     const malformed = { ...receipt(), counts: { planned: 1 } };
 

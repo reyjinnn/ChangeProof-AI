@@ -89,3 +89,53 @@ export interface ConfigurationPort {
   require(key: string): string;
   optional(key: string): string | null;
 }
+
+/**
+ * Secret broker (AGENTS.md §3 rule 12).
+ *
+ * Model, provider, and payment credentials are read at call time from the
+ * broker and never stored in modules, guests, logs, or contracts. A ref that
+ * is unknown or empty throws — there is no default credential. Implementations
+ * must never log values or include them in errors.
+ */
+export interface SecretBrokerPort {
+  readCredential(refId: string): Promise<string>;
+}
+
+/**
+ * Read-only telemetry connector (FR3-25).
+ *
+ * Connectors read logs/traces/metrics/deploy history within a declared scope
+ * and return records plus a query receipt. They never produce causes,
+ * verdicts, or oracle content: quality assessment stays in `observability`
+ * over validated `IncidentEvidence`. Dropped and truncated reads stay visible
+ * as counts — a silent gap is a false-assurance bug.
+ */
+export interface TelemetryQuery {
+  /** Backend-local source name (stream, file, table); never a raw path or URL. */
+  readonly source: string;
+  readonly sinceIso?: string;
+  readonly untilIso?: string;
+  readonly limit: number;
+}
+
+export interface TelemetryRecord {
+  readonly eventAt: string;
+  readonly observedAt: string;
+  readonly traceId?: string;
+  readonly operationId?: string;
+  readonly spanId?: string;
+  readonly fields: Readonly<Record<string, unknown>>;
+}
+
+export interface TelemetryPage {
+  readonly records: readonly TelemetryRecord[];
+  readonly dropped: number;
+  readonly truncated: boolean;
+  readonly queryReceipt: string;
+}
+
+export interface TelemetryConnectorPort {
+  readonly backend: string;
+  query(query: TelemetryQuery): Promise<TelemetryPage>;
+}

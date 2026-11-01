@@ -5,6 +5,8 @@ import { fileURLToPath } from 'node:url';
 import { Pool } from 'pg';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
+import { databaseUrlFor, resetProbeDatabase } from './db.js';
+
 /**
  * WP3-21 / T2-5 — live PostgreSQL/RLS proof (NEG3-21, FR3-29).
  *
@@ -28,8 +30,10 @@ if (databaseUrl === undefined || databaseUrl.length === 0) {
 const here = dirname(fileURLToPath(import.meta.url));
 const migration = readFileSync(join(here, '..', '..', 'infra', 'postgres', 'V1__identity_tenancy.sql'), 'utf8');
 
-const admin = new Pool({ connectionString: databaseUrl });
-const appUrl = new URL(databaseUrl);
+// Own database per file: scheduling (serial or parallel) cannot cross-talk.
+const fileDbUrl = databaseUrlFor(databaseUrl, 't_rls');
+const admin = new Pool({ connectionString: fileDbUrl });
+const appUrl = new URL(fileDbUrl);
 appUrl.username = 'app_user';
 appUrl.password = 'app-probe-only';
 const appPool = new Pool({ connectionString: appUrl.toString() });
@@ -51,6 +55,7 @@ async function withTenant<T>(tenantId: string, work: (query: (text: string) => P
 }
 
 beforeAll(async () => {
+  await resetProbeDatabase(databaseUrl, 't_rls');
   await admin.query(migration);
   await admin.query(`DELETE FROM repository_grants`);
   await admin.query(`DELETE FROM memberships`);
@@ -117,7 +122,11 @@ describe('row-level security isolates tenants on real PostgreSQL', () => {
     try {
       const setting = await client.query(`SELECT current_setting('app.current_tenant', true) AS value`);
       const value = (setting.rows as { value: string | null }[])[0]?.value;
-      expect(value).toBeNull();
+      // PostgreSQL reports a RESET custom GUC as '' rather than NULL; either
+      // way no tenant context may survive — the previous tenant must not leak.
+      expect(value === null || value === '').toBe(true);
+      const projects = await client.query(`SELECT id FROM projects`);
+      expect(projects.rows).toEqual([]);
     } finally {
       client.release();
     }

@@ -29,6 +29,7 @@ import {
   IncidentEvidenceSchema,
   InterventionManifestSchema,
   InvariantProposalSchema,
+  InvitationSchema,
   JobLeaseSchema,
   MeasurementValiditySchema,
   NodeKindSchema,
@@ -44,6 +45,7 @@ import {
   RepositoryConnectionSchema,
   RunForecastSchema,
   RunStateSchema,
+  SessionSchema,
   SupportLevelSchema,
   SystemGraphSchema,
   TargetAssessmentSchema,
@@ -394,6 +396,38 @@ describe('hosted contracts check authority, not just shape', () => {
     expect(TenantContextSchema.parse(tenant()).authoritySource).toBe('server');
     expect(() => TenantContextSchema.parse({ ...tenant(), authoritySource: 'browser' })).toThrow();
     expect(() => TenantContextSchema.parse({ ...tenant(), role: 'superuser' })).toThrow();
+  });
+
+  it('accepts session and invitation records and rejects bad roles, hashes, versions', () => {
+    const session = {
+      schemaVersion: '1' as const,
+      sessionId: 'sess-abc123',
+      tenantId: 'tenant-a',
+      userId: 'user-1',
+      grantVersionAtIssue: 0,
+      issuedAt: ISO,
+      expiresAt: ISO,
+      revokedAt: null,
+    };
+    expect(SessionSchema.parse(session).sessionId).toBe('sess-abc123');
+    expect(() => SessionSchema.parse({ ...session, schemaVersion: '2' })).toThrow();
+    expect(() => SessionSchema.parse({ ...session, grantVersionAtIssue: -1 })).toThrow();
+    const invitation = {
+      schemaVersion: '1' as const,
+      invitationId: 'inv-1',
+      tenantId: 'tenant-a',
+      role: 'member' as const,
+      invitedBy: 'user-9',
+      tokenHash: SHA_A,
+      issuedAt: ISO,
+      expiresAt: ISO,
+      acceptedAt: null,
+      revokedAt: null,
+    };
+    expect(InvitationSchema.parse(invitation).role).toBe('member');
+    expect(() => InvitationSchema.parse({ ...invitation, role: 'superuser' })).toThrow();
+    expect(() => InvitationSchema.parse({ ...invitation, tokenHash: 'not-a-hash' })).toThrow();
+    expect(() => InvitationSchema.parse({ ...invitation, schemaVersion: '99' })).toThrow();
   });
 
   it('accepts repository, run-request, lease, usage, grant, lifecycle and profile records', () => {

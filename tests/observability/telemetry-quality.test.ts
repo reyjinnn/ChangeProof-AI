@@ -90,6 +90,14 @@ describe('telemetry quality never produces a cause (NEG3-16)', () => {
     expect(quality.gaps.some((gap) => gap.includes('deploy'))).toBe(true);
   });
 
+  it('marks joins across redacted keys as unsupported instead of correlating through them', () => {
+    const quality = assessTelemetryQuality(evidence({ redactions: ['trace.parent'] }));
+
+    expect(quality.causality).toBe('causality_unproven');
+    expect(quality.gaps.some((gap) => gap.includes('redacted'))).toBe(true);
+    expect('cause' in quality).toBe(false);
+  });
+
   it('marks timestamp-only correlation as ambiguous', () => {
     const quality = assessTelemetryQuality(
       evidence({ traceIds: [], operationIds: [], spanIds: [] }),

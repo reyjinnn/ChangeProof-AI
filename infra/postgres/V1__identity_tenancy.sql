@@ -12,10 +12,11 @@
 
 -- Idempotent for disposable probe databases; the hosted migrator records
 -- applied versions in its own ledger and never replays V1 on hosted data.
-DROP TABLE IF EXISTS repository_grants;
-DROP TABLE IF EXISTS memberships;
-DROP TABLE IF EXISTS projects;
-DROP TABLE IF EXISTS tenants;
+-- CASCADE: later migrations (V2+) reference these tables; probe reset drops all.
+DROP TABLE IF EXISTS repository_grants CASCADE;
+DROP TABLE IF EXISTS memberships CASCADE;
+DROP TABLE IF EXISTS projects CASCADE;
+DROP TABLE IF EXISTS tenants CASCADE;
 
 CREATE TABLE tenants (
   id TEXT PRIMARY KEY

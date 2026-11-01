@@ -32,6 +32,7 @@ export * from './contracts/schemas/budget.js';
 export * from './contracts/schemas/campaign.js';
 export * from './contracts/schemas/engine.js';
 export * from './contracts/schemas/hosted.js';
+export * from './contracts/schemas/identity-services.js';
 export * from './contracts/schemas/readiness.js';
 
 // Ports (contract surface for cross-module collaboration, wired by orchestrator)

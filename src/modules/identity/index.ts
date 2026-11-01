@@ -4,7 +4,11 @@ import {
   type TenantContext,
 } from '../../core/index.js';
 
+import { assertServerAuthority } from './guards.js';
+
 export * from './challenges.js';
+export * from './guards.js';
+export * from './store.js';
 
 /**
  * Tenant grant and session checks (WP3-21, FR3-29).
@@ -16,15 +20,6 @@ export * from './challenges.js';
  * + RLS) and hosted wiring (sessions, invites, lifecycle) arrive with the
  * full WP; the live RLS proof lives in `tests/native/identity-rls.test.ts`.
  */
-
-/** The context must be derived server-side; a browser or job payload is not authority. */
-export function assertServerAuthority(context: { readonly authoritySource: string }): void {
-  if (context.authoritySource !== 'server') {
-    throw new ChangeProofError(
-      'Tenant context is not server-derived; opaque IDs and payloads are not permission.',
-    );
-  }
-}
 
 /** The requested tenant must equal the session tenant. */
 export function assertTenantMatch(context: TenantContext, tenantId: string): void {
@@ -44,19 +39,6 @@ export function assertGrantCurrent(context: TenantContext, currentGrantVersion: 
     throw new ChangeProofError(
       'Membership is stale or revoked; re-authentication is required.',
     );
-  }
-}
-
-/** Only owner/admin/member mutate tenant resources; viewer never does, and the
- *  operator role carries no tenant authority (NEG3-34). */
-export function assertCanMutate(context: TenantContext): void {
-  assertServerAuthority(context);
-  if (
-    context.role !== 'owner' &&
-    context.role !== 'admin' &&
-    context.role !== 'member'
-  ) {
-    throw new ChangeProofError('Role is not authorized to mutate this resource.');
   }
 }
 
@@ -91,22 +73,6 @@ export function assertSessionFresh(context: TenantContext, nowIso: string): void
   }
   if (expires <= now) {
     throw new ChangeProofError('Session has expired; re-authentication is required.');
-  }
-}
-
-/** Removing the final owner would lock the tenant out (NEG3-38). */
-export function assertNoLastOwnerLockout(
-  members: readonly { readonly userId: string; readonly role: string }[],
-  removingUserId: string,
-): void {
-  const remainingOwners = members.filter(
-    (member) => member.role === 'owner' && member.userId !== removingUserId,
-  );
-  const removing = members.find((member) => member.userId === removingUserId);
-  if (removing?.role === 'owner' && remainingOwners.length === 0) {
-    throw new ChangeProofError(
-      'Removing the last owner is refused; transfer ownership first.',
-    );
   }
 }
 

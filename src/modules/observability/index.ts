@@ -1,5 +1,7 @@
 import type { CharacterizationRecord, IncidentEvidence } from '../../core/index.js';
 
+export * from './connector.js';
+
 /**
  * Read-only telemetry normalization (WP3-15, FR3-25, FR3-28).
  *

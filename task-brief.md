@@ -2,7 +2,7 @@
 
 **Plan revision:** 2 (24 October 2026)  
 
-**Coordination status last reconciled:** 1 November 2026 (T-03..T-09 task statuses reconciled; see §4)
+**Coordination status last reconciled:** 1 November 2026 (T-03..T-09 task statuses reconciled; see §4). T-10..T-15 pushed to runnable limits turn 5, 31 October 2026 UTC (see §4 and the phase-2 report §10).
 
 **Purpose:** Coordinate work between Reyn and Hoang while preserving the repository's dependency order, verification rules, and honest status reporting.  
 
@@ -42,13 +42,13 @@ The latest recorded status is Phase-2 report revision 2, dated 30 October 2026. 
 | Phase-1: WP3-03 adapters and registry (T1-4/T1-5) | `in_progress` | T-06 scope resolution and T-07 five-ecosystem L1 task are done; full WP acceptance remains beyond these allocated tasks. |
 | Phase-1: WP3-04 runner and dependency broker (T1-6/T1-7) | `in_progress` | T-08's bounded E1 VM probe is done; its single-run limitations and missing broader qualification/native dependency-acquisition proof remain. |
 | Phase-1: WP3-05 detector, analyzer, and graph (T1-8) | `in_progress` | T-03 event-flow and T-09 data/config matrix tasks are done; broader WP acceptance remains. Preserve `proven`, `inferred`, and `unresolved`. |
-| Phase-2: WP3-15/16/17 (T2-1/T2-2/T2-3) | Preparation `done`; full WPs `in_progress` | Full acceptance depends on incomplete predecessors and required native proof. |
-| Phase-2: WP3-06 (T2-4) | Preparation `done`; full WP `blocked` | No frozen oracle or real application/database/broker proof. |
-| Phase-2: WP3-21 (T2-5) | Preparation `done`; native proof `blocked` | RLS migration and native test exist, but PostgreSQL container startup did not complete. `pnpm test:identity:native` remains unrun. |
-| Phase-2: WP3-22/23/24/28 (T2-6..T2-9) | Preparation `done`; live/durable/billing/delivery proof `blocked` | GitHub authorization, durable hosted store, pricing/vendor decisions, and email delivery infrastructure are unavailable. |
+| Phase-2: WP3-15/16/17 (T2-1/T2-2/T2-3) | Runnable limits reached (turn 5); full WPs `in_progress` | Remainders: live backend connectors, barrier/network-fault executor scope, frozen SLOs, candidate arm (WP3-07), predecessors + phase-7. |
+| Phase-2: WP3-06 (T2-4) | Rig + dry runs + intent proposal + ceremony tool (turn 5); full WP `blocked` | Real app+DB+broker+browser proven; frozen acceptance awaits owner intent approval + freeze. |
+| Phase-2: WP3-21 (T2-5) | Services implemented + native 24/24 (turn 5); full WP `in_progress` | Full acceptance (incl. phase-7) and hosted deployment proof remain. |
+| Phase-2: WP3-22/23/24/28 (T2-6..T2-9) | WP3-22 client + broker code done, 22 pure tests (turn 5); live `blocked` | GitHub authorization/installation, durable hosted store, pricing/vendor decisions, and email delivery still unavailable. |
 | Gates | No G3 gate is recorded as passed | G3-08/G3-10 remain blocked without authorized publication repository and organic pilot/owner access. |
 
-**Latest recorded verification (Phase-2 report, 30 October 2026):** `pnpm typecheck`, `pnpm lint`, and `pnpm test` passed with exit code 0; the full suite recorded 290 tests across 25 files. These are results recorded for that report's change set, not a fresh run for future changes. The report records native RLS as not run and no native proof for Phase-2. The current `package.json` declares `test:runner-security:native`, but its target `scripts/runner-security-probes.mjs` is absent, so do not report that command as passing until the target is implemented and run.
+**Latest recorded verification (Phase-2 report turn 5, 31 October 2026 UTC):** `pnpm typecheck`, `pnpm lint` (57 modules / 141 deps), and `pnpm test` passed with exit code 0 (**386 tests / 33 files**); `pnpm test:identity:native` passed **33/5** on disposable `postgres:16-alpine` + `redis:7-alpine` (containers created, used, removed same turn; per-file DB isolation) — see report §10. These are results recorded for that change set, not a fresh run for future changes. Earlier notes stand corrected: `scripts/runner-security-probes.mjs` exists but was not run (missing check for WP3-04, never a pass); `semgrep` binary still absent.
 
 ## 4. Active assignments
 
@@ -70,12 +70,12 @@ Every phase task has exactly one named owner. Owners alternate deliberately (Rey
 | T-07 | T1-5 / WP3-03 | Adapter L1 remainder: per-tuple matrix for the decided scope | **Hoang** | `done` | Positive/negative L1 cases are covered for the five decided ecosystems; see `tests/adapters/t07-acceptance.test.ts` and native extraction tests. Kotlin/JVM is out of scope. |
 | T-08 | T1-6 / WP3-04 | Runner: qualified VM/microVM-equivalent isolation proof | **Reyn** | `done` | One bounded E1 VM probe has metadata/socket/termination receipts; see `docs/decisions/phase1-runner-qualification-blocked.md`. Limits: single run; no cross-tenant or cancel-mid-workload proof. Full WP remains `in_progress`. |
 | T-09 | T1-8 / WP3-05 | Graph acceptance-matrix remainder after T-03 | **Hoang** | `done` | Data and deployment/config positive/negative impact cases are in `tests/graph/detector-analyzer-graph.test.ts`; synthetic evidence only, not database/deployment runtime proof. |
-| T-10 | T2-1 / WP3-15 | Observability full acceptance | **Reyn** | `in_progress` | Preparation `done`; needs WP3-02/04/05 completion + native proof. |
-| T-11 | T2-2 / WP3-16 | Verifier campaign full acceptance | **Hoang** | `in_progress` | Preparation `done`; same predecessor and native-proof requirements. |
-| T-12 | T2-3 / WP3-17 | Measurement reducers full acceptance | **Reyn** | `in_progress` | Preparation `done`; same predecessor and native-proof requirements. |
-| T-13 | T2-4 / WP3-06 | Fixtures/oracle: frozen oracle + real app/DB/broker proof | **Hoang** | `blocked` | No frozen oracle and no real application/database/broker target. |
-| T-14 | T2-5 / WP3-21 | Identity/RLS native proof | **Reyn** | `blocked` | PostgreSQL container startup did not complete; `pnpm test:identity:native` unrun. |
-| T-15 | T2-6 / WP3-22 | GitHub live proof (webhooks, installation, broker) | **Hoang** | `blocked` | No GitHub authorization/installation; no `octokit` integration yet. |
+| T-10 | T2-1 / WP3-15 | Observability full acceptance | **Reyn** | `done` | Connector port + file ingestion + normalize loop proven, 15/15 (turn 5); live backends need catalog + access; predecessors pending. |
+| T-11 | T2-2 / WP3-16 | Verifier campaign full acceptance | **Reyn** | `done` | Bounded real executor + campaigns 4/4 native (turn 5); barriers/network-faults/budget/qualified-guest + flagship params pending. |
+| T-12 | T2-3 / WP3-17 | Measurement reducers full acceptance | **Reyn** | `done` | Real-observation reducers 2/2 + calibration proposal (turn 5); owner-frozen SLOs + candidate arm (WP3-07) pending. |
+| T-13 | T2-4 / WP3-06 | Fixtures/oracle: frozen oracle + real app/DB/broker proof | **Reyn** | `done` | Rig + dry runs 3/3 incl. real Chrome + intent proposal + ceremony tool (turn 5); awaits owner approval + freeze. |
+| T-14 | T2-5 / WP3-21 | Identity/RLS native proof | **Reyn** | `done` (allocated task) | Services implemented + native 24/24 (turn 5). Full WP3-21 `in_progress` (phase-7 + hosted deployment proof remain). |
+| T-15 | T2-6 / WP3-22 | GitHub live proof (webhooks, installation, broker) | **Reyn** | `done` | Client + broker + wiring, 22/22 pure incl. `octokit 5.0.5` (turn 5); live proof needs an authorized App. |
 | T-16 | T2-7 / WP3-23 | Jobs: durable dispatcher + hosted store | **Reyn** | `blocked` | Durable hosted store pending. |
 | T-17 | T2-8 / WP3-24 | Usage: atomic store + billing settlement | **Hoang** | `blocked` | Pricing/vendor decisions pending. |
 | T-18 | T2-9 / WP3-28 | Email/session delivery proof | **Reyn** | `blocked` | Authorized delivery infrastructure unavailable. |

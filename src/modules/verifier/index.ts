@@ -247,6 +247,7 @@ export class GuestRunner {
 }
 
 export * from './campaign.js';
+export * from './executor.js';
 export * from './reducers.js';
 
 /** Explicitly throw when a required runner setting is missing. */
