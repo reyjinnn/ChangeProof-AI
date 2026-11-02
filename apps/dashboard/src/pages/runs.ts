@@ -821,6 +821,8 @@ async function renderDetail(outlet: HTMLElement, ctx: RouteContext): Promise<voi
       ]),
       h('p', {}, [
         h('a', { href: `#/evidence?run=${encodeURIComponent(current.runId)}` }, ['Open the evidence library']),
+        document.createTextNode(' · '),
+        h('a', { href: `#/threads?run=${encodeURIComponent(current.runId)}` }, ['Open discussions']),
       ]),
     );
   };

@@ -6,6 +6,9 @@ import { apiGet } from './api.js';
 import { registerAuthPages } from './pages/auth.js';
 import { registerEvidencePages } from './pages/evidence.js';
 import { registerNotificationPages } from './pages/notifications.js';
+import { registerOperatorPages } from './pages/operator.js';
+import { registerSupportPages } from './pages/support.js';
+import { registerThreadPages } from './pages/threads.js';
 import { registerPublicPages } from './pages/public.js';
 import { registerRunPages } from './pages/runs.js';
 import { registerSettingsPage } from './pages/settings.js';
@@ -49,6 +52,9 @@ async function boot(): Promise<void> {
   registerRunPages();
   registerEvidencePages();
   registerNotificationPages();
+  registerSupportPages();
+  registerOperatorPages();
+  registerThreadPages();
 
   const { outlet } = renderShell(app);
   await refreshAccount();

@@ -16,6 +16,7 @@ import {
   isNotificationsPath,
   type NotificationsDeps,
 } from './routes-notifications.js';
+import { handleTeamworkApi, isTeamworkPath, type TeamworkDeps } from './routes-teamwork.js';
 
 /**
  * Thin HTTP slice (T-42, WP3-27/25).
@@ -38,6 +39,8 @@ export interface HttpOptions {
   readonly runs?: RunsDeps;
   /** Notification services; absent without a database (notifications paths answer 503). */
   readonly notifications?: NotificationsDeps;
+  /** Teamwork services; absent without a database (teamwork paths answer 503). */
+  readonly teamwork?: TeamworkDeps;
 }
 
 export interface HttpHandle {
@@ -205,6 +208,10 @@ export function createHttpServer(options: HttpOptions): HttpHandle {
         }
         if (isNotificationsPath(url.pathname)) {
           await handleNotificationsApi(options.notifications, request, response, request.method, url, rawBody);
+          return;
+        }
+        if (isTeamworkPath(url.pathname)) {
+          await handleTeamworkApi(options.teamwork, request, response, request.method, url, rawBody);
           return;
         }
         handleApi(ctx, response, request.method, url);

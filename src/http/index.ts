@@ -5,4 +5,5 @@ export { HttpRouteError, actingContext, parseBody, pathSegment, SESSION_COOKIE, 
 export { handleAuthApi, isAuthPath, type AuthDeps } from './routes-auth.js';
 export { handleRunsApi, isRunsPath, type RunsDeps } from './routes-runs.js';
 export { handleNotificationsApi, isNotificationsPath, type NotificationsDeps } from './routes-notifications.js';
+export { handleTeamworkApi, isTeamworkPath, type TeamworkDeps } from './routes-teamwork.js';
 export { startFromEnv } from './start.js';

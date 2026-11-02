@@ -1,6 +1,7 @@
 import { Pool } from 'pg';
 
 import {
+  composeCollaboration,
   composeEmailIdentity,
   composeFileEvidence,
   composeIdentityStore,
@@ -11,12 +12,14 @@ import {
   composePublicSite,
   composeQueries,
   composeSmtpDelivery,
+  composeSupport,
   composeUsage,
 } from '../orchestrator/index.js';
 import { createHttpServer, type HttpHandle } from './server.js';
 import type { AuthDeps } from './routes-auth.js';
 import type { NotificationsDeps } from './routes-notifications.js';
 import type { RunsDeps } from './routes-runs.js';
+import type { TeamworkDeps } from './routes-teamwork.js';
 
 /**
  * Runnable HTTP entry (T-42…T-44): `node dist/http/start.js`.
@@ -55,7 +58,7 @@ function requiredEnv(
 
 function wireAuth(
   env: StartEnv,
-): { auth: AuthDeps; runs: RunsDeps; notifications: NotificationsDeps; close: () => Promise<void> } | undefined {
+): { auth: AuthDeps; runs: RunsDeps; notifications: NotificationsDeps; teamwork: TeamworkDeps; close: () => Promise<void> } | undefined {
   if (env.DATABASE_URL === undefined || env.DATABASE_URL === '') return undefined;
   const secret = requiredEnv(env, 'CP_CHALLENGE_SECRET');
   if (secret.length < 32) {
@@ -101,6 +104,14 @@ function wireAuth(
       session: { deriveContext: (input) => identity.store.deriveContext(input) },
       notifications: composedNotifications,
     },
+    teamwork: {
+      session: { deriveContext: (input) => identity.store.deriveContext(input) },
+      support: composeSupport(pool, { identity: identity.store, jobs: jobs.store }),
+      collaboration: composeCollaboration(pool, {
+        identity: identity.store,
+        notifications: composedNotifications.store,
+      }),
+    },
     close: () => pool.end().then(() => undefined),
   };
 }
@@ -117,7 +128,7 @@ export async function startFromEnv(env: StartEnv, rootDir: string): Promise<{ ha
     distDir: env.CP_DIST ?? `${rootDir}/apps/dashboard/dist`,
     ...(wired === undefined
       ? {}
-      : { auth: wired.auth, runs: wired.runs, notifications: wired.notifications }),
+      : { auth: wired.auth, runs: wired.runs, notifications: wired.notifications, teamwork: wired.teamwork }),
   });
   await new Promise<void>((resolve, reject) => {
     handle.server.once('error', reject);
