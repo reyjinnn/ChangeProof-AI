@@ -98,15 +98,16 @@ Engineering task status is **separate** from the product verdict. They never mix
 changeproof/
 ├── src/
 │   ├── core/            contracts (versioned Zod), ports, errors — imports NOTHING internal
-│   ├── modules/
-│   │   ├── detector     change + stack discovery
-│   │   ├── adapters/    registry · typescript · python · jvm · go · php · dotnet · native
-│   │   ├── analyzer     per-adapter analysis
-│   │   ├── graph        impact graph, edge confidence
-│   │   ├── policy       pure verdict rules (no I/O, no model, no clock)
-│   │   ├── verifier     independent proof, campaigns, oracles
-│   │   └── dependencies typed dependency capabilities + trusted resolver
-│   └── orchestrator/    composition root — the only place importing every module's public API
+│   ├── modules/         25 modules: identity jobs usage lifecycle notifications queries
+│   │                    support collaboration adapters(registry typescript
+│   │                    python go php dotnet native) detector analyzer graph
+│   │                    observability migrations dependencies fixtures agent
+│   │                    verifier policy evidence github providers distribution
+│   │                    evaluation publicsite
+│   ├── orchestrator/    composition root — the only place importing every module's public API
+│   ├── http/            JSON API + static dashboard hosting (workers entry absent)
+│   └── cli/             `changeproof` self-host/BYOK bin
+├── apps/dashboard       product UI, in-tree Vite app (trace-viewer absent)
 ├── config/  fixtures/  tests/  bench/  infra/  docs/  runs/   (runs/ is gitignored)
 ├── .prepare/            BRD · PRD · MVP · architecture  (specification package)
 ├── phases/              phase-1 … phase-7 playbooks + hackathon-slice
@@ -184,9 +185,12 @@ Conflicts between documents are *not* guessed at: record the conflict and resolv
 | Authoritative state (target) | **PostgreSQL** + private content-addressed object storage | local JSON is not hosted authority |
 | GitHub integration (target) | **Octokit** behind a broker | no customer credentials in guests |
 | Language toolchains (target) | pinned natively per adapter (ts-morph for TS, native CLIs elsewhere) | interface stays language-neutral |
-| UI | `.template-ui/mockup.html` → `apps/dashboard`, `apps/trace-viewer` (phase-6) | Inter + Plus Jakarta Sans, self-hosted WOFF2, SIL OFL 1.1 |
+| DB drivers | **pg 8.x** + **redis 6.x** | RLS stores, pooling context reset |
+| UI | `apps/dashboard` from `.template-ui/mockup.html` (`apps/trace-viewer` absent) | Inter + Plus Jakarta Sans, self-hosted WOFF2, SIL OFL 1.1 |
+| UI build/dev/test | **Vite 7.1.7** · **happy-dom 15.11.7** · **axe-core 4.10.2** | component + accessibility checks |
+| Browser E2E | **playwright-core 1.x** + real Chromium, disposable PG16 + Mailpit | no screenshot/trace output in repo |
 
-Workspaces, HTML framework, and database driver arrive with their work packages; nothing is added speculatively.
+Single root package; `pnpm-workspace.yaml` holds install/build approvals only, and the dashboard has no separate `package.json`. Nothing is added speculatively.
 
 ---
 
@@ -232,17 +236,27 @@ pnpm lint
 pnpm test
 ```
 
-The `pnpm verify` shortcut runs those same checks in sequence. The latest recorded close (phase-5 report §12, 2 November 2026) has typecheck, lint/boundaries (134 modules / 385 deps), and build passing, with the unit suite at 794 passed and 3 pre-existing Python adapter failures (`l1-extraction` 2, `t07-acceptance` 1). Run the checks yourself and compare against the latest [phase report](docs/phase-reports/phase-5.md); do not attribute an existing failure to your change without checking its baseline.
+The `pnpm verify` shortcut runs those same checks in sequence. The latest observed run (2 November 2026, see the phase-6 report) has typecheck, lint/boundaries (157 modules / 465 deps), build, UI build, component tests (79/79), HTTP tests (20/20), and browser E2E (4/4 specs) passing, with the full unit suite at 815 passed and 4 failed of 819: the 3 pre-existing Python adapter failures (`l1-extraction` 2, `t07-acceptance` 1) plus 1 architecture timeout under parallel load (9/9 in isolation). The full native suite was last recorded in the phase-5 report §12 (160/162) and was not re-run. Run the checks yourself and compare against the latest [phase report](docs/phase-reports/phase-6.md); do not attribute an existing failure to your change without checking its baseline.
 
 ### Run the project
 
-This checkout has a `changeproof` CLI (`pnpm build`, then `changeproof help`) but no application server or worker entry point yet. A dashboard scaffold exists in the working tree (`apps/dashboard`, `src/http`) as uncommitted phase-6 work-in-progress, with `pnpm dev` serving it. To run the code that exists today, use the build and test commands from the project root:
+This checkout has a `changeproof` CLI, an HTTP API + dashboard server, and the dashboard UI. There is no worker entry point (`src/workers` is absent). The server and UI exist in the working tree as uncommitted phase-6 work; see the [phase-6 report](docs/phase-reports/phase-6.md) for what is proven about them.
 
 ```powershell
-pnpm build          # compile TypeScript into dist/
-pnpm test           # run the test suite once
-pnpm test:watch     # rerun tests as files change
+pnpm build                        # compile TypeScript into dist/
+node dist/cli/index.js help       # self-host/BYOK CLI usage
+pnpm test                         # run the test suite once
+pnpm test:watch                   # rerun tests as files change
 ```
+
+Start the server from the built output. Without `DATABASE_URL` it serves the public site and health only; with a database it additionally wires account and run services, and then `CP_SMTP_HOST`, `CP_SMTP_PORT`, `CP_SMTP_SENDER`, `CP_CHALLENGE_SECRET` (≥32 chars), and `CP_EVIDENCE_DIR` (an existing directory) are all required — the server refuses to start half-wired:
+
+```powershell
+$env:PORT = '4179'
+node dist/http/start.js
+```
+
+`pnpm dev` serves the dashboard through Vite for UI iteration only: it defines no API proxy, so API-backed screens show their offline states unless the built server answers `/api` on the same origin. `pnpm build:ui` produces the bundle the server hosts from `apps/dashboard/dist`.
 
 Native runner security probes run on a Modal Sandbox via `pnpm test:runner-security:native` (needs `MODAL_TOKEN_ID` / `MODAL_TOKEN_SECRET`; `--dry-run` spends nothing and proves wiring only). Until the probes run with receipts on Modal and a new boundary decision is recorded, qualification stays blocked (see `docs/decisions/phase1-runner-qualification-blocked.md`) — never a pass, and container-only evidence does not qualify a VM/microVM boundary.
 
@@ -258,7 +272,7 @@ The base install does not require every language toolchain. If your task runs na
 
 1. Read `AGENTS.md` and `SKILL.md` for the working rules, task format, and negative-case index.
 2. Read `.prepare/BRD.md`, `.prepare/PRD.md`, `.prepare/MVP.md`, then `.prepare/architecture.md` in that order.
-3. Pick a dependency-ready task from the MVP work-package dependency graph. Do not pick by WP number alone. The current next task recorded in the phase report is phase-6 T-42 (T6-1); verify [the latest report](docs/phase-reports/phase-6.md) and `task-brief.md` before starting because task status can change.
+3. Pick a dependency-ready task from the MVP work-package dependency graph. Do not pick by WP number alone. The current next task is T-46 (T6-5, evidence/publication/export UI, still `tentative`); verify [the latest report](docs/phase-reports/phase-6.md) and `task-brief.md` before starting because task status can change.
 4. Before changing code, write down the task scope, requirement IDs, expected behavior, failure cases, and proof checks using the task header in `AGENTS.md`.
 5. Add or update positive and negative tests, make the smallest change that meets the task, then run the checks for the affected area and `pnpm verify`.
 6. In your pull request, summarize the behavior changed, tests and commands run with results, remaining limitations, and any contract or decision record changes. Never present mock/replay success as real-runtime proof.
@@ -267,7 +281,7 @@ Do not add credentials or `.env` files to commits. Do not run paid API calls, ch
 
 ### Current verification status
 
-At the time this README was updated, `pnpm verify` was **not green** in the last recorded close (phase-5 report §12, 2 November 2026): typecheck, lint/boundary checks (134 modules / 385 deps), and build passed, but 3 pre-existing Python adapter tests failed (`l1-extraction` 2, `t07-acceptance` 1) — 794 passed, 3 failed. The full native suite stood at 160/162 with 2 pre-existing/environmental failures. Treat these as known baseline issues, not as failures caused by your contribution. Re-run verification on your checkout and report the current output; this status may become stale as the failures are fixed.
+At the time this README was updated, `pnpm verify` was **not green** in the last observed run (2 November 2026): typecheck, lint/boundary checks (157 modules / 465 deps), and build passed, but the unit suite stood at 815 passed and 4 failed of 819 — the 3 pre-existing Python adapter failures (`l1-extraction` 2, `t07-acceptance` 1) plus 1 architecture timeout under parallel load (9/9 in isolation). Component (79/79), HTTP (20/20), and browser E2E (4/4 specs) suites passed. The full native suite was last recorded in the phase-5 report §12 (160/162) and was not re-run. Treat these as known baseline issues, not as failures caused by your contribution. Re-run verification on your checkout and report the current output; this status may become stale as the failures are fixed.
 
 ### Reading before coding
 
@@ -285,18 +299,25 @@ Actual scripts from `package.json`:
 | Category | Command | What it runs |
 | --- | --- | --- |
 | Build | `pnpm build` | `tsc -p tsconfig.build.json` |
-| Typecheck | `pnpm typecheck` | `tsc --noEmit -p tsconfig.json` (strict) |
-| Lint | `pnpm lint` | `eslint .` **and** `depcruise --config .dependency-cruiser.cjs src` |
+| UI build | `pnpm build:ui` | `vite build apps/dashboard` |
+| UI dev | `pnpm dev` | `vite apps/dashboard` (UI only, no API proxy) |
+| Typecheck | `pnpm typecheck` | strict `tsc --noEmit` on the root **and** `apps/dashboard` projects |
+| Lint | `pnpm lint` | `eslint .` **and** `depcruise --config .dependency-cruiser.cjs src apps` |
 | Lint only | `pnpm lint:eslint` | ESLint alone |
-| Boundaries only | `pnpm lint:boundaries` | dependency-cruiser alone |
+| Boundaries only | `pnpm lint:boundaries` | dependency-cruiser on `src` alone |
 | All tests | `pnpm test` | `vitest run` |
 | Watch | `pnpm test:watch` | `vitest` |
 | Contracts + policy | `pnpm test:unit` | `tests/contracts`, `tests/policy` |
 | Architecture | `pnpm test:architecture` | `tests/architecture` |
 | Adapter conformance | `pnpm test:adapters` | `tests/adapters` |
 | Impact graph | `pnpm test:graph` | `tests/graph` |
+| Negative matrix | `pnpm test:negative` | `tests/negative` — **no such directory; exits 1 (missing check)** |
 | Dependency capabilities | `pnpm test:dependencies` | `tests/dependencies` |
 | Security | `pnpm test:security` | `tests/security` |
+| UI components | `pnpm test:ui` | dashboard Vitest config |
+| Browser E2E | `pnpm test:e2e` | `node tests/e2e/run.mjs` (disposable PG16 + Mailpit) |
+| Full native | `pnpm test:identity:native` | whole `vitest.native.config.ts` suite (needs `DATABASE_URL`) |
+| Runner probes | `pnpm test:runner-security:native` | Modal Sandbox probes (needs `MODAL_TOKEN_ID` / `MODAL_TOKEN_SECRET`) |
 | Full verification | `pnpm verify` | `typecheck && lint && test` |
 | Cleanup | `pnpm clean` | removes `dist/` |
 
@@ -335,6 +356,8 @@ Hard rules:
 | [`phases/phase-1.md`](phases/phase-1.md) … [`phase-7.md`](phases/phase-7.md) | The seven execution playbooks of one complete release |
 | [`phases/hackathon-slice.md`](phases/hackathon-slice.md) | Competition vertical slice — **not** a release phase |
 | [`docs/phase-reports/`](docs/phase-reports/) | Per-phase proof: commands, exit codes, artifacts, blockers |
+| [`docs/feature-coverage.md`](docs/feature-coverage.md) | Phase-6 control → requirement → endpoint → browser-case record |
+| [`docs/pilot-prep.md`](docs/pilot-prep.md) | Organic pilot preparation package (T-41) |
 | [`docs/decisions/`](docs/decisions/) | Decision records, schema/policy versions, license notice |
 | [`docs/phase-plan-revision.md`](docs/phase-plan-revision.md) | Plan revision 2 |
 | [`.template-ui/mockup.html`](.template-ui/mockup.html) | UI design source (design tokens extracted to one source; layered `!important` skins are not copied) |
@@ -394,15 +417,15 @@ Honest snapshot of the repository — verify anything you intend to rely on:
 
 **Present**
 
-- TypeScript source and toolchain: strict `tsc`, ESLint, dependency-cruiser boundary rules, Vitest suites (unit + native configs; 118 test files).
-- `src/core` (contracts, ports, errors), `src/orchestrator`, `src/cli` (`changeproof` bin), and modules for `detector`, `analyzer`, `graph`, `policy`, `verifier`, `agent`, `adapters`, `dependencies`, `migrations`, `fixtures`, `evidence`, `github`, `identity`, `jobs`, `usage`, `lifecycle`, `notifications`, `queries`, `support`, `collaboration`, `publicsite`, `distribution`, `providers`, and `evaluation`.
-- PostgreSQL migrations `V1`–`V11` with RLS stores, `bench/` dev suites, self-host profile, pilot-prep package (working tree, uncommitted), phase reports through phase-5 plus a started phase-6 report.
+- TypeScript source and toolchain: strict `tsc`, ESLint, dependency-cruiser boundary rules, Vitest suites (unit + native configs; 117 test files under `tests/`, plus 11 dashboard component files).
+- `src/core` (contracts, ports, errors), `src/orchestrator`, `src/http` (JSON API + static hosting), `src/cli` (`changeproof` bin), and 25 modules: `identity`, `jobs`, `usage`, `lifecycle`, `notifications`, `queries`, `support`, `collaboration`, `adapters`, `detector`, `analyzer`, `graph`, `observability`, `migrations`, `dependencies`, `fixtures`, `agent`, `verifier`, `policy`, `evidence`, `github`, `providers`, `distribution`, `evaluation`, `publicsite`.
+- PostgreSQL migrations `V1`–`V11` with RLS stores, `bench/` dev suites, self-host profile, pilot-prep package (working tree, uncommitted), feature-coverage record, and phase reports 1–6 (phase-6 §§1–8: T6-1..T6-4 done, T6-5..T6-8 open).
 - Specification package in `.prepare/`, phase playbooks in `phases/`, decision records in `docs/decisions/`.
-- Latest recorded verification (phase-5 report §12, 2 November 2026): typecheck, lint/boundaries, and build passed; unit 794 passed + 3 pre-existing Python adapter failures; native 160/162 with 2 pre-existing/environmental failures. The full `pnpm verify` exited 1. Re-run on your checkout; this snapshot goes stale fast.
+- Latest observed verification (2 November 2026): typecheck, lint/boundaries (157/465), build, UI build, component (79/79), HTTP (20/20), and browser E2E (4/4 specs) passed; unit 815 passed + 4 failed of 819 (3 pre-existing Python + 1 load-flake timeout, 9/9 isolated); full native suite last recorded phase-5 §12 (160/162, not re-run). The full `pnpm verify` exited 1. Re-run on your checkout; this snapshot goes stale fast.
 
 **Not present / not claimed**
 
-- `src/workers` and `apps/trace-viewer` — not present. `src/http` and `apps/dashboard` exist only as uncommitted phase-6 work-in-progress in the working tree.
+- `src/workers` and `apps/trace-viewer` — not present. `src/http` and `apps/dashboard` are implemented and verified per the phase-6 report but still uncommitted in the working tree.
 - Hosted object-storage wiring, live GitHub App (client + broker code present, no authorized App), qualified-guest hosted execution.
 - Hosted gates, pilot repository access, and `G3-08`/`G3-10` evidence.
 - Measured SLOs, cost, performance, adoption figures — **none have been measured**.

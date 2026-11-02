@@ -7,6 +7,11 @@ node_modules/
 # Disposable run artifacts (never authoritative state)
 runs/
 
+# Disposable file-evidence checkouts for local/E2E server runs
+# (CP_EVIDENCE_DIR). Tests mint theirs under the OS temp dir.
+evidence-local/
+evidence-tmp/
+
 # Local environment — never commit credentials
 .env
 .env.*
@@ -39,6 +44,8 @@ pnpm-debug.log*
 *.bak
 *.swp
 *.swo
+*.orig
+*.rej
 
 # Windows
 Desktop.ini
