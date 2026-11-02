@@ -139,3 +139,91 @@ export interface TelemetryConnectorPort {
   readonly backend: string;
   query(query: TelemetryQuery): Promise<TelemetryPage>;
 }
+
+/**
+ * Outbound email delivery (FR3-38).
+ *
+ * The store composes the recipient, subject, and plaintext body (which
+ * carries the single-use token); link assembly around the token is
+ * presentation work for the HTTP layer. Implementations return the transport
+ * acceptance receipt. Bodies are ASCII-only: non-ASCII content fails closed
+ * rather than sending mojibake.
+ */
+export interface EmailMessage {
+  readonly to: string;
+  readonly subject: string;
+  readonly textBody: string;
+}
+
+export interface EmailDeliveryReceipt {
+  readonly messageId: string;
+  readonly acceptedAt: string;
+}
+
+export interface EmailDeliveryPort {
+  send(message: EmailMessage): Promise<EmailDeliveryReceipt>;
+}
+
+/**
+ * Versioned model client (FR3-07).
+ *
+ * The single seam between the reasoning engine and any model provider. The
+ * client sends allowlisted context with recorded prompt/config/model IDs,
+ * revalidates every response, and raises typed failures for outages,
+ * malformed responses, and missing tool calls. Provider fallback happens
+ * only through explicit configuration. The model never becomes a verifier
+ * or verdict authority: its output is an untrusted proposal.
+ */
+export interface ModelMessage {
+  readonly role: 'system' | 'user' | 'tool';
+  /** Origin label for context-allowlist filtering; absent means broker-owned. */
+  readonly source?: string;
+  readonly content: string;
+}
+
+export interface ModelTool {
+  readonly name: string;
+  readonly description: string;
+  /** JSON Schema text for the tool arguments. */
+  readonly parameters: string;
+}
+
+export interface ModelToolCall {
+  readonly name: string;
+  /** JSON text; validated parseable, never executed blindly. */
+  readonly arguments: string;
+}
+
+export interface ModelCompleteInput {
+  readonly promptId: string;
+  readonly messages: readonly ModelMessage[];
+  readonly tools: readonly ModelTool[];
+  readonly maxTokens: number;
+  readonly requireToolCall: boolean;
+  /** Sources allowed into context; absent admits broker-owned content only. */
+  readonly contextAllowlist?: readonly string[];
+}
+
+export interface ModelUsage {
+  readonly inputTokens: number;
+  readonly outputTokens: number;
+}
+
+export interface ModelCompleteResult {
+  readonly model: string;
+  readonly outputText: string;
+  readonly toolCalls: readonly ModelToolCall[];
+  readonly usage: ModelUsage;
+  readonly providerRequestId: string;
+  readonly promptId: string;
+  readonly configId: string;
+  readonly usedFallback: boolean;
+  readonly droppedContextMessages: number;
+  readonly cumulativeTokens: number;
+}
+
+export interface ModelClientPort {
+  readonly provider: string;
+  readonly contractVersion: string;
+  complete(input: ModelCompleteInput): Promise<ModelCompleteResult>;
+}
