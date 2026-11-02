@@ -2,9 +2,9 @@
 
 **Date:** 2 November 2026
 **Application root:** this repository (`ChangeProof-AI/`), branch `development`
-**Phase status:** `in_progress` — allocated back-end tasks T-27/T-28/T-29/T-30
-(T4-1..T4-4) `done` (see §2–§5). No full WP and no G3 gate passed; phase stays
-`in_progress`.
+**Phase status:** `in_progress` — allocated back-end tasks T-27..T-32
+(T4-1..T4-6) `done` (see §2–§5, §7–§8). No full WP and no G3 gate passed;
+phase stays `in_progress` pending phase-6/7 UI and whole-system proof.
 **Plan revision:** 2 (24 October 2026).
 
 ## 1. Entry audit (evidence, not summary)
@@ -268,7 +268,135 @@ threshold, or schema semantic change to existing versioned items
 (digest normalization for submit retries is new-contract behavior);
 no version bump needed.
 
-**Next dependency-ready task:** T4-5 (WP3-31 self-host/BYOK/binary) and
-T4-6 (WP3-32 SAML/SCIM + GitLab/Bitbucket) per the readiness rule —
-check dependency-ready status before starting; do not start the next
-phase automatically.
+**Next dependency-ready task (at §6 close):** T4-5 (WP3-31
+self-host/BYOK/binary) and T4-6 (WP3-32 SAML/SCIM + GitLab/Bitbucket) —
+executed below as T-31/T-32.
+
+## 7. T-31 / WP3-31 — BYOK + self-host deployment tooling (`done`)
+
+Task ID / parent WP: T-31 (T4-5) / WP3-31.
+Requirement IDs: FR3-43, NEG3-37.
+User-visible outcome: operator binary (`changeproof install/upgrade/
+backup/restore/teardown/status/byok-*`) with a fail-closed deployment
+gate; BYOK credentials live only as metadata + fingerprint while key
+material stays in the secret broker with revocation-checked use,
+rotation, and terminal revoke.
+Prerequisite evidence: WP3-24 usage + WP3-25 lifecycle service tasks
+(task-level `done`).
+Allowed source/config changes: `src/core` distribution contracts,
+`src/modules/distribution/`, `src/orchestrator/distribution.ts`,
+`src/cli/`, `infra/postgres/V9__distribution.sql`,
+`infra/selfhost/profiles/local-linux.json`, `package.json` bin, tests.
+Input snapshots + intended intervention: frozen profile + pinned
+migrations + qualification file; disposable PG16 for the install cycle.
+Acceptance checks: unit 24/24 (BYOK + deployment); native 7/7
+(install/upgrade/backup/restore/teardown cycle with digest verify +
+sequence reset); CLI blocked path exits 2 (proven, not asserted).
+Protected oracle / proof scope: install/restore mechanics on
+disposable data only; no repair verdicts claimed.
+Artifacts expected: module + CLI + migration + profile — present.
+Actual commands + exit codes: see §9.
+Status + remaining blocker: allocated task `done`. Full WP3-31 stays
+open: self-host platform catalog + license choice, Windows/macOS
+binary profiles, live pull-through qualification (phase-7).
+Next dependency-ready task: T-32 (executed same session).
+
+What was built (tests-first):
+
+- BYOK: metadata-only contract (fingerprint SHA-256, key material
+  refused at parse); secret resolved through the broker at call time;
+  revocation-checked broker reads; terminal revoke; savepoint-guarded
+  duplicate insert.
+- Deployment: `assertDeploymentQualified` gate (exit 2 = blocked);
+  exact runtime pins; artifact digest over profile + migrations;
+  generic logical backup/restore with full verify + sequence reset;
+  dbName bound into workdir state with mismatch refusals.
+- NEG3-37: restore/install paths leak no key material and bypass no
+  host isolation; unqualified profiles block instead of degrading.
+
+## 8. T-32 / WP3-32 — SAML/SCIM + GitLab/Bitbucket adapters (`done`)
+
+Task ID / parent WP: T-32 (T4-6) / WP3-32.
+Requirement IDs: FR3-44/45, NEG3-38/39.
+User-visible outcome: tenant-bound SAML login and SCIM provisioning
+with replay/revoke safety; GitLab + Bitbucket as provider adapters
+behind one neutral port with exact-head CI binding and fenced
+webhook handling.
+Prerequisite evidence: T-31 distribution + WP3-22 GitHub App + WP3-28
+email identity service tasks (task-level `done`).
+Allowed source/config changes: `src/core` identity-service contracts
++ provider port, `src/modules/identity/{saml,scim,guards,store}.ts`,
+`src/modules/providers/`, `src/orchestrator/providers.ts`,
+`infra/postgres/V10__enterprise.sql`,
+`docs/decisions/t32-provider-catalog.md`, tests.
+Input snapshots + intended intervention: frozen provider catalog
+(REST v4 / Cloud 2.0, webhook auth rules); disposable PG16 + RLS +
+two tenants; injected provider transports (no live org access).
+Acceptance checks: unit 30/30 (SAML + SCIM + GitLab/Bitbucket +
+transports); native 9/9 (enterprise RLS journey); 66/66 affected
+re-verify green.
+Protected oracle / proof scope: identity binding and provider
+mechanics only; no live IdP/org interop claimed.
+Artifacts expected: modules + migration + catalog freeze — present.
+Actual commands + exit codes: see §9.
+Status + remaining blocker: allocated task `done`. Full WP3-32 stays
+open: configured SAML IdP + XML/C14N vendor, GitLab self-managed
+matrix + Bitbucket Server/DC, authorized test orgs + tokens,
+per-provider live snapshot/event/publication/CI (phase-7).
+Next dependency-ready task: phase-5 T5-1 (executed same session).
+
+What was built (tests-first):
+
+- SAML: explicit-tenant login (no issuer routing); pure claim
+  validation + RSA-SHA256 verification; replay-guard PK; explicit
+  subject links only (no JIT, no email matching).
+- SCIM: hash-only tokens with constant-time compare; version-ordered
+  idempotent events; member-only provisioning; suspend + session
+  revoke; last-owner guard.
+- Providers: neutral `RepositoryProviderPort` + injected transport;
+  exact-sha CI attestation; GitLab shared-secret webhook verify;
+  Bitbucket webhooks as triggers only with API re-read; webhook
+  dedup table.
+- NEG3-38: wrong issuer/tenant, SCIM replay, deprovision races, and
+  domain-takeover shapes refused without escalation. NEG3-39:
+  provider mismatch/outage, wrong head/CI, and public-source
+  instructions fenced with explicit partial effects.
+
+## 9. Verification (T-31/T-32 turn, actual commands + exit codes)
+
+- `pnpm typecheck` → 0 · `pnpm lint` → 0 (eslint + depcruise
+  boundaries, zero violations, CLI orphan exempted in config)
+- New unit: distribution 24/24 · identity 30/30 (SAML/SCIM/providers/
+  transports, incl. conformance rows)
+- Native (`vitest.native.config.ts`, disposable `changeproof-t31`
+  PG16): distribution 7/7 + enterprise 9/9 (16/16); CLI `install`
+  blocked path exits 2 (proven); no leftover containers/networks
+- Full `pnpm test` at close: same 3 pre-existing Python adapter
+  failures as the §6 close (adapter files untouched; all T-31/T-32
+  files green)
+- `pnpm build` → 0 + `changeproof help/status` CLI smoke green
+- Skill bindings honored: code-security (T-31/32),
+  secret-serialization (BYOK/SCIM tokens)
+- Missing checks / honest limits: live IdP/org interop, XML/C14N
+  vendor, self-managed/Server matrices, platform catalog + license
+  (all recorded as phase-7 blockers in §7–§8, never simulated)
+
+Changed files (T-31/T-32): `src/core/contracts/schemas/
+{distribution,identity-services}.ts` (+ provider port,
+`DeploymentBlockedError`), `src/modules/
+{distribution,providers}/`, `src/modules/identity/
+{saml,scim}.ts` (+ guards/store retrofit), `src/orchestrator/
+{distribution,providers}.ts`, `src/cli/`, `infra/postgres/
+V{9,10}_*.sql`, `infra/selfhost/profiles/local-linux.json`,
+`docs/decisions/t32-provider-catalog.md`,
+`tests/{distribution,identity,
+providers}/t3*`, `tests/native/{distribution,enterprise}.test.ts`,
+`tests/contracts/conformance-matrix.test.ts` (new rows);
+(modified): `src/core/index.ts`, `src/orchestrator/index.ts`,
+`.dependency-cruiser.cjs` (CLI orphan), `package.json` (bin).
+No contract, policy, threshold, or schema semantic change to
+existing versioned items; no version bump needed.
+
+**Next dependency-ready task:** phase-5 T5-1/T5-2/T5-3 — executed
+same session, reported in `docs/phase-reports/phase-5.md`. Do not
+start phase-6 automatically; T5-4..T5-9 remain explicitly open.

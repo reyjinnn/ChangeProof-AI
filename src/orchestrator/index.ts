@@ -1,6 +1,8 @@
 export * from './bundle.js';
 export * from './configuration.js';
+export * from './distribution.js';
 export * from './errors.js';
+export * from './providers.js';
 export * from './publication.js';
 
 import {
@@ -28,6 +30,8 @@ import {
   assertNoLastOwnerLockout,
   createEmailIdentityStore,
   createIdentityStore,
+  createSamlStore,
+  createScimStore,
   type EmailIdentityDb,
   type EmailIdentityDeps,
   type EmailIdentityStore,
@@ -167,12 +171,16 @@ export function composePhase2(): Phase2Preparation {
  */
 export interface IdentityComposition {
   store: IdentityStore;
+  saml: ReturnType<typeof createSamlStore>;
+  scim: ReturnType<typeof createScimStore>;
   assertNoLastOwnerLockout: typeof assertNoLastOwnerLockout;
 }
 
 export function composeIdentityStore(db: IdentityDb): IdentityComposition {
   return {
     store: createIdentityStore(db),
+    saml: createSamlStore(db),
+    scim: createScimStore(db),
     assertNoLastOwnerLockout,
   };
 }

@@ -54,6 +54,30 @@ export const SCHEMA_VERSIONS = {
   ArtifactAccessGrant: '1',
   DataLifecycleRecord: '1',
   HostedServiceProfile: '1',
+
+  // Distribution contracts (PRD §18, FR3-43)
+  ByokCredential: '1',
+  DeploymentProfile: '1',
+  DeploymentQualification: '1',
+  DeploymentReceipt: '1',
+
+  // Enterprise identity contracts (PRD §18, FR3-44)
+  SamlConnection: '1',
+  SamlAssertion: '1',
+  ScimToken: '1',
+  ScimEvent: '1',
+
+  // Evaluation harness contracts (PRD §20, FR3-24)
+  EvalCase: '1',
+  EvalManifest: '1',
+  EvalArmResult: '1',
+  EvalComparison: '1',
+
+  // Multi-region campaign contracts (PRD §20, FR3-26/27)
+  RegionTopology: '1',
+  RegionCampaign: '1',
+  RegionTrialReceipt: '1',
+  ConsistencyReport: '1',
 } as const satisfies Record<string, string>;
 
 export type ContractName = keyof typeof SCHEMA_VERSIONS;

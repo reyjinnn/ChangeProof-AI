@@ -31,6 +31,7 @@ if (databaseUrl === undefined || databaseUrl.length === 0) {
 const here = dirname(fileURLToPath(import.meta.url));
 const v1 = readFileSync(join(here, '..', '..', 'infra', 'postgres', 'V1__identity_tenancy.sql'), 'utf8');
 const v2 = readFileSync(join(here, '..', '..', 'infra', 'postgres', 'V2__identity_services.sql'), 'utf8');
+const v10 = readFileSync(join(here, '..', '..', 'infra', 'postgres', 'V10__enterprise.sql'), 'utf8');
 
 // Own database per file: scheduling (serial or parallel) cannot cross-talk.
 const fileDbUrl = databaseUrlFor(databaseUrl, 't_svc');
@@ -63,6 +64,7 @@ beforeAll(async () => {
   await resetProbeDatabase(databaseUrl, 't_svc');
   await admin.query(v1);
   await admin.query(v2);
+  await admin.query(v10);
 }, 60_000);
 
 afterAll(async () => {

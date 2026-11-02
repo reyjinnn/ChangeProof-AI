@@ -46,6 +46,7 @@ const migrations = [
   'V6__lifecycle.sql',
   'V7__engagement.sql',
   'V8__teamwork.sql',
+  'V10__enterprise.sql',
 ].map((name) => migration(name));
 
 const fileDbUrl = databaseUrlFor(databaseUrl, 't_teamwork');

@@ -4,14 +4,22 @@ import {
   ArtifactAccessGrantSchema,
   BundleAssessmentSchema,
   BundleStateSchema,
+  ByokCredentialSchema,
   CandidateBundleSchema,
   CanonicalObjectHash,
   ChangeIntentSchema,
   CheckResultValueSchema,
   DataLifecycleRecordSchema,
+  DeploymentProfileSchema,
+  DeploymentQualificationSchema,
+  DeploymentReceiptSchema,
   DimensionAssessmentSchema,
   DimensionResultSchema,
   DimensionSchema,
+  EvalArmResultSchema,
+  EvalCaseSchema,
+  EvalComparisonSchema,
+  EvalManifestSchema,
   ECOSYSTEMS,
   EdgeKindSchema,
   EdgeResolutionSchema,
@@ -41,11 +49,20 @@ import {
   ProvenLevelSchema,
   RawByteHash,
   ReadinessAssessmentSchema,
+  RegionCampaignSchema,
+  RegionTopologySchema,
+  RegionTrialReceiptSchema,
   RepairPlanSchema,
   RepositoryConnectionSchema,
   RunForecastSchema,
   RunStateSchema,
+  SamlAssertionSchema,
+  SamlConnectionSchema,
+  ScimEventSchema,
+  ScimTokenSchema,
   SessionSchema,
+  SoakPlanSchema,
+  SoakReceiptSchema,
   SupportLevelSchema,
   SystemGraphSchema,
   TargetAssessmentSchema,
@@ -131,8 +148,205 @@ describe('unknown schemaVersion is rejected per family', () => {
     expect(() => TenantContextSchema.parse({ ...tenant(), schemaVersion: '2' })).toThrow();
     expect(() => ReadinessAssessmentSchema.parse({ ...readiness(), schemaVersion: '2' })).toThrow();
     expect(() => ImpactSchema.parse({ ...impact(), schemaVersion: '1' })).toThrow();
+    expect(() => ByokCredentialSchema.parse({ ...byok(), schemaVersion: '2' })).toThrow();
+    expect(() => DeploymentProfileSchema.parse({ ...deployProfile(), schemaVersion: '2' })).toThrow();
+    expect(() => DeploymentQualificationSchema.parse({ ...deployQual(), schemaVersion: '2' })).toThrow();
+    expect(() => DeploymentReceiptSchema.parse({ ...deployReceipt(), schemaVersion: '2' })).toThrow();
+    expect(() => SamlConnectionSchema.parse({ ...samlConn(), schemaVersion: '2' })).toThrow();
+    expect(() => SamlAssertionSchema.parse({ ...samlAssert(), schemaVersion: '2' })).toThrow();
+    expect(() => ScimTokenSchema.parse({ ...scimToken(), schemaVersion: '2' })).toThrow();
+    expect(() => ScimEventSchema.parse({ ...scimEvent(), schemaVersion: '2' })).toThrow();
+    expect(() => EvalCaseSchema.parse({ ...evalCase(), schemaVersion: '2' })).toThrow();
+    expect(() => EvalManifestSchema.parse({ ...evalManifest(), schemaVersion: '2' })).toThrow();
+    expect(() => EvalArmResultSchema.parse({ ...evalArmResult(), schemaVersion: '2' })).toThrow();
+    expect(() => EvalComparisonSchema.parse({ ...evalComparison(), schemaVersion: '2' })).toThrow();
   });
 });
+
+function byok() {
+  return {
+    schemaVersion: '1' as const,
+    refId: 'byok-ref-1',
+    tenantId: 'tenant-1',
+    provider: 'meta',
+    model: 'muse-spark-1.3',
+    fingerprint: SHA_A,
+    status: 'active' as const,
+    rotationVersion: 1,
+    createdAt: ISO,
+    rotatedAt: ISO,
+  };
+}
+
+function deployProfile() {
+  return {
+    schemaVersion: '1' as const,
+    profileId: 'local-linux',
+    platform: 'linux-x64',
+    nodePin: '26.12.1',
+    pnpmPin: '12.5.1',
+    postgresPin: '16',
+    migrationFiles: ['V1__identity_tenancy.sql'],
+    maxConcurrentRuns: 4,
+    diskGb: 20,
+    qualificationMethod: 'qual-method-1',
+  };
+}
+
+function deployQual() {
+  return {
+    schemaVersion: '1' as const,
+    profileId: 'local-linux',
+    method: 'qual-method-1',
+    receiptRefs: ['receipt-1'],
+    qualifiedAt: ISO,
+  };
+}
+
+function deployReceipt() {
+  return {
+    schemaVersion: '1' as const,
+    receiptId: 'receipt-1',
+    profileId: 'local-linux',
+    step: 'install' as const,
+    artifactDigest: SHA_A,
+    success: true,
+    startedAt: ISO,
+    finishedAt: ISO,
+    detail: 'applied 1 migration',
+  };
+}
+
+function samlConn() {
+  return {
+    schemaVersion: '1' as const,
+    tenantId: 'tenant-1',
+    entityId: 'https://sp.example.com/metadata',
+    idpIssuer: 'https://idp.example.com/metadata',
+    audience: 'https://sp.example.com/metadata',
+    acsUrl: 'https://sp.example.com/acs',
+    certPem: '-----BEGIN CERTIFICATE-----\nfake\n-----END CERTIFICATE-----',
+    certFingerprint: SHA_A,
+    verifiedDomain: 'example.com',
+    status: 'active' as const,
+    createdAt: ISO,
+    rotatedAt: ISO,
+  };
+}
+
+function samlAssert() {
+  return {
+    schemaVersion: '1' as const,
+    assertionId: 'assertion-1',
+    issuer: 'https://idp.example.com/metadata',
+    audience: 'https://sp.example.com/metadata',
+    destination: 'https://sp.example.com/acs',
+    subject: 'subject-1',
+    authnInstant: ISO,
+    notBefore: ISO,
+    notOnOrAfter: ISO,
+    requestId: 'request-1',
+    signedContentB64: 'c2lnbmVk',
+    signatureB64: 'c2ln',
+  };
+}
+
+function scimToken() {
+  return {
+    schemaVersion: '1' as const,
+    tokenId: 'scim-token-1',
+    tenantId: 'tenant-1',
+    tokenHash: SHA_A,
+    status: 'active' as const,
+    createdAt: ISO,
+    revokedAt: null,
+    lastUsedAt: null,
+  };
+}
+
+function scimEvent() {
+  return {
+    schemaVersion: '1' as const,
+    eventId: 'scim-event-1',
+    tenantId: 'tenant-1',
+    externalId: 'idp-user-1',
+    operation: 'provision' as const,
+    version: 1,
+    groups: [],
+  };
+}
+
+function evalCase() {
+  return {
+    schemaVersion: '1' as const,
+    caseId: 'dev-1',
+    dataset: 'dev' as const,
+    pack: 'functionality' as const,
+    suite: 'core',
+    origin: 'controlled_change' as const,
+    intermittent: false,
+    predictors: [],
+    inputDigest: SHA_A,
+    oracleRef: 'oracle-1',
+    fixability: 'fixable' as const,
+  };
+}
+
+function evalArm() {
+  return {
+    evaluationVersion: 'eval-1',
+    datasetVersion: 'dev-1',
+    armId: 'B0',
+    modelIdentity: 'model-1',
+    configDigest: SHA_A,
+    allowedInputs: [],
+    allowedTools: [],
+    feedbackDisclosure: 'none' as const,
+    commonBudget: { modelCostUsd: 10, wallTimeMs: 60_000 },
+    terminalRules: ['stop-at-budget'],
+    evaluatorIdentity: 'evaluator-1',
+    oracleIdentity: 'oracle-1',
+    caseOrder: 'fixed' as const,
+    repetitionPolicy: { repeats: 1, selection: 'first_pass_only' as const },
+    frozenAt: ISO,
+  };
+}
+
+function evalManifest() {
+  return {
+    schemaVersion: '1' as const,
+    manifestId: 'manifest-1',
+    createdAt: ISO,
+    datasetDigest: SHA_A,
+    cases: [evalCase()],
+    arms: [evalArm()],
+    abortPolicy: { maxConsecutiveInfraFailures: 3, maxCostOverrunRatio: 1.5 },
+    releaseCriteria: [],
+    digest: SHA_A,
+  };
+}
+
+function evalArmResult() {
+  return {
+    schemaVersion: '1' as const,
+    manifestDigest: SHA_A,
+    armId: 'B0',
+    caseResults: [],
+    aborted: false,
+    startedAt: ISO,
+    finishedAt: ISO,
+  };
+}
+
+function evalComparison() {
+  return {
+    schemaVersion: '1' as const,
+    manifestDigest: SHA_A,
+    comparable: true,
+    incomparabilityReasons: [],
+    arms: [],
+  };
+}
 
 function inventory() {
   return {
@@ -663,6 +877,187 @@ describe('readiness contracts keep plans separate from proof', () => {
         updateVersion: 0,
       }).revisionId,
     ).toBe('rev-1');
+  });
+});
+
+describe('distribution contracts carry metadata, never secrets', () => {
+  it('rejects key material and uncheckable fingerprints on BYOK records', () => {
+    expect(ByokCredentialSchema.parse(byok()).status).toBe('active');
+    expect(() => ByokCredentialSchema.parse({ ...byok(), keyMaterial: 'sk-live' })).toThrow();
+    expect(() => ByokCredentialSchema.parse({ ...byok(), fingerprint: 'nope' })).toThrow();
+    expect(() => ByokCredentialSchema.parse({ ...byok(), status: 'enabled' })).toThrow();
+  });
+
+  it('pins every deployment artifact and receipt explicitly', () => {
+    expect(DeploymentProfileSchema.parse(deployProfile()).migrationFiles).toHaveLength(1);
+    expect(() => DeploymentProfileSchema.parse({ ...deployProfile(), migrationFiles: [] })).toThrow();
+    expect(() => DeploymentQualificationSchema.parse({ ...deployQual(), receiptRefs: [] })).toThrow();
+    expect(() => DeploymentReceiptSchema.parse({ ...deployReceipt(), step: 'deploy' })).toThrow();
+  });
+});
+
+describe('enterprise identity binds tenants without leaking them', () => {
+  it('pins SAML claims and refuses unknown statuses', () => {
+    expect(SamlConnectionSchema.parse(samlConn()).status).toBe('active');
+    expect(() => SamlConnectionSchema.parse({ ...samlConn(), status: 'pending' })).toThrow();
+    expect(() => SamlAssertionSchema.parse({ ...samlAssert(), signedContentB64: '' })).toThrow();
+  });
+
+  it('keeps SCIM tokens hash-only and versions ordered', () => {
+    expect(() => ScimTokenSchema.parse({ ...scimToken(), tokenHash: 'short' })).toThrow();
+    expect(() => ScimTokenSchema.parse({ ...scimToken(), token: 'scim_live' })).toThrow();
+    expect(() => ScimEventSchema.parse({ ...scimEvent(), version: 0 })).toThrow();
+  });
+});
+
+describe('evaluation packages bind cases, arms, and denominators', () => {
+  it('requires campaigns for intermittent cases and digests for everything', () => {
+    expect(() => EvalCaseSchema.parse({ ...evalCase(), intermittent: true })).toThrow(/campaign/);
+    expect(() => EvalManifestSchema.parse({ ...evalManifest(), cases: [] })).toThrow();
+    expect(() => EvalManifestSchema.parse({ ...evalManifest(), arms: [] })).toThrow();
+  });
+
+  it('keeps rates nullable over empty denominators and exclusions visible', () => {
+    const summary = {
+      armId: 'B0',
+      resolved: 0,
+      unresolved: 0,
+      failed: 0,
+      incomplete: 0,
+      refused: 0,
+      regressions: 0,
+      denominator: 0,
+      resolvedRate: null,
+      grossCost: 0,
+      netCost: 0,
+      excluded: [],
+    };
+    expect(EvalComparisonSchema.parse({ ...evalComparison(), arms: [summary] }).arms).toHaveLength(1);
+  });
+});
+
+describe('region campaigns bind topology, receipts, and qualification', () => {
+  function topology() {
+    return {
+      schemaVersion: '1',
+      topologyId: 'topo-1',
+      regions: [
+        { regionId: 'a', role: 'primary', endpointRef: 'ep-a' },
+        { regionId: 'b', role: 'replica', endpointRef: 'ep-b' },
+      ],
+      provenance: { kind: 'single-host-probe', detail: 'docker network cpreg' },
+      consistencyClaimed: 'eventual',
+      clockSource: 'container-clock',
+    };
+  }
+
+  function campaign() {
+    return {
+      schemaVersion: '1',
+      planId: 'plan-1',
+      planHash: SHA_A,
+      topology: topology(),
+      faults: [{ faultId: 'f-part', kind: 'partition', targets: ['a-b'], startAfterMs: 0, durationMs: 5000, heal: { kind: 'reconnect', verifyWithinMs: 30000 } }],
+      trials: 2,
+      workload: { writesPerTrial: 5, writeRegion: 'a', readRegions: ['b'] },
+      orderingBound: { maxSeqGap: 0, maxDuplicates: 0 },
+      rpoBound: { maxLostAckedWrites: 0 },
+      rtoBound: { maxRestoreMs: 30000 },
+      frozenAt: ISO,
+      digest: SHA_B,
+    };
+  }
+
+  function receipt() {
+    return {
+      schemaVersion: '1',
+      planDigest: SHA_B,
+      trialIndex: 0,
+      faultId: 'f-part',
+      faultApplied: true,
+      faultHealed: true,
+      healVerified: true,
+      rolesBefore: { a: 'primary', b: 'replica' },
+      rolesAfter: { a: 'primary', b: 'replica' },
+      journal: { writesAttempted: 5, writesAcked: 5, writesPresentAfter: 5, maxSeqGap: 0, duplicates: 0 },
+      measuredRpoLostWrites: 0,
+      measuredRtoMs: 1200,
+      startedAt: ISO,
+      finishedAt: ISO,
+    };
+  }
+
+  it('refuses single-region topologies and unfrozen campaigns', () => {
+    expect(() => RegionTopologySchema.parse({ ...topology(), regions: [topology().regions[0]] })).toThrow();
+    expect(RegionCampaignSchema.parse(campaign()).trials).toBe(2);
+    expect(() => RegionCampaignSchema.parse({ ...campaign(), faults: [] })).toThrow();
+    expect(() => RegionCampaignSchema.parse({ ...campaign(), digest: 'short' })).toThrow();
+  });
+
+  it('keeps trial receipts explicit about heal proof and authorship', () => {
+    expect(RegionTrialReceiptSchema.parse(receipt()).healVerified).toBe(true);
+    expect(RegionTrialReceiptSchema.parse({ ...receipt(), resyncBy: 'test-harness' }).resyncBy).toBe('test-harness');
+    expect(() => RegionTrialReceiptSchema.parse({ ...receipt(), trialIndex: -1 })).toThrow();
+  });
+});
+
+describe('soak plans freeze horizons beyond the known onset', () => {
+  function soakPlan() {
+    return {
+      schemaVersion: '1',
+      planId: 'soak-1',
+      profileId: 'node-service-leak',
+      provenance: { kind: 'full-horizon', detail: 'conformance fixture' },
+      knownOnset: { cycles: 50000, minDurationMs: 21600000 },
+      horizon: { cycles: 100000, minDurationMs: 43200000 },
+      workload: { opsPerCycle: 100, description: 'sustained load' },
+      runtime: {
+        runtime: 'node',
+        runtimeVersion: '22.11.0',
+        allocator: 'v8-default',
+        gcSettings: '--expose-gc',
+        profiler: 'clinic-doctor',
+        profilerVersion: '13.0.0',
+      },
+      requiredSeries: ['heapUsedBytes', 'rssBytes'],
+      slopeBounds: { heapUsedBytes: 10, rssBytes: 20 },
+      minSamplesPerSegment: 8,
+      workloadTolerance: { maxDroppedOps: 0, maxTimeoutOps: 0 },
+      restartPolicy: { kind: 'forbidden' },
+      frozenAt: ISO,
+      digest: SHA_B,
+    };
+  }
+
+  function soakReceipt() {
+    return {
+      schemaVersion: '1',
+      planDigest: SHA_B,
+      cyclesCompleted: 100000,
+      durationMs: 43200000,
+      samples: [],
+      accounting: [],
+      restarts: [],
+      profilerOverheadCalibrated: true,
+      calibrationRef: 'cal-1',
+      peakRssBytes: 120000000,
+      totalCompletedOps: 10000000,
+      abortReason: null,
+      startedAt: ISO,
+      finishedAt: ISO,
+    };
+  }
+
+  it('refuses horizons at or below the known onset', () => {
+    expect(SoakPlanSchema.parse(soakPlan()).horizon.cycles).toBe(100000);
+    expect(() => SoakPlanSchema.parse({ ...soakPlan(), horizon: { cycles: 50000, minDurationMs: 43200000 } })).toThrow(/onset/);
+    expect(() => SoakPlanSchema.parse({ ...soakPlan(), requiredSeries: ['heapUsedBytes'] })).toThrow();
+    expect(() => SoakPlanSchema.parse({ ...soakPlan(), slopeBounds: { heapUsedBytes: 10 } })).toThrow(/slope bound/);
+  });
+
+  it('keeps soak receipts explicit about aborts and calibration', () => {
+    expect(SoakReceiptSchema.parse(soakReceipt()).abortReason).toBeNull();
+    expect(SoakReceiptSchema.parse({ ...soakReceipt(), abortReason: 'workload aborted at cycle 4: boom' }).abortReason).toContain('aborted');
   });
 });
 

@@ -40,7 +40,12 @@ module.exports = {
       severity: 'error',
       from: {
         orphan: true,
-        pathNot: ['\\.d\\.ts$', '(^|/)(vitest|eslint)\\.config\\.(ts|mjs)$'],
+        pathNot: [
+          '\\.d\\.ts$',
+          '(^|/)(vitest|eslint)\\.config\\.(ts|mjs)$',
+          // Process entrypoints are roots by design: nothing imports them.
+          '(^|/)(http|workers|cli)/[^/]+\\.ts$',
+        ],
       },
       to: {},
     },

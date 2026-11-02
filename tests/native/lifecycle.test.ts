@@ -44,6 +44,7 @@ const v4 = migration('V4__usage.sql');
 const v5 = migration('V5__email_identity.sql');
 const v6 = migration('V6__lifecycle.sql');
 const v7 = migration('V7__engagement.sql');
+const v10 = migration('V10__enterprise.sql');
 
 const fileDbUrl = databaseUrlFor(databaseUrl, 't_lifecycle');
 const admin = new Pool({ connectionString: fileDbUrl });
@@ -175,6 +176,7 @@ beforeAll(async () => {
   await admin.query(v5);
   await admin.query(v6);
   await admin.query(v7);
+  await admin.query(v10);
 }, 60_000);
 
 afterAll(async () => {

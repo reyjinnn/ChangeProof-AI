@@ -15,7 +15,10 @@ import type { CapabilityKey, CapabilityRecord } from '../contracts/schemas/capab
 import type { SystemGraph } from '../contracts/schemas/graph.js';
 import type { ExperimentPlan, TrialReceipt } from '../contracts/schemas/campaign.js';
 import type { ExecutionBudget } from '../contracts/schemas/budget.js';
-import type { TenantContext } from '../contracts/schemas/hosted.js';
+import type {
+  RepositoryConnection,
+  TenantContext,
+} from '../contracts/schemas/hosted.js';
 import type { ExecutionMode } from '../contracts/vocabulary.js';
 
 /** A snapshot of customer source, pinned to an immutable identity. */
@@ -25,6 +28,103 @@ export interface SourceSnapshotPort {
   readonly commit: string;
   /** Digest of the exact bytes that were pinned. */
   readonly digest: string;
+}
+
+/**
+ * Provider-neutral repository surface (FR3-45).
+ *
+ * GitLab and Bitbucket adapters implement this port; the GitHub App client
+ * stays the mandatory provider-specific adapter. Every call first asserts an
+ * `active` connection of the matching provider with the repository
+ * allowlisted — revocation and provider mismatch fail before any network
+ * happens. Webhook payloads are triggers only: effects derive from exact
+ * state re-read over the authenticated API, never from the event body.
+ */
+export type RepositoryProvider = 'github' | 'gitlab' | 'bitbucket';
+
+export interface ProviderRepositoryRef {
+  readonly id: string;
+  /** Provider-local path: `group/project` (GitLab) or `workspace/repo` (Bitbucket). */
+  readonly path: string;
+}
+
+export interface ProviderCommit {
+  readonly sha: string;
+  readonly message: string;
+  readonly committedAt: string;
+}
+
+export interface ProviderBranchHead {
+  readonly sha: string;
+}
+
+export interface ProviderMergeRequest {
+  readonly id: string;
+  readonly url: string;
+  readonly headSha: string;
+  readonly state: string;
+}
+
+export interface ProviderRepository {
+  readonly id: string;
+  readonly fullName: string;
+  readonly isPrivate: boolean;
+}
+
+export interface ProviderPipelineStatus {
+  readonly sha: string;
+  readonly pipelineId: string;
+  readonly status: string;
+  readonly fetchedAt: string;
+}
+
+export interface ProviderCommitInput {
+  readonly connection: RepositoryConnection;
+  readonly repository: ProviderRepositoryRef;
+  readonly sha: string;
+}
+
+export interface ProviderHeadInput {
+  readonly connection: RepositoryConnection;
+  readonly repository: ProviderRepositoryRef;
+  readonly branch: string;
+}
+
+export interface ProviderOpenRequestInput {
+  readonly connection: RepositoryConnection;
+  readonly repository: ProviderRepositoryRef;
+  readonly base: string;
+  readonly head: string;
+  readonly title: string;
+  readonly body: string;
+}
+
+export interface ProviderFindRequestInput {
+  readonly connection: RepositoryConnection;
+  readonly repository: ProviderRepositoryRef;
+  readonly head: string;
+}
+
+export interface ProviderScopeInput {
+  readonly connection: RepositoryConnection;
+}
+
+export interface ProviderPipelineInput {
+  readonly connection: RepositoryConnection;
+  readonly repository: ProviderRepositoryRef;
+  readonly sha: string;
+  readonly nowIso: string;
+}
+
+export interface RepositoryProviderPort {
+  readonly provider: RepositoryProvider;
+  fetchCommit(input: ProviderCommitInput): Promise<ProviderCommit>;
+  fetchBranchHead(input: ProviderHeadInput): Promise<ProviderBranchHead>;
+  openMergeRequest(input: ProviderOpenRequestInput): Promise<ProviderMergeRequest>;
+  findRequestByHead(input: ProviderFindRequestInput): Promise<ProviderMergeRequest | null>;
+  listAccessibleRepositories(input: ProviderScopeInput): Promise<readonly ProviderRepository[]>;
+  /** CI status bound to the exact head sha; a different sha is a refusal, not an attestation. */
+  fetchHeadPipeline(input: ProviderPipelineInput): Promise<ProviderPipelineStatus>;
 }
 
 /** Adapter surface (FR3-02). Adapters never decide the verdict. */

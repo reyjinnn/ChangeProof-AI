@@ -3,6 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
+  "bin": {
+    "changeproof": "./dist/cli/index.js"
+  },
   "description": "ChangeProof AI 1.0 — investigates, fixes and independently verifies the impact of software changes across languages, frameworks, databases, events and repositories.",
   "license": "SEE LICENSE IN docs/decisions/",
   "packageManager": "pnpm@12.5.1",

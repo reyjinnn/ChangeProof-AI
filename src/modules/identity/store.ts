@@ -65,6 +65,7 @@ const MembershipRowSchema = z.object({
   user_id: z.string(),
   role: z.string(),
   grant_version: z.number().int(),
+  status: z.string(),
 });
 
 const ProjectRowSchema = z.object({ id: z.string() });
@@ -342,13 +343,16 @@ export function createIdentityStore(db: IdentityDb): IdentityStore {
       try {
         return await inTenant(session.tenant_id, async (client) => {
           const membership = await client.query(
-            `SELECT user_id, role, grant_version FROM memberships WHERE user_id = $1`,
+            `SELECT user_id, role, grant_version, status FROM memberships WHERE user_id = $1`,
             [session.user_id],
           );
           if (membership.rows.length === 0) {
             throw new ChangeProofError('Membership is gone; re-authentication is required.');
           }
           const member = MembershipRowSchema.parse(membership.rows[0]);
+          if (member.status !== 'active') {
+            throw new ChangeProofError('Membership is suspended; re-authentication is required.');
+          }
           if (member.grant_version > session.grant_version_at_issue) {
             throw new ChangeProofError('Session grant is stale; re-authentication is required.');
           }
@@ -452,7 +456,7 @@ export function createIdentityStore(db: IdentityDb): IdentityStore {
       try {
         await inTenant(tenantId, async (client) => {
           const members = await client.query(
-            `SELECT user_id, role, grant_version FROM memberships ORDER BY user_id FOR UPDATE`,
+            `SELECT user_id, role, grant_version, status FROM memberships ORDER BY user_id FOR UPDATE`,
           );
           const parsed = members.rows.map((row) => MembershipRowSchema.parse(row));
           const lockoutView = parsed.map((member) => ({ userId: member.user_id, role: member.role }));
@@ -480,7 +484,7 @@ export function createIdentityStore(db: IdentityDb): IdentityStore {
       try {
         await inTenant(tenantId, async (client) => {
           const members = await client.query(
-            `SELECT user_id, role, grant_version FROM memberships ORDER BY user_id FOR UPDATE`,
+            `SELECT user_id, role, grant_version, status FROM memberships ORDER BY user_id FOR UPDATE`,
           );
           const parsed = members.rows.map((row) => MembershipRowSchema.parse(row));
           const lockoutView = parsed.map((member) => ({ userId: member.user_id, role: member.role }));

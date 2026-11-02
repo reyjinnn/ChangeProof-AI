@@ -32,6 +32,23 @@ export function assertCanMutate(context: TenantContext): void {
   }
 }
 
+/** Actor shape wide enough that the authority checks stay meaningful. */
+export interface EnterpriseActor {
+  readonly authoritySource: string;
+  readonly role: string;
+  readonly tenantId: string;
+}
+
+/** SAML/SCIM provisioning needs owner/admin; member/viewer/operator never qualify. */
+export function assertOwnerOrAdmin(context: EnterpriseActor, action: string): void {
+  if (context.authoritySource !== 'server') {
+    throw new ChangeProofError('Tenant context is not server-derived; refusing.');
+  }
+  if (context.role !== 'owner' && context.role !== 'admin') {
+    throw new ChangeProofError(`${action} requires an owner or admin; refusing.`);
+  }
+}
+
 /** Removing the final owner would lock the tenant out (NEG3-38). */
 export function assertNoLastOwnerLockout(
   members: readonly { readonly userId: string; readonly role: string }[],

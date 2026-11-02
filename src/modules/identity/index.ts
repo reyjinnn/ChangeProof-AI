@@ -10,6 +10,8 @@ export * from './challenges.js';
 export * from './email.js';
 export * from './guards.js';
 export * from './passwords.js';
+export * from './saml.js';
+export * from './scim.js';
 export * from './smtp.js';
 export * from './store.js';
 

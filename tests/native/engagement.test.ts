@@ -44,6 +44,7 @@ const migrations = [
   'V5__email_identity.sql',
   'V6__lifecycle.sql',
   'V7__engagement.sql',
+  'V10__enterprise.sql',
 ].map((name) => migration(name));
 
 const fileDbUrl = databaseUrlFor(databaseUrl, 't_engagement');

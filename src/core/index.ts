@@ -40,6 +40,9 @@ export * from './contracts/schemas/runlifecycle.js';
 export * from './contracts/schemas/engagement.js';
 export * from './contracts/schemas/support.js';
 export * from './contracts/schemas/collaboration.js';
+export * from './contracts/schemas/distribution.js';
+export * from './contracts/schemas/regions.js';
+export * from './contracts/schemas/soak.js';
 
 // Ports (contract surface for cross-module collaboration, wired by orchestrator)
 export * from './ports/index.js';
