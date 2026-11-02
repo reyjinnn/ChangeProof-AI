@@ -2,11 +2,11 @@
 
 **Date:** 30 October 2026 (turn 2 — same day)
 **Application root:** this repository (`ChangeProof-AI/`), branch `development`
-**Phase status:** `in_progress` — T2-1..T2-6 pushed to their runnable limits
-(turn 5): native identity services 24/24, fixture baselines + browser, real
-reducers, real campaigns, GitHub client code, file ingestion loop. Full WPs
-stay `in_progress`/`blocked` on predecessors, owner decisions, and live
-access (see §10); no G3 gate passed.
+**Phase status:** `in_progress` — T2-1..T2-9 pushed to their runnable limits
+(turn 6): + durable jobs store 17/17 native, atomic usage store 12/12
+native, email/session flows 14/14 + real SMTP delivery 3/3. Full WPs stay
+`in_progress`/`blocked` on predecessors, owner decisions, and live access
+(see §10–§11); no G3 gate passed.
 **Plan revision:** 2 (24 October 2026).
 
 ## 1. Entry audit (preserved from kickoff, evidence not summary)
@@ -32,7 +32,7 @@ no GitHub App authorization, no email delivery infrastructure. Docker server
 |---|---|---|---|
 | T2-1 observability (WP3-15) | 02, 05 | connector port + file ingestion + normalize loop proven (turn 5) | live backend connectors blocked (catalog + authorized access); predecessors `in_progress` |
 | T2-2 campaign (WP3-16) | 04, 15 | bounded real executor + trials proven (turn 5) | barriers/network-faults/budget/qualified-guest + frozen flagship params pending |
-| T2-3 reducers (WP3-17) | 01, 16 | real-observation reducers + calibration proposal (turn 5) | owner-frozen SLOs + candidate arm (WP3-07) pending |
+| T2-3 reducers (WP3-17) | 01, 16 | real-observation reducers + sandbox threshold slice frozen (DEC3-P3-01) | qualified SLOs/profile + candidate arm (WP3-07) pending |
 | T2-4 fixtures/oracle (WP3-06) | 04, 05, 16, 17 | rig + dry runs + intent proposal + ceremony tool (turn 5) / full `blocked` | real app+DB+broker+browser proven; frozen acceptance awaits owner approval + freeze (human acts) |
 | T2-5 identity/RLS (WP3-21) | 02 | preparation `done` / native proof `done` (turn 4) | `modules/identity` checks + `infra/postgres/V1__identity_tenancy.sql` + `tests/native/identity-rls.test.ts` green 6/6 on disposable `postgres:16-alpine` (see §9); full WP3-21 stays `in_progress` (hosted identity services pending) |
 | T2-6 GitHub (WP3-22) | 21 | octokit client + secret broker + wiring, 22 pure tests (turn 5) / live `blocked` | `octokit 5.0.5` integrated; live install/snapshot/CI proof needs an authorized App |
@@ -504,9 +504,10 @@ Status: T-14 allocated task stays `done`; T-10/11/12/13/15 pushed to their
   pass with pinned digest + rawRefs + determinism; a window with a real
   service blackout assesses `inconclusive`/`invalid` (NEG3-18, never a pass).
 - Measured p50/p90/p99 = 118/121/126ms (n=12, incl. a documented +100ms poll
-  observer effect); `CALIBRATION-PROPOSAL.md` proposes a sandbox p50 threshold
-  of 2000ms + 20% margin — explicitly UNFROZEN. Missing: owner-frozen SLOs and
-  the candidate arm (needs the WP3-07 repair loop for the FR3-27.3 trio).
+  observer effect). At report time, `CALIBRATION-PROPOSAL.md` was unfrozen;
+  owner decision DEC3-P3-01 later froze only the sandbox p50 threshold (2000ms),
+  +20% candidate margin, and baseline n=3. Qualified SLOs/profile and the
+  candidate arm (needs the WP3-07 repair loop for the FR3-27.3 trio) remain open.
 
 ### 10.4 T-11/WP3-16 — bounded real executor + campaigns 4/4
 
@@ -562,3 +563,138 @@ isolation — not scheduling — carries correctness. `pnpm add` needed
 No contract, policy, threshold, or existing-schema semantic change; new
 schemas are versioned from birth; no version bump needed. No full WP and no
 G3 gate passed. Phase status stays `in_progress`.
+
+## 11. Execution record — turn 6 (T-16/T-17/T-18 to done, 1 Nov 2026 UTC)
+
+```text
+Task IDs / parent WPs: T-16 / WP3-23, T-17 / WP3-24, T-18 / WP3-28
+Requirement IDs: FR3-32/33/34/38; FR3-15/16 (fence, authority); NEG3-13/22/23/
+  25/26/28/29/30/36; NFR3-04; BR3-18/19/21
+User-visible outcome: runs admit atomically with idempotent replay and run
+  under fenced leases with crash/resume/cancel/drain; usage admits atomically
+  under operator caps with idempotent events and receipt-gated settlement;
+  email register/verify/login/recovery/onboarding works end to end with real
+  SMTP delivery proven to a disposable mail server.
+Prerequisite evidence: turn-5 §10 (native 33/5, pure 386/33); JobLease /
+  UsageLedgerEntry / challenge contracts (proven); identity store + V1/V2
+  (proven); recovered Docker daemon; cached postgres:16-alpine image.
+Allowed source/config changes: infra/postgres/V3+V4+V5, src/modules/jobs/**
+  (fencing split + store), src/modules/usage/** (accounting split + store),
+  src/modules/identity/{email,passwords,smtp}.ts + challenges purpose,
+  src/core/ports (EmailDeliveryPort), src/orchestrator (composeJobs/Usage/
+  EmailIdentity), tests/native/jobs-durable + usage-atomic + email-identity
+  + email-delivery, tests/identity/passwords + challenges purpose,
+  tests/orchestrator/phase2-{jobs,usage,email}-store, this report.
+Input snapshots + intended intervention: in-repo fixtures + disposable
+  postgres:16-alpine + redis:7-alpine + axllent/mailpit:v1.27 containers
+  (created, used, removed same turn); no customer repo, no frozen product
+  oracle, no paid API, no external mutation.
+Acceptance checks: unit 439 + 3 pre-existing Python failures (proven
+  identical on untouched tree, §11.4); native 79/9 green; typecheck +
+  lint/boundaries clean; new deps: none (stdlib + pulled mailpit image).
+Protected oracle / proof scope: no protected product oracle created,
+  touched, or claimed. Delivery proof is real SMTP to disposable Mailpit,
+  asserted via its HTTP API — not a simulated click.
+Actual commands + exit codes: §11.4 list.
+Status: T-16/T-17/T-18 allocated tasks `done` (all runnable rows proven);
+  full WP3-23/24/28 stay `in_progress`/`blocked` on the named remainders.
+```
+
+### 11.1 T-16/WP3-23 — durable dispatcher + hosted store `done`
+
+- `infra/postgres/V3__jobs.sql`: runs (unique idempotency key), jobs (the
+  durable queue), job_leases (epoch + CAS version + guest + immutable
+  candidate digest), outbox (unique effect id), checkpoints (chained to the
+  lease version); RLS + indexes; V1/V2 conventions kept.
+- `src/modules/jobs/{fencing,store}.ts`: pure guards factored to
+  `fencing.ts` (guards.ts precedent, no import cycle); the store admits in
+  one txn with replay + deletion-fence check, claims per-tenant FIFO under
+  a concurrency cap with a fresh guest per claim, heartbeats/checkpoints/
+  effects under fencing + CAS, expires with bounded retry → requeue or
+  fail, cancels with drain + settle, dispatches the outbox with SKIP LOCKED
+  and gates completion on reconciled effects. Resume with different
+  digests is refused (a changed candidate is a new job). One redundant
+  owner comparison was deleted: the fencing epoch is the authority.
+- `tests/native/jobs-durable.test.ts` 17/17 on real PostgreSQL 16
+  (NEG3-22/23/26, fence, FIFO, cap, CAS races, resume identity + fresh
+  guest, exhaustion, cancel drain, outbox reconcile gate, isolation).
+- Full-WP remainders: FR3-32 hostile-code isolation (qualified guest still
+  single-probe); measured fairness/noisy-neighbor campaign (needs a frozen
+  HostedServiceProfile); multi-job runs arrive with WP3-11; cross-tenant
+  fair-share ordering is dispatcher policy for the same campaign.
+
+### 11.2 T-17/WP3-24 — atomic usage store + settlement `done`
+
+- `infra/postgres/V4__usage.sql`: entitlements (one current row per tenant,
+  partial unique index), reservations (locked burns), usage_ledger
+  (append-only: NO update/delete grant, unique effect id).
+- `src/modules/usage/{accounting,store}.ts`: no default cap (admission
+  without an operator entitlement fails closed); concurrent admissions
+  serialize on the locked entitlement row; consumes burn the hold under a
+  reservation lock and never exceed it; every event is idempotent by
+  effect id with collision detection; release/settle free the hold while
+  consumed stays monotonic; settlement requires a server-side receipt ref;
+  rollover opens a new capped period while in-flight reservations keep
+  their balances. `reverse` (post-settlement refund) has no store path:
+  it needs the undecided payment provider's verified refund event.
+- `tests/native/usage-atomic.test.ts` 12/12 (NEG3-13/25/36: racing
+  admissions admit exactly what fits, racing consumes never overspend,
+  replays never double-debit, monotonic pinned via the pure core,
+  rollover preserves, isolation + fence hold).
+- Full-WP remainders: payment provider selection + signed event
+  verification; frozen free-tier/cap numbers; proof-cost forecast (needs
+  calibration, no invented figures); failure/refund policy.
+
+### 11.3 T-18/WP3-28 — email/session flows + real delivery `done`
+
+- `infra/postgres/V5__email_identity.sql`: email_users (hash-only),
+  email_challenges (hash-only, atomic single-use consume, one error for
+  unknown/used/expired/wrong-purpose), email_send_attempts (exact per-key
+  rate limit via advisory xact lock), `list_user_tenants`,
+  `list_user_sessions`, `claim_tenant_with_ticket` (atomic ticket →
+  tenant + owner membership). All REVOKE'd; DEFINER-only like V2.
+- `src/modules/identity/{email,passwords,smtp}.ts` + `claim_organization`
+  challenge purpose: register (duplicate-safe, same shape), resend,
+  verify (+ onboarding ticket), password login with multi-tenant
+  selection and remember-me TTLs, reset with all-session revocation,
+  ticket-based org claim, session listing. Unknown addresses and wrong
+  passwords share response shapes (no oracles). `[DERIVED]` server
+  values: password 10..128 + scrypt 16384/8/1, verify/claim 24h, reset
+  1h, sessions 12h/30d, resend/reset/notice 5/h, login 10/h, register
+  10/h. SMTP is a minimal `node:net` client (reply-checked, dot-stuffed,
+  ASCII-only, header-injection refused) with a documented shortcut to a
+  qualified vendor before production.
+- `tests/native/email-identity.test.ts` 14/14 (NEG3-29/30) with a
+  recording delivery; `tests/native/email-delivery.test.ts` 3/3 against
+  disposable Mailpit v1.27: the message is asserted back via its HTTP API
+  (recipient, subject, token in body) — real protocol delivery.
+- Full-WP remainders: account linking (needs live GitHub, consistent with
+  T-15); production mail vendor + authenticated submission; verification-
+  link assembly (HTTP layer, phase-6). Bug fixed: `lookup_email_user`
+  returned a NULL row instead of zero rows — now `SETOF`.
+
+### 11.4 Verification (this turn, actual commands + exit codes)
+
+- `pnpm typecheck` → 0 · `pnpm lint` → 0 (70 modules / 173 deps, zero
+  violations, incl. depcruise boundaries)
+- `pnpm test` → 1 with **439 passed / 3 failed (442)**: the 3 failures
+  are the pre-existing Python L1 extraction cases, proven identical on
+  the untouched tree via stash check (same 3/47 on the two files
+  without my changes; environment toolchain issue, out of scope, not
+  narrowed, not weakened)
+- `DATABASE_URL=… REDIS_URL=… MAILPIT_*=… pnpm test:identity:native` → 0
+  (**79 tests / 9 files**: prior 33 + jobs 17 + usage 12 + email 14 + 3)
+- `docker rm -f changeproof-pg-t16 changeproof-redis-t16
+  changeproof-mailpit-t18` → 0; foreign containers untouched
+- `semgrep` → missing (binary absent; skill bodies applied manually)
+
+Environment note for future turns: `git stash` + pop rewrote touched
+files to CRLF (`core.autocrlf=true`) and broke multi-line exact-match
+editing until normalized back to LF. Prefer `git diff` over stash for
+pre-existing checks, or re-normalize owned files afterwards.
+
+No contract, policy, threshold, or existing-schema semantic change; new
+schemas are versioned from birth; model contract `1` added (ports only).
+No full WP and no G3 gate passed. T-19/T-20 executed the same turn — see
+the phase-3 report. Next dependency-ready tasks: T-21..T-26 (all
+`tentative`, need WP3-07 predecessors + scope confirmation).
