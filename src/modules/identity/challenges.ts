@@ -14,7 +14,7 @@ import { ChangeProofError } from '../../core/index.js';
  * logic is deterministic and replay-testable.
  */
 
-export type ChallengePurpose = 'verify_email' | 'reset_password' | 'link_account';
+export type ChallengePurpose = 'verify_email' | 'reset_password' | 'link_account' | 'claim_organization';
 
 export interface MintChallengeInput {
   readonly purpose: ChallengePurpose;
@@ -38,7 +38,12 @@ export interface VerifiedChallenge {
 }
 
 const TOKEN_VERSION = 'v1';
-const PURPOSES: ReadonlySet<string> = new Set(['verify_email', 'reset_password', 'link_account']);
+const PURPOSES: ReadonlySet<string> = new Set([
+  'verify_email',
+  'reset_password',
+  'link_account',
+  'claim_organization',
+]);
 
 interface ChallengePayload {
   readonly v: string;
