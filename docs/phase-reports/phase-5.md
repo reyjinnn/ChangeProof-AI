@@ -2,10 +2,9 @@
 
 **Date:** 2 November 2026
 **Application root:** this repository (`ChangeProof-AI/`), branch `development`
-**Phase status:** `in_progress` — allocated tasks T5-1..T5-8
-(T-33..T-40) `done` (see §2–§4, §7–§11). Only T5-9 (WP3-14 pilot prep)
-remains open (§6). No full WP and no G3 gate passed; phase stays
-`in_progress` until T5-9 and phase-7 acceptance.
+**Phase status:** `in_progress` — allocated tasks T5-1..T5-9
+(T-33..T-41) `done` (see §2–§4, §7–§11, §13). No full WP and no G3
+gate passed; phase stays `in_progress` pending phase-7 acceptance.
 **Plan revision:** 2 (24 October 2026).
 
 ## 1. Entry audit (evidence, not summary)
@@ -215,11 +214,10 @@ change to existing versioned items; no version bump needed.
 | T5-6 TB/cross-engine migration | WP3-33 | Allocated task `done`; ≥1 TB dataset + live cross-engine target + independent campaign stay phase-7 (paid storage needs session auth) |
 | T5-7 cloud deployment automation | WP3-34 | Allocated task `done`; live AWS/Azure/GCP receipts per profile stay phase-7 (credentials need session auth) |
 | T5-8 service operations | WP3-26 | Allocated task `done`; 3-org × 2-identity campaign + payment-provider + license/vendor/SLO decisions stay phase-7 |
-| T5-9 organic pilot prep | WP3-14 | `not_started`: authorized pilot repo + owner access for SC3-06 provenance |
+| T5-9 organic pilot prep | WP3-14 | Allocated task `done` (see §13); authorized pilot repo + owner access stay phase-7 needs |
 
-**Next dependency-ready task:** T5-9 (WP3-14) organic pilot prep —
-authorized pilot scope, owner/domain access, provenance and validation
-procedure. Do not start phase-6 automatically.
+**Next dependency-ready task:** phase-6 T6-1 (T-42) design tokens +
+responsive shell. Do not start phase-6 automatically.
 
 ## 7. T-36 / WP3-20 — legacy fixtures / recovery (`done`)
 
@@ -477,3 +475,29 @@ lifecycle}/index.ts`, `src/modules/migrations/index.ts`
 `tests/contracts/conformance-matrix.test.ts` (+4 rows). No contract,
 policy, threshold, or schema semantic change to existing versioned
 items; no version bump needed.
+
+## 13. T-41 / WP3-14 — organic pilot preparation (`done`)
+
+Task ID / parent WP: T-41 (T5-9) / WP3-14.
+Requirement IDs: BR3-11/14; FR3-21; SC3-06; NEG3-28.
+User-visible outcome: frozen pilot scope template, owner/domain access
+checklist, SC3-06 provenance record template, outcome/active-time
+measurement procedure, and owner validation procedure; zero authorized
+pilots verified, register empty, concrete phase-7 needs named.
+Prerequisite evidence: phase-5 T-33..T-40 task evidence (task-level
+`done`); repo search confirming no authorized pilot repo/owner.
+Allowed source/config changes: `docs/pilot-prep.md`,
+`config/pilot/register.json`, `tests/pilot/t41-register.test.ts` only.
+No product source, contract, policy, or threshold changes.
+Acceptance checks: unit 2/2 (empty register admits no adoption/repair
+claim; `controlled_change` rejected as SC3-06 origin).
+Protected oracle / proof scope: preparation only — no pilot run, no
+adoption or impact claim (NEG3-28).
+Artifacts expected: prep package + register + guard test — present.
+Actual commands + exit codes: `pnpm vitest run tests/pilot` → 0 (2/2);
+`pnpm typecheck` → 0; `pnpm lint` → 0 (134 modules / 385 deps, zero
+violations).
+Status + remaining blocker: allocated task `done`. Full WP3-14 stays
+open: authorized pilot repo + owner (§6 needs 1–4 in
+`docs/pilot-prep.md`), phase-7 G3-10 campaign.
+Next dependency-ready task: phase-6 T6-1 (T-42).
