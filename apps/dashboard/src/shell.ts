@@ -2,7 +2,7 @@
  * sidebar collapses to an overlay drawer below 760px; Escape closes it
  * and returns focus to the menu button. */
 
-import { h } from './components.js';
+import { brandMarkSvg, h, iconSvg, type IconName } from './components.js';
 import { openSearchPalette } from './pages/search.js';
 import { navRoutes } from './routes.js';
 import { loadSidebarCollapsed, loadTheme, saveSidebarCollapsed, saveTheme } from './store.js';
@@ -16,17 +16,38 @@ function themeIcon(theme: 'light' | 'dark'): string {
   return theme === 'light' ? 'Dark mode' : 'Light mode';
 }
 
+function routeIcon(path: string): IconName {
+  if (path === '/') return 'status';
+  if (path === '/runs') return 'runs';
+  if (path === '/runs/new') return 'new-run';
+  if (path.startsWith('/evidence')) return 'evidence';
+  if (path === '/inbox') return 'inbox';
+  if (path === '/support') return 'support';
+  if (path === '/threads') return 'threads';
+  if (path === '/operator') return 'operator';
+  if (path === '/billing') return 'billing';
+  if (path === '/enterprise') return 'enterprise';
+  if (path === '/settings') return 'settings';
+  if (path === '/templates') return 'templates';
+  if (path === '/samples') return 'samples';
+  if (path === '/faq') return 'faq';
+  if (path === '/pricing') return 'pricing';
+  if (path === '/roadmap') return 'roadmap';
+  if (path === '/changelog') return 'changelog';
+  return 'public';
+}
+
 export function renderShell(app: HTMLElement): Shell {
   const skip = h('a', { class: 'skip-link', href: '#outlet' }, ['Skip to content']);
 
   const brand = h('div', { class: 'brand' }, []);
-  const mark = document.createElement('img');
-  mark.src = '/assets/changeproof-mark.svg';
-  mark.alt = '';
-  mark.width = 28;
-  mark.height = 28;
-  mark.setAttribute('aria-hidden', 'true');
-  brand.append(mark, document.createTextNode(' ChangeProof AI'));
+  brand.append(
+    brandMarkSvg(),
+    h('div', { class: 'brand-copy' }, [
+      h('strong', {}, ['ChangeProof AI']),
+      h('span', {}, ['Deterministic assurance']),
+    ]),
+  );
 
   const SECTION_ORDER = ['workspace', 'public', 'account'] as const;
   const SECTION_LABEL: Record<(typeof SECTION_ORDER)[number], string> = {
@@ -41,12 +62,18 @@ export function renderShell(app: HTMLElement): Shell {
     const list = h('ul', {}, []);
     for (const route of items) {
       if (route.navLabel === undefined) continue;
-      list.appendChild(h('li', {}, [h('a', { href: `#${route.path}` }, [route.navLabel])]));
+      const link = h('a', { href: `#${route.path}` }, []);
+      link.append(iconSvg(routeIcon(route.path)), h('span', {}, [route.navLabel]));
+      list.appendChild(h('li', {}, [link]));
     }
     // Plain-text group labels: no heading-level games inside the sidebar.
     nav.append(h('p', { class: 'nav-group' }, [SECTION_LABEL[section]]), list);
   }
-  const sidebar = h('aside', { class: 'sidebar', id: 'sidebar' }, [brand, nav]);
+  const sidebarFoot = h('div', { class: 'sidebar-foot', id: 'sidebar-foot' }, [
+    h('div', { class: 'eyebrow' }, ['Tenant isolation']),
+    h('p', { class: 'muted', id: 'sidebar-session-summary' }, ['Guest session · sign in to access workspace']),
+  ]);
+  const sidebar = h('aside', { class: 'sidebar', id: 'sidebar' }, [brand, nav, sidebarFoot]);
 
   const menuButton = h(
     'button',
@@ -102,9 +129,14 @@ export function renderShell(app: HTMLElement): Shell {
     }
   });
 
+  const topContext = h('div', { class: 'top-context', 'aria-hidden': 'true' }, [
+    h('span', { class: 'orb' }, []),
+    h('span', {}, ['Deterministic policy · zero model authority']),
+  ]);
   const account = h('span', { id: 'account', class: 'account-slot' }, []);
   const topbar = h('header', { class: 'topbar' }, [
     menuButton,
+    topContext,
     h('span', { class: 'spacer', 'aria-hidden': 'true' }, []),
     account,
     searchButton,

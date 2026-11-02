@@ -16,6 +16,13 @@ export interface AccountState {
 
 /** Topbar account slot: login link out, tenant/role + logout in. */
 export function renderAccount(state: AccountState): void {
+  const sidebarSummary = document.getElementById('sidebar-session-summary');
+  if (sidebarSummary !== null) {
+    sidebarSummary.textContent =
+      state.authenticated && state.tenantId !== undefined && state.role !== undefined
+        ? 'Authenticated tenant workspace'
+        : 'Guest session · sign in to access workspace';
+  }
   const slot = document.getElementById('account');
   if (slot === null) return;
   if (!state.authenticated || state.tenantId === undefined || state.role === undefined) {
@@ -33,7 +40,7 @@ export function renderAccount(state: AccountState): void {
       });
   });
   slot.replaceChildren(
-    h('span', { class: 'muted' }, [`${state.tenantId} · ${state.role} `]),
+    h('span', { class: 'badge', 'data-tone': 'info' }, [`${state.tenantId} · ${state.role}`]),
     h('a', { class: 'button', href: '#/settings' }, ['Settings']),
     document.createTextNode(' '),
     logout,
