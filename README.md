@@ -111,7 +111,7 @@ changeproof/
 ├── config/  fixtures/  tests/  bench/  infra/  docs/  runs/   (runs/ is gitignored)
 ├── .prepare/            BRD · PRD · MVP · architecture  (specification package)
 ├── phases/              phase-1 … phase-7 playbooks + hackathon-slice
-├── scripts/             native runner security probes
+├── scripts/             runner probes + campaign reproduction runner
 └── .template-ui/mockup.html          UI design source (~1.1 MB, embedded fonts)
 ```
 
@@ -236,11 +236,11 @@ pnpm lint
 pnpm test
 ```
 
-The `pnpm verify` shortcut runs those same checks in sequence. The latest observed run (2 November 2026, see the phase-6 report §§18–20 and the phase-7 report §1) has typecheck, lint/boundaries (168 modules / 526 deps, zero violations), build, UI build, component tests (132/132), HTTP tests (38/38), and browser E2E (8/8 specs) passing, plus contracts/policy (139/139), architecture (9/9), identity (47/47), and security (14/14) suites green. The full `pnpm test` was not re-run on this tree; the adapter suite stands at 141/144 with the 3 pre-existing Python extraction failures verified identical on the clean baseline, and `pnpm test:negative` remains a missing check (no `tests/negative/` directory). The full native suite was last recorded in the phase-5 report §12 (160/162) and was not re-run; per-slice native suites were re-run green (auth 11/11, runs 10/10, notifications 6/6, teamwork 6/6, enterprise 5/5). Run the checks yourself and compare against the latest [phase report](docs/phase-reports/phase-7.md); do not attribute an existing failure to your change without checking its baseline.
+The `pnpm verify` shortcut runs those same checks in sequence. The latest observed run (2 November 2026, see the phase-7 report §§1–9) has typecheck, dependency boundaries (168 modules / 527 deps, zero violations), the negative suite (636/636), the adapter suite (144/144), and 24 mock dirs (684/684) passing. Build, UI build, component (132/132), HTTP (38/38), and browser E2E (8/8 specs) greens are carried from the T-50 baseline and were not re-run in the T-51..T-55 slices. The full `pnpm test` was not re-run on this tree. Known reds: `pnpm lint` overall exits 1 on 7 pre-existing eslint errors inside uncommitted external dashboard edits (all session files lint clean), and native soak stands at 0/2 failing (unresolved variation vs an earlier 2/2, owned by T7-11). The full native suite was last recorded in the phase-5 report §12 (160/162) and was not re-run; per-slice natives were re-run green (N1 85/85, N2 64/64, campaign/SC3 21/21, verifier 59/59). Run the checks yourself and compare against the latest [phase report](docs/phase-reports/phase-7.md); do not attribute an existing failure to your change without checking its baseline.
 
 ### Run the project
 
-This checkout has a `changeproof` CLI, an HTTP API + dashboard server, and the dashboard UI. There is no worker entry point (`src/workers` is absent). The server and UI exist in the working tree as uncommitted phase-6 work (allocation complete, report §§1–20), with the phase-7 report started; see the [phase-6 report](docs/phase-reports/phase-6.md) and [phase-7 report](docs/phase-reports/phase-7.md) for what is proven about them.
+This checkout has a `changeproof` CLI, an HTTP API + dashboard server, and the dashboard UI. There is no worker entry point (`src/workers` is absent). The server and UI exist in the working tree as uncommitted phase-6 work (allocation complete, report §§1–20), with the phase-7 report at §§1–9 (T-50..T-55 recorded); see the [phase-6 report](docs/phase-reports/phase-6.md) and [phase-7 report](docs/phase-reports/phase-7.md) for what is proven about them.
 
 ```powershell
 pnpm build                        # compile TypeScript into dist/
@@ -272,7 +272,7 @@ The base install does not require every language toolchain. If your task runs na
 
 1. Read `AGENTS.md` and `SKILL.md` for the working rules, task format, and negative-case index.
 2. Read `.prepare/BRD.md`, `.prepare/PRD.md`, `.prepare/MVP.md`, then `.prepare/architecture.md` in that order.
-3. Pick a dependency-ready task from the MVP work-package dependency graph. Do not pick by WP number alone. Phase-6 allocation is complete and the T-50 qualification slice is recorded; the current next task is T-51 (T7-2, six-ecosystem tuple matrix, still `tentative`); verify [the latest report](docs/phase-reports/phase-7.md) and `task-brief.md` before starting because task status can change.
+3. Pick a dependency-ready task from the MVP work-package dependency graph. Do not pick by WP number alone. Phase-6 allocation is complete and phase-7 slices T-50..T-55 are recorded; the current next task is T-56 (T7-7, organic pilot acceptance, still `tentative` and blocked without pilot/owner access); verify [the latest report](docs/phase-reports/phase-7.md) and `task-brief.md` before starting because task status can change.
 4. Before changing code, write down the task scope, requirement IDs, expected behavior, failure cases, and proof checks using the task header in `AGENTS.md`.
 5. Add or update positive and negative tests, make the smallest change that meets the task, then run the checks for the affected area and `pnpm verify`.
 6. In your pull request, summarize the behavior changed, tests and commands run with results, remaining limitations, and any contract or decision record changes. Never present mock/replay success as real-runtime proof.
@@ -281,7 +281,7 @@ Do not add credentials or `.env` files to commits. Do not run paid API calls, ch
 
 ### Current verification status
 
-At the time this README was updated, the last observed per-suite run (2 November 2026) had typecheck, lint/boundary checks (168 modules / 526 deps, zero violations), build, UI build, component (132/132), HTTP (38/38), browser E2E (8/8 specs), contracts/policy (139/139), architecture (9/9), identity (47/47), and security (14/14) suites passing. The full `pnpm test` (`pnpm verify`'s third leg) was not re-run on this tree, so `pnpm verify` as a whole is unproven here; the adapter suite stands at 141/144 with the 3 pre-existing Python extraction failures verified identical on the clean baseline, and `pnpm test:negative` is a missing check (no `tests/negative/` directory). The full native suite was last recorded in the phase-5 report §12 (160/162) and was not re-run; per-slice native suites were re-run green. Treat the adapter failures and the missing negative suite as known baseline issues, not as failures caused by your contribution. Re-run verification on your checkout and report the current output; this status may become stale as the failures are fixed.
+At the time this README was updated, the last observed per-suite run (2 November 2026, phase-7 §§1–9) had typecheck, dependency boundaries (168 modules / 527 deps, zero violations), the negative suite (636/636), the adapter suite (144/144), and 24 mock dirs (684/684) passing. The full `pnpm test` (`pnpm verify`'s third leg) was not re-run on this tree, so `pnpm verify` as a whole is unproven here. Known reds carried from that run: `pnpm lint` overall exits 1 on 7 pre-existing eslint errors inside uncommitted external dashboard edits (all session files lint clean), and native soak stands at 0/2 failing (unresolved variation, owned by T7-11). The full native suite was last recorded in the phase-5 report §12 (160/162) and was not re-run; per-slice natives were re-run green. Treat those reds as known baseline issues, not as failures caused by your contribution. Re-run verification on your checkout and report the current output; this status may become stale as the failures are fixed.
 
 ### Reading before coding
 
@@ -311,7 +311,7 @@ Actual scripts from `package.json`:
 | Architecture | `pnpm test:architecture` | `tests/architecture` |
 | Adapter conformance | `pnpm test:adapters` | `tests/adapters` |
 | Impact graph | `pnpm test:graph` | `tests/graph` |
-| Negative matrix | `pnpm test:negative` | `tests/negative` — **no such directory; exits 1 (missing check)** |
+| Negative matrix | `pnpm test:negative` | `tests/negative` — thin NEG3-pinned suite, 636/636 green |
 | Dependency capabilities | `pnpm test:dependencies` | `tests/dependencies` |
 | Security | `pnpm test:security` | `tests/security` |
 | UI components | `pnpm test:ui` | dashboard Vitest config |
@@ -417,11 +417,11 @@ Honest snapshot of the repository — verify anything you intend to rely on:
 
 **Present**
 
-- TypeScript source and toolchain: strict `tsc`, ESLint, dependency-cruiser boundary rules, Vitest suites (unit + native configs; 123 test files under `tests/`, plus 19 dashboard component files covering 12 pages and 8 E2E specs).
+- TypeScript source and toolchain: strict `tsc`, ESLint, dependency-cruiser boundary rules, Vitest suites (unit + native configs; 124 test files under `tests/`, plus 19 dashboard component files covering 12 pages and 8 E2E specs).
 - `src/core` (contracts, ports, errors), `src/orchestrator`, `src/http` (JSON API + static hosting), `src/cli` (`changeproof` bin), and 25 modules: `identity`, `jobs`, `usage`, `lifecycle`, `notifications`, `queries`, `support`, `collaboration`, `adapters`, `detector`, `analyzer`, `graph`, `observability`, `migrations`, `dependencies`, `fixtures`, `agent`, `verifier`, `policy`, `evidence`, `github`, `providers`, `distribution`, `evaluation`, `publicsite`.
-- PostgreSQL migrations `V1`–`V11` with RLS stores, `bench/` dev suites, self-host profile, pilot-prep package (working tree, uncommitted), feature-coverage record, and phase reports 1–6 (phase-6 §§1–20: T6-1..T6-8 done, allocation complete) plus the phase-7 report (T-50 T7-1 slice recorded).
+- PostgreSQL migrations `V1`–`V11` with RLS stores, `bench/` dev suites, self-host profile, pilot-prep package (working tree, uncommitted), feature-coverage record, phase reports 1–6 (phase-6 §§1–20: T6-1..T6-8 done, allocation complete), the phase-7 report §§1–9 (T-50..T-55 recorded), the `tests/negative` suite, the `scripts/reproduce-campaign.mjs` runner, and the `fixtures/changeproof-3` evaluation skeleton.
 - Specification package in `.prepare/`, phase playbooks in `phases/`, decision records in `docs/decisions/`.
-- Latest observed verification (2 November 2026): typecheck, lint/boundaries (168/526, zero violations), build, UI build, component (132/132), HTTP (38/38), and browser E2E (8/8 specs) passed, plus contracts/policy (139/139), architecture (9/9), identity (47/47), and security (14/14); full `pnpm test` not re-run on this tree; adapters 141/144 (3 pre-existing Python failures, baseline-verified); `test:negative` missing; full native suite last recorded phase-5 §12 (160/162, not re-run), per-slice natives re-run green. Re-run on your checkout; this snapshot goes stale fast.
+- Latest observed verification (2 November 2026): typecheck, boundaries (168/527, zero violations), negative suite (636/636), adapters (144/144), and 24 mock dirs (684/684) passed; build/UI/E2E/component/HTTP greens carried from the T-50 baseline, not re-run; full `pnpm test` not re-run on this tree; known reds are the 7 pre-existing dashboard eslint errors (external uncommitted edits) and native soak 0/2 (T7-11 owns); full native suite last recorded phase-5 §12 (160/162, not re-run), per-slice natives re-run green. Re-run on your checkout; this snapshot goes stale fast.
 
 **Not present / not claimed**
 

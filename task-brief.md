@@ -2,11 +2,11 @@
 
 **Plan revision:** 2 (24 October 2026)  
 
-**Coordination status last reconciled:** 2 November 2026 (T-02..T-50 allocated `done`; T6-1..T6-8 complete; T-51..T-60 `tentative`; see §4 and [`docs/phase-reports/phase-6.md`](docs/phase-reports/phase-6.md) §§18–20 and [phase-7 §1](docs/phase-reports/phase-7.md)). History: T-10..T-15 runnable limits turn 5, 31 October 2026 UTC (phase-2 report §10); T-16..T-18 turn 6 and T-19/T-20 phase-3 turn 1, 1 November 2026 UTC; T-27..T-32 phase-4 and T-33..T-41 phase-5, 2 November 2026 UTC; T-42..T-45 phase-6, 2 November 2026 UTC; T-46..T-49 phase-6 and T-50 (T7-1 slice) phase-7, 2 November 2026 UTC. Allocated-task `done` only — no full WP or G3 gate is recorded as passed.
+**Coordination status last reconciled:** 2 November 2026 (T-02..T-55 allocated `done`; T6-1..T6-8 complete; T-56..T-60 `tentative`; see §4 and [`docs/phase-reports/phase-6.md`](docs/phase-reports/phase-6.md) §§18–20 and [phase-7 §§1–9](docs/phase-reports/phase-7.md)). History: T-10..T-15 runnable limits turn 5, 31 October 2026 UTC (phase-2 report §10); T-16..T-18 turn 6 and T-19/T-20 phase-3 turn 1, 1 November 2026 UTC; T-27..T-32 phase-4 and T-33..T-41 phase-5, 2 November 2026 UTC; T-42..T-45 phase-6, 2 November 2026 UTC; T-46..T-49 phase-6 and T-50 (T7-1 slice) phase-7, 2 November 2026 UTC; T-51..T-55 (T7-2..T7-6 slices) phase-7, 2 November 2026 UTC. Allocated-task `done` only — no full WP or G3 gate is recorded as passed.
 
 **Purpose:** Coordinate work between Reyn and Hoang while preserving the repository's dependency order, verification rules, and honest status reporting.  
 
-**Current verified project status:** Phase-6 allocation is complete (T6-1..T6-8 / T-42..T-49 `done`, report §§1–20) and phase-7 has started with the T-50 (T7-1 slice) evidence recorded — see [`docs/phase-reports/phase-7.md`](docs/phase-reports/phase-7.md) §1 alongside the historical Phase-1–6 reports. No full WP or G3 gate is recorded as complete.
+**Current verified project status:** Phase-6 allocation is complete (T6-1..T6-8 / T-42..T-49 `done`, report §§1–20) and phase-7 slices T-50..T-55 are recorded — see [`docs/phase-reports/phase-7.md`](docs/phase-reports/phase-7.md) §§1–9 alongside the historical Phase-1–6 reports. No full WP or G3 gate is recorded as complete.
 
 **This brief is a coordination document. It does not authorize external changes, paid services, production deployment, or claims that any work package or gate has passed.**
 
@@ -33,16 +33,16 @@ These roles do not imply that either person has authorization to perform an exte
 
 ## 3. Current phase status and remaining work
 
-The latest recorded status is the phase-7 report §1 (with phase-6 §§1–20 complete), dated 2 November 2026. Phases 1–6 remain `in_progress`; allocated-task evidence never completes a full WP. Re-run applicable checks after source/config changes. (Phase-1/2 detail now lives in the assignment index §4 and the historical reports.)
+The latest recorded status is the phase-7 report §§1–9 (with phase-6 §§1–20 complete), dated 2 November 2026. Phases 1–6 remain `in_progress`; allocated-task evidence never completes a full WP. Re-run applicable checks after source/config changes. (Phase-1/2 detail now lives in the assignment index §4 and the historical reports.)
 
 | Phase / area | Recorded status | Remaining proof / blocker |
 |---|---|---|
 | Phases 1–5 back-end allocated (T-02..T-41) | `done` per reports 1–5; every full WP `in_progress` | Full-WP acceptance per MVP §8 stays with phase-7; owner-held gates (frozen oracle/intent, live model, qualified guest, authorized App/orgs, vendors, pilots) remain. |
 | Phase-6 front-end T6-1..T6-8 (T-42..T-49) | `done` (phase-6 report §§1–20, gates §§7/10/13/16/19) | Backend gaps recorded per task (coverage gaps list); production hardening; phase-7 acceptance. |
-| Phase-7 acceptance (T-50..T-60) | T-50 (T7-1 slice) `done`, T-51..T-60 `not_started` (`tentative`) | T-50: negatives re-run green, `test:negative` missing, adapters 141/144 (3 pre-existing), guest probes blocked (no Modal creds/scope). Full WP3-01..34 + G3-01..17 qualification ahead. T-54/T-56 `blocked` without authorized publication repo and organic pilot/owner access. |
+| Phase-7 acceptance (T-50..T-60) | T-50..T-55 `done`, T-56..T-60 `not_started` (`tentative`) | T-51: tuple matrix audited (0/32 certified), adapters 144/144 via env-only fix. T-52: freeze/campaign mechanics green, no owner freeze, live model blocked. T-53: `test:negative` 636/636, 36/40 NEGs pinned, soak 0/2 red. T-54: reproduction runner added; G3-07/08 blocked (no frozen manifest, no App/scope). T-55: eval skeleton + harness green, live arms HELD. G3-01 `in_progress`, G3-02/G3-07/G3-08/G3-13 `blocked`, rest `not_started`/`in_progress`; no gate passed. T-56 needs organic pilot/owner access. |
 | Gates | No G3 gate is recorded as passed | G3-08/G3-10 remain blocked without authorized publication repository and organic pilot/owner access. |
 
-**Latest observed verification (2 November 2026):** `pnpm typecheck`, `pnpm lint` (168 modules / 526 deps, zero violations), `pnpm build`, `pnpm build:ui`, `pnpm test:ui` (132/132), `pnpm vitest run tests/http` (38/38), and `pnpm test:e2e` (8/8 specs) passed with exit code 0, plus contracts/policy (139/139), architecture (9/9), identity (47/47), and security (14/14). The full `pnpm test` was not re-run on this tree; adapters stand at 141/144 (3 pre-existing Python failures, baseline-verified) and `pnpm test:negative` is a missing check. Native slices re-run: auth-http 11/11, runs-http 10/10, notifications-http 6/6, teamwork-http 6/6, enterprise-http 5/5. The full native suite was last recorded in the phase-5 report §12 (160/162) and was not re-run. These are results recorded for that change set, not a fresh run for future changes. Earlier notes stand corrected: `scripts/runner-security-probes.mjs` exists (Modal qualification still blocked per its decision record, never a pass); `semgrep` binary still absent.
+**Latest observed verification (2 November 2026, phase-7 §§1–9):** `pnpm typecheck`, dependency boundaries (168 modules / 527 deps, zero violations), `pnpm test:negative` (636/636), `pnpm test:adapters` (144/144), and 24 mock dirs (684/684) passed with exit code 0. Build/UI/E2E/component/HTTP greens are carried from the T-50 baseline, not re-run in T-51..T-55. The full `pnpm test` was not re-run on this tree. Known reds: `pnpm lint` overall exits 1 on 7 pre-existing eslint errors inside uncommitted external dashboard edits (all session files lint clean); native soak 0/2 failing (unresolved variation, T7-11 owns). Native slices re-run: N1 85/85, N2 64/64, campaign/SC3 21/21, verifier 59/59. The full native suite was last recorded in the phase-5 report §12 (160/162) and was not re-run. These are results recorded for that change set, not a fresh run for future changes. Earlier notes stand corrected: `scripts/runner-security-probes.mjs` exists (Modal qualification still blocked per its decision record, never a pass); `semgrep` binary still absent.
 
 ## 4. Active assignments
 
@@ -105,11 +105,11 @@ Every phase task has exactly one named owner. Owners alternate deliberately (Rey
 | T-48 | T6-7 / WP3-30 | Support / collaboration UI | **Reyn** | `done` | Allocated done 2 Nov 2026 (teamwork slice + support/operator/threads pages; native 6/6, E2E teamwork; phase-6 report §§15–16). Full WP3-30 open (gap APIs, workers, phase-7). |
 | T-49 | T6-8 / WP3-24/31/32 | Billing / BYOK / enterprise UI | **Reyn** | `done` | Allocated done 2 Nov 2026 (enterprise slice + billing/enterprise pages; native 5/5, E2E enterprise; phase-6 report §§18–19). Full WP3-24/31/32 open (live IdP, payment provider, gap APIs, workers, phase-7). |
 | T-50 | T7-1 / G3-01, G3-02 | Contract/identity/policy/import negatives + qualified guest probes | **Reyn** | `done` | Allocated done 2 Nov 2026 (T7-1 slice: unit 139/139, arch 9/9, identity 47/47, security 14/14, adapters 141/144 baseline-verified; guest probes blocked on creds/scope; phase-7 report §1). G3-01 `in_progress`, G3-02 `blocked`; no gate passed. |
-| T-51 | T7-2 / G3-03 | Six-ecosystem L1/L2/L3 tuple matrix | **Reyn** | `not_started` | `tentative` — acceptance phase. |
-| T-52 | T7-3 / G3-04, G3-05, G3-11 | Frozen baselines, independent oracle, causality, real scenarios | **Reyn** | `not_started` | `tentative` — acceptance phase. |
-| T-53 | T7-4 / G3-06, G3-13 | NEG3-01..40 mapping + concurrent-tenant isolation | **Reyn** | `not_started` | `tentative` — acceptance phase. |
-| T-54 | T7-5 / G3-07, G3-08 | Clean full-campaign reproduction + authorized publication | **Reyn** | `not_started` | `tentative` — blocked without an authorized publication repository. |
-| T-55 | T7-6 / G3-09 | Frozen dev/holdout evaluation (B0/B1/B2/Full + ablations) | **Reyn** | `not_started` | `tentative` — acceptance phase. |
+| T-51 | T7-2 / G3-03 | Six-ecosystem L1/L2/L3 tuple matrix | **Reyn** | `done` | Allocated done 2 Nov 2026 (matrix audited from actuals, 0/32 certified; env-only adapter-test fix 141/144 → 144/144, non-weakening verified; phase-7 §4). G3-03 `in_progress` (fails: no frozen matrix/records). |
+| T-52 | T7-3 / G3-04, G3-05, G3-11 | Frozen baselines, independent oracle, causality, real scenarios | **Reyn** | `done` | Allocated done 2 Nov 2026 (freeze mechanics exit 0, verifier 59/59, campaign/SC3 natives 21/21, regions 2/2; live model blocked, no owner freeze; all counts below §17.3 floors; phase-7 §5). G3-04/05/11 `not_started` for acceptance. |
+| T-53 | T7-4 / G3-06, G3-13 | NEG3-01..40 mapping + concurrent-tenant isolation | **Reyn** | `done` | Allocated done 2 Nov 2026 (new `tests/negative` 636/636; 24 mock dirs 684/684; natives N1 85/85, N2 64/64; 36/40 NEGs pinned, soak 0/2 red, guest live probes blocked; phase-7 §6). G3-06 `in_progress`, G3-13 `blocked`. |
+| T-54 | T7-5 / G3-07, G3-08 | Clean full-campaign reproduction + authorized publication | **Reyn** | `done` | Allocated done 2 Nov 2026 (`scripts/reproduce-campaign.mjs` added, negatives N1–N5 exit 2, mechanics M3–M5 3/3; publication procedure reviewable, no live PR; phase-7 §7). G3-07/08 `blocked` (no frozen manifest, no App/scope/CI client). |
+| T-55 | T7-6 / G3-09 | Frozen dev/holdout evaluation (B0/B1/B2/Full + ablations) | **Reyn** | `done` | Allocated done 2 Nov 2026 (changeproof-3 skeleton manifest, harness 24/24 + mechanics 8/8, oracle-isolation audit; live arms HELD; phase-7 §8). G3-09 HELD (not passed, not failed). |
 | T-56 | T7-7 / G3-10 | Organic pilot acceptance (SC3-06) | **Reyn** | `not_started` | `tentative` — blocked without organic pilot/owner access. |
 | T-57 | T7-8 / G3-12, G3-15 | Full real browser journey | **Reyn** | `not_started` | `tentative` — acceptance phase. |
 | T-58 | T7-9 / G3-14 | Capacity/fairness/outage/restore + billing lifecycle | **Reyn** | `not_started` | `tentative` — acceptance phase. |
@@ -399,15 +399,15 @@ pnpm test:e2e
 pnpm test:identity:native
 ```
 
-`pnpm verify` is also defined and runs typecheck, lint, and the full test suite. `pnpm test:identity:native` runs the whole native config (needs `DATABASE_URL`; last full run recorded phase-5 report §12, 160/162). `pnpm test:runner-security:native` targets the existing `scripts/runner-security-probes.mjs`; Modal qualification stays blocked per its decision record. `pnpm test:negative` is declared but `tests/negative/` does not exist, so it exits 1 (missing check). `pnpm dev` / `pnpm build:ui` serve and build the dashboard (no API proxy in dev). No command may be reported as passing until it was run against the current change.
+`pnpm verify` is also defined and runs typecheck, lint, and the full test suite. `pnpm test:identity:native` runs the whole native config (needs `DATABASE_URL`; last full run recorded phase-5 report §12, 160/162). `pnpm test:runner-security:native` targets the existing `scripts/runner-security-probes.mjs`; Modal qualification stays blocked per its decision record. `pnpm test:negative` runs the thin NEG3-pinned suite (636/636 green since T-53). `pnpm dev` / `pnpm build:ui` serve and build the dashboard (no API proxy in dev). No command may be reported as passing until it was run against the current change.
 
 ## 7. Immediate next actions
 
-1. T-42..T-50 are recorded `done` as allocated tasks with phase-6 report evidence (§§1–20) and the phase-7 report (§1); T-51..T-60 are `not_started` and `tentative`.
-2. Next dependency-ready task: T-51 (T7-2, six-ecosystem L1/L2/L3 tuple matrix). Reyn confirms exact scope, prerequisite evidence, and file ownership before it starts; the owner records a §5 header at that point.
+1. T-42..T-55 are recorded `done` as allocated tasks with phase-6 report evidence (§§1–20) and the phase-7 report (§§1–9); T-56..T-60 are `not_started` and `tentative`.
+2. Next dependency-ready task: T-56 (T7-7, organic pilot acceptance SC3-06). Reyn confirms exact scope, prerequisite evidence, and file ownership before it starts; the owner records a §5 header at that point.
 3. Keep every full WP and all of phases 1–7 `in_progress` until their complete acceptance criteria are independently proven. Allocated task evidence never passes a full WP or a G3 gate.
 4. `tentative` tasks do not start without Reyn confirming scope and prerequisites. Record actual commands, exit codes, mock/native distinction, blockers, and the next dependency-ready task.
-5. Phase-7 stays ahead: T-54 needs an authorized publication repository and T-56 needs organic pilot/owner access before either can start. Missing access is a recorded blocker, never a reason to simulate.
+5. Phase-7 stays ahead: T-56 needs organic pilot/owner access before it can start; T-54's live-publication half still needs an authorized publication repository. Missing access is a recorded blocker, never a reason to simulate.
 6. Do not set a daily task or phase quota or start the next phase automatically.
 
 ## 8. Source-of-truth references
