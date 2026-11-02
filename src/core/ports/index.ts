@@ -15,6 +15,7 @@ import type { CapabilityKey, CapabilityRecord } from '../contracts/schemas/capab
 import type { SystemGraph } from '../contracts/schemas/graph.js';
 import type { ExperimentPlan, TrialReceipt } from '../contracts/schemas/campaign.js';
 import type { ExecutionBudget } from '../contracts/schemas/budget.js';
+import type { TenantContext } from '../contracts/schemas/hosted.js';
 import type { ExecutionMode } from '../contracts/vocabulary.js';
 
 /** A snapshot of customer source, pinned to an immutable identity. */
@@ -226,4 +227,93 @@ export interface ModelClientPort {
   readonly provider: string;
   readonly contractVersion: string;
   complete(input: ModelCompleteInput): Promise<ModelCompleteResult>;
+}
+
+/**
+ * Run-lifecycle seams (FR3-31, WP3-25).
+ *
+ * The lifecycle store re-derives the session context on every call and
+ * reserves/enqueues through these ports; the orchestrator binds them to the
+ * identity, usage, jobs, and evidence stores. No port passes credentials,
+ * source bytes, or verdicts — only opaque IDs, digests, and amounts.
+ */
+export interface LifecycleSessionPort {
+  deriveContext(input: { sessionId: string; nowIso: string }): Promise<TenantContext>;
+}
+
+export interface LifecycleUsagePort {
+  reserveRun(input: {
+    tenantId: string;
+    runId: string;
+    reservationId: string;
+    effectId: string;
+    requested: number;
+    nowIso: string;
+  }): Promise<{ reservationId: string; reserved: number; duplicate: boolean }>;
+}
+
+export interface LifecycleJobsPort {
+  enqueueRun(input: {
+    runId: string;
+    jobId: string;
+    tenantId: string;
+    idempotencyKey: string;
+    reservationId: string;
+    nowIso: string;
+  }): Promise<{ runId: string; jobId: string; duplicate: boolean }>;
+  requestJobCancel(input: { tenantId: string; jobId: string; nowIso: string }): Promise<void>;
+}
+
+export interface LifecycleEvidencePort {
+  fetchArtifact(digest: string): Uint8Array;
+}
+
+/** Budgeted reproduction: re-execute an immutable submit under a new request identity. */
+export interface LifecycleReproPort {
+  retryRun(
+    actor: { sessionId: string; nowIso: string },
+    retry: { runId: string; idempotencyKey: string },
+  ): Promise<{ runId: string; jobId: string; reservationId: string; submitDigest: string; duplicate: boolean }>;
+}
+
+/**
+ * Support-access authority (FR3-41, WP3-30).
+ *
+ * Read paths consult active support grants for operator actors; every
+ * grant-authorized read is logged. Membership roles never need this port.
+ */
+export interface SupportGrantScope {
+  readonly grantId: string;
+  readonly resourceType: 'run' | 'project' | 'repository' | 'evidence';
+  readonly resourceId: string;
+}
+
+export interface SupportAccessPort {
+  listActiveScopes(
+    tenantId: string,
+    userId: string,
+    nowIso: string,
+  ): Promise<readonly SupportGrantScope[]>;
+  logAccess(input: {
+    tenantId: string;
+    userId: string;
+    grantId: string;
+    action: string;
+    resourceType: string;
+    resourceId: string;
+    nowIso: string;
+  }): Promise<void>;
+}
+
+/** Mention fan-out from collaboration to the notifications inbox. */
+export interface MentionNotifyPort {
+  notifyMention(input: {
+    tenantId: string;
+    eventId: string;
+    userId: string;
+    threadId: string;
+    runId: string;
+    mentionedBy: string;
+    nowIso: string;
+  }): Promise<void>;
 }

@@ -2,7 +2,7 @@
 
 **Plan revision:** 2 (24 October 2026)  
 
-**Coordination status last reconciled:** 1 November 2026 (T-16..T-25 done; see §4). T-10..T-15 pushed to runnable limits turn 5, 31 October 2026 UTC (see §4 and the phase-2 report §10); T-16..T-18 done turn 6 and T-19/T-20 done phase-3 turn 1, 1 November 2026 UTC (see §4, phase-2 report §11, phase-3 report).
+**Coordination status last reconciled:** 2 November 2026 (T-16..T-30 done; see §4, phase-3 report §5, phase-4 report). T-10..T-15 pushed to runnable limits turn 5, 31 October 2026 UTC (see §4 and the phase-2 report §10); T-16..T-18 done turn 6 and T-19/T-20 done phase-3 turn 1, 1 November 2026 UTC (see §4, phase-2 report §11, phase-3 report).
 
 **Purpose:** Coordinate work between Reyn and Hoang while preserving the repository's dependency order, verification rules, and honest status reporting.  
 
@@ -86,11 +86,11 @@ Every phase task has exactly one named owner. Owners alternate deliberately (Rey
 | T-23 | T3-10 / WP3-10 | Migrations + dependency broker integration | **Reyn** | `done` | Allocated done 1 Nov 2026 (MigrationRunner + broker + SC3-02/03 native). Full WP3-10 open (hosted authority). |
 | T-24 | T3-11 / WP3-11 | Orchestrator bundle coordination + recovery | **Reyn** | `done` | Allocated done 1 Nov 2026 (coordinateBundle/coordinateRecovery; NEG3-06 pinned). Full WP3-11 open (multi-system SC3 runs). |
 | T-25 | T3-12 / WP3-12 | Evidence store + publication broker | **Reyn** | `done` | Allocated done 1 Nov 2026 (evidence store + broker; NEG3-14/23/39 pinned). Live GitHub row blocked (no authorized App). |
-| T-26 | T3-18 / WP3-18 | Complex scenario suite (SC3-03/04/07/08/09) | **Reyn** | `not_started` | `tentative` — after WP3-11/17. |
-| T-27 | T4-1 / WP3-27 | Public site API + content | **Reyn** | `not_started` | `tentative` — after WP3-25 services proven. |
-| T-28 | T4-2 / WP3-25 | Run-lifecycle API | **Reyn** | `not_started` | `tentative` — needs proven WP3-12/22/23/24/28 services. |
-| T-29 | T4-3 / WP3-29 | Queries + notifications | **Reyn** | `not_started` | `tentative`. |
-| T-30 | T4-4 / WP3-30 | Support + collaboration services | **Reyn** | `not_started` | `tentative`. |
+| T-26 | T3-18 / WP3-18 | Complex scenario suite (SC3-03/04/07/08/09) | **Reyn** | `done` | Allocated done 2 Nov 2026 (unit 19/19 + native 15/15; fixtures/tests only). Full WP3-18 open (frozen oracle, live model, guards, cross-system proof). |
+| T-27 | T4-1 / WP3-27 | Public site API + content | **Reyn** | `done` | Allocated done 2 Nov 2026 (closed contracts, manifest, two-layer tenant boundary, 24/24 unit). Full WP3-27 open (phase-6 visuals, browser acceptance). |
+| T-28 | T4-2 / WP3-25 | Run-lifecycle API | **Reyn** | `done` | Allocated done 2 Nov 2026 (V6 store + wiring, 7/7 unit + 7/7 native; NEG3-22/27/33). Full WP3-25 open (streaming, dispatcher role, browser). |
+| T-29 | T4-3 / WP3-29 | Queries + notifications | **Reyn** | `done` | Allocated done 2 Nov 2026 (V7 stores + wiring, 8/8 unit + 11/11 native; NEG3-31/32). Full WP3-29 open (multi-channel delivery, reconnect, browser). |
+| T-30 | T4-4 / WP3-30 | Support + collaboration services | **Reyn** | `done` | Allocated done 2 Nov 2026 (V8 stores + wiring, 7/7 unit + 14/14 native; NEG3-34/35). Full WP3-30 open (mail/push fan-out, execution-tree kill, browser). |
 | T-31 | T4-5 / WP3-31 | BYOK + self-host deployment tooling | **Reyn** | `not_started` | `tentative`. |
 | T-32 | T4-6 / WP3-32 | SAML/SCIM + GitLab/Bitbucket adapters | **Reyn** | `not_started` | `tentative`. |
 | T-33 | T5-1 / WP3-13 | Bench harness + evaluation contracts | **Reyn** | `not_started` | `tentative` — uses WP3-08/09/10/11/12/18 task evidence. |

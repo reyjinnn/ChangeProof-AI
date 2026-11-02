@@ -74,6 +74,41 @@ import {
   type MigrationDb,
   type MigrationManifest,
 } from '../modules/migrations/index.js';
+import {
+  assertPublicSafe,
+  checkAllDestinations,
+  getRoute,
+  getSampleReport,
+  getTemplate,
+  listDesignNotes,
+  listReleases,
+  loadManifestFile,
+  loadPublicSiteManifest,
+  requestTemplateApply,
+  searchFaq,
+} from '../modules/publicsite/index.js';
+import type { EvidenceStore } from '../modules/evidence/index.js';
+import {
+  createLifecycleStore,
+  type LifecycleDb,
+  type LifecycleStore,
+} from '../modules/lifecycle/index.js';
+import {
+  createNotificationsStore,
+  type NotificationsDb,
+  type NotificationsStore,
+} from '../modules/notifications/index.js';
+import { createQueriesStore, type QueriesDb, type QueriesStore } from '../modules/queries/index.js';
+import {
+  createCollaborationStore,
+  type CollaborationDb,
+  type CollaborationStore,
+} from '../modules/collaboration/index.js';
+import {
+  createSupportStore,
+  type SupportDb,
+  type SupportStore,
+} from '../modules/support/index.js';
 
 /**
  * Composition root (.prepare/architecture.md §3).
@@ -271,5 +306,194 @@ export function composeMigrations(db: MigrationDb, broker: DependencyBroker): Mi
     createRunner: (manifest) => new MigrationRunner(db, manifest),
     planUpgrade: (request) => planUpgrade(broker, request),
     assertManifestLockfileMatch,
+  };
+}
+
+/**
+ * Public website wiring (WP3-27).
+ *
+ * The composition root exposes the leaf module's public functions; it adds
+ * no content, ranking, or boundary behavior of its own. The dashboard serves
+ * this surface over HTTP in phase-6.
+ */
+export interface PublicSiteComposition {
+  loadPublicSiteManifest: typeof loadPublicSiteManifest;
+  loadManifestFile: typeof loadManifestFile;
+  getRoute: typeof getRoute;
+  searchFaq: typeof searchFaq;
+  getTemplate: typeof getTemplate;
+  requestTemplateApply: typeof requestTemplateApply;
+  getSampleReport: typeof getSampleReport;
+  listDesignNotes: typeof listDesignNotes;
+  listReleases: typeof listReleases;
+  checkAllDestinations: typeof checkAllDestinations;
+  assertPublicSafe: typeof assertPublicSafe;
+}
+
+export function composePublicSite(): PublicSiteComposition {
+  return {
+    loadPublicSiteManifest,
+    loadManifestFile,
+    getRoute,
+    searchFaq,
+    getTemplate,
+    requestTemplateApply,
+    getSampleReport,
+    listDesignNotes,
+    listReleases,
+    checkAllDestinations,
+    assertPublicSafe,
+  };
+}
+
+/**
+ * Run-lifecycle wiring (WP3-25).
+ *
+ * The composition root binds the lifecycle store to the identity, usage,
+ * jobs, and evidence stores through the core ports; it adds no grant,
+ * reservation, scheduling, or persistence behavior of its own.
+ */
+export interface LifecycleComposition {
+  store: LifecycleStore;
+}
+
+export function composeLifecycle(
+  db: LifecycleDb,
+  deps: { identity: IdentityStore; usage: UsageStore; jobs: JobsStore; evidence: EvidenceStore },
+): LifecycleComposition {
+  return {
+    store: createLifecycleStore(db, {
+      session: {
+        deriveContext: (input) => deps.identity.deriveContext(input),
+      },
+      usage: {
+        reserveRun: (input) =>
+          deps.usage.admitReservation({
+            tenantId: input.tenantId,
+            runId: input.runId,
+            reservationId: input.reservationId,
+            effectId: input.effectId,
+            requested: input.requested,
+            nowIso: input.nowIso,
+          }),
+      },
+      jobs: {
+        enqueueRun: (input) =>
+          deps.jobs.admitRun({
+            runId: input.runId,
+            jobId: input.jobId,
+            tenantId: input.tenantId,
+            idempotencyKey: input.idempotencyKey,
+            reservationId: input.reservationId,
+            nowIso: input.nowIso,
+          }),
+        requestJobCancel: (input) => deps.jobs.requestCancel(input),
+      },
+      evidence: {
+        fetchArtifact: (digest) => deps.evidence.get(digest),
+      },
+    }),
+  };
+}
+
+/**
+ * Notifications wiring (WP3-29).
+ *
+ * The composition root binds the notifications store to the identity store
+ * for session context; it adds no inbox, preference, or outbox behavior.
+ */
+export interface NotificationsComposition {
+  store: NotificationsStore;
+}
+
+export function composeNotifications(db: NotificationsDb, identity: IdentityStore): NotificationsComposition {
+  return {
+    store: createNotificationsStore(db, {
+      deriveContext: (input) => identity.deriveContext(input),
+    }),
+  };
+}
+
+/**
+ * Queries wiring (WP3-29).
+ *
+ * The composition root binds the queries store to the identity store for
+ * session context and to the lifecycle store for budgeted reproduction; it
+ * adds no search, export, or cache behavior of its own.
+ */
+export interface QueriesComposition {
+  store: QueriesStore;
+}
+
+export function composeQueries(
+  db: QueriesDb,
+  deps: { identity: IdentityStore; lifecycle: LifecycleStore },
+): QueriesComposition {
+  return {
+    store: createQueriesStore(db, {
+      session: { deriveContext: (input) => deps.identity.deriveContext(input) },
+      repro: { retryRun: (actor, retry) => deps.lifecycle.retryRun(actor, retry) },
+    }),
+  };
+}
+
+/**
+ * Support wiring (WP3-30).
+ *
+ * The composition root binds the support store to the identity store for
+ * session context and to the jobs store for fenced drains; it adds no
+ * ticket, grant, incident, or operator behavior of its own.
+ */
+export interface SupportComposition {
+  store: SupportStore;
+}
+
+export function composeSupport(
+  db: SupportDb,
+  deps: { identity: IdentityStore; jobs: JobsStore },
+): SupportComposition {
+  return {
+    store: createSupportStore(db, {
+      session: { deriveContext: (input) => deps.identity.deriveContext(input) },
+      jobs: { requestJobCancel: (input) => deps.jobs.requestCancel(input) },
+    }),
+  };
+}
+
+/**
+ * Collaboration wiring (WP3-30).
+ *
+ * The composition root binds the collaboration store to the identity store
+ * for session context and to the notifications store for mention fan-out; it
+ * adds no thread, comment, or sharing behavior of its own.
+ */
+export interface CollaborationComposition {
+  store: CollaborationStore;
+}
+
+export function composeCollaboration(
+  db: CollaborationDb,
+  deps: { identity: IdentityStore; notifications: NotificationsStore },
+): CollaborationComposition {
+  return {
+    store: createCollaborationStore(db, {
+      session: { deriveContext: (input) => deps.identity.deriveContext(input) },
+      mentions: {
+        notifyMention: (input) =>
+          deps.notifications
+            .publishFromEvent({
+              tenantId: input.tenantId,
+              eventId: input.eventId,
+              category: 'results',
+              title: 'Mentioned in a discussion',
+              body: `${input.mentionedBy} mentioned you in thread ${input.threadId}.`,
+              userId: input.userId,
+              deepLink: `/app/runs/${input.runId}`,
+              runId: input.runId,
+              nowIso: input.nowIso,
+            })
+            .then(() => undefined),
+      },
+    }),
   };
 }
