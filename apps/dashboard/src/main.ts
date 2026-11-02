@@ -1,0 +1,65 @@
+import './tokens.css';
+
+import type { PublicRoute, PublicTemplate, SampleReport } from '../../../src/core/contracts/schemas/publicsite.js';
+
+import { apiGet } from './api.js';
+import { registerAuthPages } from './pages/auth.js';
+import { registerPublicPages } from './pages/public.js';
+import { registerRunPages } from './pages/runs.js';
+import { registerSettingsPage } from './pages/settings.js';
+import { renderRoute, registerRoute } from './routes.js';
+import { refreshAccount, SESSION_CHANGED_EVENT } from './session.js';
+import { renderShell } from './shell.js';
+import { renderStatus } from './status.js';
+
+async function boot(): Promise<void> {
+  const app = document.getElementById('app');
+  if (app === null) throw new Error('Dashboard root #app is missing; refusing to boot into nothing.');
+
+  registerRoute({
+    path: '/',
+    title: 'Service status',
+    navLabel: 'Status',
+    navSection: 'workspace',
+    render: (outlet) => renderStatus(outlet),
+  });
+
+  // Public navigation follows the live manifest; an unreachable API still
+  // boots the shell with the status route, which reports the outage itself.
+  try {
+    const [routes, templates, samples] = await Promise.all([
+      apiGet<readonly PublicRoute[]>('/api/site/routes'),
+      apiGet<readonly PublicTemplate[]>('/api/site/templates'),
+      apiGet<readonly SampleReport[]>('/api/site/samples'),
+    ]);
+    registerPublicPages(
+      routes,
+      templates.map((template) => template.id),
+      samples.map((sample) => sample.id),
+    );
+  } catch {
+    // Status route stays; its own fetch names the outage with a retry.
+  }
+
+  registerAuthPages();
+  registerSettingsPage();
+
+  registerRunPages();
+
+  const { outlet } = renderShell(app);
+  await refreshAccount();
+  window.addEventListener('hashchange', () => void renderRoute(outlet, window.location.hash));
+  window.addEventListener(SESSION_CHANGED_EVENT, () => {
+    // The account refresh is async; if the user navigates meanwhile, the
+    // stale completion must not re-render (and re-fire) the new route.
+    const atDispatch = window.location.hash;
+    void (async () => {
+      await refreshAccount();
+      if (window.location.hash !== atDispatch) return;
+      await renderRoute(outlet, window.location.hash);
+    })();
+  });
+  await renderRoute(outlet, window.location.hash);
+}
+
+void boot();

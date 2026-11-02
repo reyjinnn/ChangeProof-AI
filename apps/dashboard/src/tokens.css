@@ -1,0 +1,541 @@
+/* One design-token source for apps/dashboard (T-42 / WP3-27).
+ * Values follow the final CSS cascade in .template-ui/mockup.html:
+ * per-property winner across the 7 :root layers (light) and the 4
+ * [data-theme="dark"] layers (dark). Do not copy layered mockup CSS. */
+
+@font-face {
+  font-family: "Inter";
+  src: url("/assets/fonts/inter-latin-variable.woff2") format("woff2");
+  font-weight: 400 800;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Plus Jakarta Sans";
+  src: url("/assets/fonts/plusjakartasans-latin-variable.woff2") format("woff2");
+  font-weight: 500 800;
+  font-display: swap;
+}
+
+:root {
+  color-scheme: light;
+  --bg: #efeeeb;
+  --paper: #fff;
+  --surface: #f6f8fc;
+  --ink: #18365b;
+  /* [DERIVED] Mockup cascade says #60738d (4.18:1 on --bg, fails AA);
+   * darkened one step to #5b6c84 (4.61:1) for NFR3-14. */
+  --muted: #5b6c84;
+  --line: #d7e1ef;
+  --blue: #28558e;
+  --sapphire: #28558e;
+  --accent: #28558e;
+  --accent-ink: #fff;
+  --sidebar: #28558e;
+  --sidebar-ink: #fff;
+  --green: #0b7153;
+  --green-soft: #e2f1e9;
+  --amber: #8a560d;
+  --amber-soft: #f9eedb;
+  --red: #b32620;
+  --red-soft: #fae6e5;
+  --info: #28558e;
+  --info-soft: #e2eaf5;
+  --radius: 18px;
+  --radius-sm: 10px;
+  --side-w: 252px;
+  --shadow: 0 8px 30px rgb(36 59 96 / 4%);
+  --body-font: "Inter", "Segoe UI", system-ui, sans-serif;
+  --heading-font: "Plus Jakarta Sans", "Inter", sans-serif;
+}
+
+[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #0b0b0d;
+  --paper: #141416;
+  --surface: #1d1d20;
+  --ink: #f3f5f8;
+  --muted: #bdc4ce;
+  --line: #383e47;
+  --blue: #9bbce9;
+  --sapphire: #9bbce9;
+  --accent: #315c92;
+  --accent-ink: #fff;
+  --sidebar: #141416;
+  --sidebar-ink: #f3f5f8;
+  --green: #a2ddba;
+  --green-soft: #263e2e;
+  --amber: #bbd1f3;
+  --amber-soft: #273c58;
+  --red: #ffb5bf;
+  --red-soft: #452a30;
+  --info: #b8cef0;
+  --info-soft: #293c58;
+  --shadow: 0 2px 4px rgb(0 0 0 / 6%), 0 16px 48px rgb(0 0 0 / 12%);
+}
+
+@media (max-width: 1200px) {
+  :root {
+    --side-w: 230px;
+  }
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-padding-top: 90px;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--body-font);
+  font-size: 14px;
+  line-height: 1.65;
+  min-height: 100vh;
+}
+
+h1,
+h2,
+h3,
+.brand {
+  font-family: var(--heading-font);
+  letter-spacing: -0.01em;
+  margin: 0 0 0.5em;
+}
+
+a {
+  color: var(--blue);
+}
+
+:focus-visible {
+  outline: 3px solid var(--blue);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Shell: fixed sidebar + topbar + outlet. Below 760px the sidebar is an
+ * overlay drawer opened from the topbar menu button. */
+.sidebar {
+  position: fixed;
+  inset: 16px auto 16px 16px;
+  width: var(--side-w);
+  padding: 20px 14px;
+  background: var(--sidebar);
+  color: var(--sidebar-ink);
+  border-radius: var(--radius);
+  overflow-y: auto;
+  z-index: 40;
+}
+
+.sidebar a {
+  color: var(--sidebar-ink);
+}
+
+.sidebar nav ul {
+  list-style: none;
+  margin: 12px 0 0;
+  padding: 0;
+}
+
+.sidebar nav a {
+  display: block;
+  padding: 8px 12px;
+  border-radius: var(--radius-sm);
+  text-decoration: none;
+}
+
+.sidebar nav a[aria-current="page"] {
+  background: rgb(255 255 255 / 18%);
+  font-weight: 700;
+}
+
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  margin-left: calc(var(--side-w) + 32px);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 28px;
+  background: var(--bg);
+  border-bottom: 1px solid var(--line);
+}
+
+.topbar .spacer {
+  flex: 1;
+}
+
+.account-slot {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+#outlet {
+  margin-left: calc(var(--side-w) + 32px);
+  padding: 24px 28px 48px;
+  max-width: 1060px;
+  min-width: 0;
+}
+
+.menu-button {
+  display: none;
+}
+
+body.sidebar-collapsed .sidebar {
+  display: none;
+}
+
+body.sidebar-collapsed .topbar,
+body.sidebar-collapsed #outlet {
+  margin-left: 0;
+}
+
+@media (max-width: 760px) {
+  .sidebar {
+    inset: 0 auto 0 0;
+    border-radius: 0;
+    width: min(300px, 85vw);
+    transform: translateX(-105%);
+    transition: transform 0.25s ease;
+  }
+
+  body.nav-open .sidebar {
+    transform: none;
+  }
+
+  .topbar,
+  #outlet {
+    margin-left: 0;
+  }
+
+  .menu-button {
+    display: inline-flex;
+  }
+
+  /* Review gate (T-45): the account text plus four buttons exceed
+   * 390px. Collapse is meaningless over a drawer, so it hides; the
+   * account truncates; the row wraps instead of spilling. */
+  .topbar {
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 10px 12px;
+  }
+
+  .topbar .collapse-button {
+    display: none;
+  }
+
+  .account-slot {
+    min-width: 0;
+    flex: 1 1 auto;
+  }
+
+  .account-slot .muted {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .topbar .spacer {
+    display: none;
+  }
+}
+
+.card {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 20px 22px;
+  margin: 0 0 18px;
+}
+
+.card > :first-child {
+  margin-top: 0;
+}
+
+/* Status badges use the product vocabulary with text labels, never
+ * color alone: ok = fixed/verified, warn = partial/unverified,
+ * bad = failed/blocked/invalid, info = neutral. */
+.badge {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.7;
+  white-space: nowrap;
+}
+
+.badge[data-tone="ok"] {
+  background: var(--green-soft);
+  color: var(--green);
+}
+
+.badge[data-tone="warn"] {
+  background: var(--amber-soft);
+  color: var(--amber);
+}
+
+.badge[data-tone="bad"] {
+  background: var(--red-soft);
+  color: var(--red);
+}
+
+.badge[data-tone="info"] {
+  background: var(--info-soft);
+  color: var(--info);
+}
+
+[data-theme="dark"] .badge[data-tone="warn"] {
+  color: #f2cd88;
+}
+
+.button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 16px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--line);
+  background: var(--paper);
+  color: var(--ink);
+  font: inherit;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.button.primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-ink);
+}
+
+.button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.field {
+  margin: 0 0 14px;
+  max-width: 460px;
+}
+
+.field label {
+  display: block;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.field input:not([type="checkbox"]):not([type="radio"]):not([type="file"]),
+.field textarea,
+.field select {
+  width: 100%;
+  padding: 9px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--paper);
+  color: var(--ink);
+  font: inherit;
+}
+
+.field .error-text {
+  color: var(--red);
+  font-size: 13px;
+  margin-top: 4px;
+}
+
+.field [aria-invalid="true"] {
+  border-color: var(--red);
+}
+
+.state-block {
+  padding: 32px 24px;
+  text-align: left;
+}
+
+.state-block h2 {
+  font-size: 18px;
+}
+
+.muted {
+  color: var(--muted);
+}
+
+code.inline {
+  font-size: 13px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 1px 6px;
+  /* 64-hex digests and ids have no break points; wrap them instead
+   * of spilling the card (review gate, T-45). */
+  overflow-wrap: anywhere;
+}
+
+/* Payload blocks scroll inside themselves, never the page. */
+#outlet pre {
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+/* Route changes focus the heading programmatically (it is never in
+ * the keyboard tab order), so the focus ring would only be a loud
+ * box around the title; screen-reader announcement is unaffected. */
+#outlet h1:focus {
+  outline: none;
+}
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 70;
+  background: rgb(20 30 50 / 45%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.modal {
+  background: var(--paper);
+  color: var(--ink);
+  border-radius: var(--radius);
+  border: 1px solid var(--line);
+  max-width: 520px;
+  width: 100%;
+  max-height: 85vh;
+  overflow-y: auto;
+  padding: 22px 24px;
+}
+
+.drawer-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 70;
+  background: rgb(20 30 50 / 45%);
+  display: flex;
+  justify-content: flex-end;
+}
+
+.drawer {
+  background: var(--paper);
+  color: var(--ink);
+  width: min(420px, 92vw);
+  height: 100%;
+  overflow-y: auto;
+  padding: 22px 24px;
+}
+
+.nav-group {
+  margin: 14px 0 2px;
+  padding: 0 12px;
+  font-size: 12px;
+  font-weight: 700;
+  opacity: 0.75;
+}
+
+.cta-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.search-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: flex-end;
+  margin-bottom: 8px;
+}
+
+.search-form .field {
+  flex: 1 1 240px;
+  margin-bottom: 0;
+}
+
+.faq-item {
+  padding: 12px 0;
+  border-top: 1px solid var(--line);
+}
+
+.faq-item:first-of-type {
+  border-top: 0;
+}
+
+.faq-item h3 {
+  font-size: 15px;
+}
+
+.detail-list {
+  display: grid;
+  grid-template-columns: minmax(120px, 180px) 1fr;
+  gap: 6px 16px;
+  margin: 0;
+}
+
+.detail-list dt {
+  font-weight: 700;
+}
+
+.detail-list dd {
+  margin: 0;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+/* Below the base rule so it wins: narrow screens stack the pair. */
+@media (max-width: 760px) {
+  .detail-list {
+    grid-template-columns: 1fr;
+    gap: 2px 0;
+  }
+
+  .detail-list dd {
+    margin-bottom: 8px;
+  }
+}
+
+.skip-link {
+  position: absolute;
+  left: -9999px;
+  top: 0;
+  background: var(--accent);
+  color: var(--accent-ink);
+  padding: 8px 14px;
+  z-index: 100;
+  border-radius: 0 0 8px 0;
+}
+
+.skip-link:focus {
+  left: 0;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
