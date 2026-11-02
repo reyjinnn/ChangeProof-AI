@@ -21,6 +21,13 @@ export function redisUrlFor(baseUrl: string, dbIndex: number): string {
   return url.toString();
 }
 
+/** Deterministic seed pick without indexed access. */
+export function pick<T>(values: readonly [T, ...T[]], index: number): T {
+  const value = values[index % values.length];
+  if (value === undefined) throw new Error('seed index out of bounds');
+  return value;
+}
+
 /** Drop and recreate a probe database; FORCE disconnects crashed-run strays. */
 export async function resetProbeDatabase(maintenanceUrl: string, dbName: string): Promise<void> {
   if (!/^[a-z_][a-z0-9_]*$/.test(dbName)) {
