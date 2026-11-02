@@ -41,10 +41,33 @@ export interface AccessibleRepository {
   readonly isPrivate: boolean;
 }
 
+export interface BranchHead {
+  readonly sha: string;
+}
+
+export interface PullRequestRef {
+  readonly number: number;
+  readonly url: string;
+  readonly headSha: string;
+  readonly state: string;
+}
+
+export interface OpenPullRequestCall {
+  readonly owner: string;
+  readonly repo: string;
+  readonly base: string;
+  readonly head: string;
+  readonly title: string;
+  readonly body: string;
+}
+
 /** Narrow transport seam: production uses Octokit, tests use fakes. */
 export interface GitHubApi {
   getCommit(input: { owner: string; repo: string; sha: string }): Promise<CommitSnapshot>;
   listAccessibleRepositories(): Promise<readonly AccessibleRepository[]>;
+  getBranchHead(input: { owner: string; repo: string; branch: string }): Promise<BranchHead>;
+  openPullRequest(input: OpenPullRequestCall): Promise<PullRequestRef>;
+  findPullRequestByHead(input: { owner: string; repo: string; head: string }): Promise<PullRequestRef | null>;
 }
 
 export type GitHubTransport = (token: string) => GitHubApi;
@@ -59,16 +82,55 @@ export interface InstallationScopeInput {
   readonly connection: RepositoryConnection;
 }
 
+export interface BranchHeadInput {
+  readonly connection: RepositoryConnection;
+  readonly repository: RepositoryRef;
+  readonly branch: string;
+}
+
+export interface OpenPullRequestInput {
+  readonly connection: RepositoryConnection;
+  readonly repository: RepositoryRef;
+  readonly base: string;
+  readonly head: string;
+  readonly title: string;
+  readonly body: string;
+}
+
+export interface FindPullRequestInput {
+  readonly connection: RepositoryConnection;
+  readonly repository: RepositoryRef;
+  readonly head: string;
+}
+
 export interface GitHubClient {
   fetchCommit(input: FetchCommitInput): Promise<CommitSnapshot>;
   listInstallationRepositories(input: InstallationScopeInput): Promise<readonly AccessibleRepository[]>;
+  fetchBranchHead(input: BranchHeadInput): Promise<BranchHead>;
+  openPullRequest(input: OpenPullRequestInput): Promise<PullRequestRef>;
+  findPullRequestByHead(input: FindPullRequestInput): Promise<PullRequestRef | null>;
 }
 
 const SLUG = /^[A-Za-z0-9][A-Za-z0-9._-]*$/;
 
-function assertSlug(value: string, label: string): void {
+export function assertSlug(value: string, label: string): void {
   if (!SLUG.test(value)) {
     throw new ChangeProofError(`${label} is not a plain owner/repo slug; refusing to call.`);
+  }
+}
+
+const BRANCH = /^[A-Za-z0-9][A-Za-z0-9._/-]*$/;
+
+export function assertBranchName(value: string, label: string): void {
+  if (
+    !BRANCH.test(value) ||
+    value.includes('..') ||
+    value.includes('//') ||
+    value.endsWith('/') ||
+    value.endsWith('.') ||
+    value.includes('@{')
+  ) {
+    throw new ChangeProofError(`${label} is not a safe git branch name; refusing to call.`);
   }
 }
 
@@ -142,6 +204,46 @@ export function octokitTransport(token: string): GitHubApi {
         isPrivate: repository.private,
       }));
     },
+    getBranchHead: async (input): Promise<BranchHead> => {
+      const response = await octokit.rest.repos.getBranch({
+        owner: input.owner,
+        repo: input.repo,
+        branch: input.branch,
+      });
+      return { sha: response.data.commit.sha };
+    },
+    openPullRequest: async (input): Promise<PullRequestRef> => {
+      const response = await octokit.rest.pulls.create({
+        owner: input.owner,
+        repo: input.repo,
+        base: input.base,
+        head: input.head,
+        title: input.title,
+        body: input.body,
+      });
+      return {
+        number: response.data.number,
+        url: response.data.html_url,
+        headSha: response.data.head.sha,
+        state: response.data.state,
+      };
+    },
+    findPullRequestByHead: async (input): Promise<PullRequestRef | null> => {
+      const response = await octokit.rest.pulls.list({
+        owner: input.owner,
+        repo: input.repo,
+        head: `${input.owner}:${input.head}`,
+        state: 'open',
+      });
+      const found = response.data[0];
+      if (found === undefined) return null;
+      return {
+        number: found.number,
+        url: found.html_url,
+        headSha: found.head.sha,
+        state: found.state,
+      };
+    },
   };
 }
 
@@ -181,5 +283,93 @@ export function createGitHubClient(input: { broker: SecretBrokerPort; transport:
         refuse('Installation scope read failed.', error);
       }
     },
+
+    async fetchBranchHead(fetch: BranchHeadInput): Promise<BranchHead> {
+      assertAuthorizedGitHub(fetch.connection, fetch.repository.id);
+      assertBranchName(fetch.branch, 'Branch');
+      assertSlug(fetch.repository.owner, 'Repository owner');
+      assertSlug(fetch.repository.repo, 'Repository name');
+      IdSchema.parse(fetch.repository.id);
+      const token = await input.broker.readCredential(fetch.connection.credentialRef);
+      try {
+        const head = await input.transport(token).getBranchHead({
+          owner: fetch.repository.owner,
+          repo: fetch.repository.repo,
+          branch: fetch.branch,
+        });
+        return { sha: GitShaSchema.parse(head.sha) };
+      } catch (error) {
+        if (error instanceof ChangeProofError) {
+          throw error;
+        }
+        refuse('Branch head read failed.', error);
+      }
+    },
+
+    async openPullRequest(open: OpenPullRequestInput): Promise<PullRequestRef> {
+      assertAuthorizedGitHub(open.connection, open.repository.id);
+      assertBranchName(open.base, 'Base branch');
+      assertBranchName(open.head, 'Head branch');
+      assertSlug(open.repository.owner, 'Repository owner');
+      assertSlug(open.repository.repo, 'Repository name');
+      IdSchema.parse(open.repository.id);
+      if (open.title.length === 0 || open.body.length === 0) {
+        throw new ChangeProofError('A pull request needs a non-empty title and body; refusing to open.');
+      }
+      const token = await input.broker.readCredential(open.connection.credentialRef);
+      try {
+        const pr = await input.transport(token).openPullRequest({
+          owner: open.repository.owner,
+          repo: open.repository.repo,
+          base: open.base,
+          head: open.head,
+          title: open.title,
+          body: open.body,
+        });
+        return checkedPullRequest(pr);
+      } catch (error) {
+        if (error instanceof ChangeProofError) {
+          throw error;
+        }
+        refuse('Pull request open failed.', error);
+      }
+    },
+
+    async findPullRequestByHead(find: FindPullRequestInput): Promise<PullRequestRef | null> {
+      assertAuthorizedGitHub(find.connection, find.repository.id);
+      assertBranchName(find.head, 'Head branch');
+      assertSlug(find.repository.owner, 'Repository owner');
+      assertSlug(find.repository.repo, 'Repository name');
+      IdSchema.parse(find.repository.id);
+      const token = await input.broker.readCredential(find.connection.credentialRef);
+      try {
+        const pr = await input.transport(token).findPullRequestByHead({
+          owner: find.repository.owner,
+          repo: find.repository.repo,
+          head: find.head,
+        });
+        return pr === null ? null : checkedPullRequest(pr);
+      } catch (error) {
+        if (error instanceof ChangeProofError) {
+          throw error;
+        }
+        refuse('Pull request lookup failed.', error);
+      }
+    },
+  };
+}
+
+function checkedPullRequest(pr: PullRequestRef): PullRequestRef {
+  if (!Number.isInteger(pr.number) || pr.number <= 0) {
+    throw new ChangeProofError('Provider returned a malformed pull request number; refusing it.');
+  }
+  if (!pr.url.startsWith('https://')) {
+    throw new ChangeProofError('Provider returned a non-https pull request URL; refusing it.');
+  }
+  return {
+    number: pr.number,
+    url: pr.url,
+    headSha: GitShaSchema.parse(pr.headSha),
+    state: pr.state,
   };
 }

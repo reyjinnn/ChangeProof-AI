@@ -1,5 +1,7 @@
+export * from './bundle.js';
 export * from './configuration.js';
 export * from './errors.js';
+export * from './publication.js';
 
 import {
   type BundleAssessment,
@@ -24,10 +26,31 @@ import {
 } from '../modules/observability/index.js';
 import {
   assertNoLastOwnerLockout,
+  createEmailIdentityStore,
   createIdentityStore,
+  type EmailIdentityDb,
+  type EmailIdentityDeps,
+  type EmailIdentityStore,
   type IdentityDb,
   type IdentityStore,
 } from '../modules/identity/index.js';
+import {
+  createJobsStore,
+  type JobsDb,
+  type JobsStore,
+} from '../modules/jobs/index.js';
+import {
+  createUsageStore,
+  type UsageDb,
+  type UsageStore,
+} from '../modules/usage/index.js';
+import {
+  authorizeMutation,
+  createHypothesisLedger,
+  createModelClient,
+  reviewPatch,
+  type ModelClientConfig,
+} from '../modules/agent/index.js';
 import {
   assessBundle,
   assessTarget,
@@ -39,6 +62,18 @@ import {
   summarizeCampaign,
   validateFaultTarget,
 } from '../modules/verifier/index.js';
+import {
+  type DependencyBroker,
+  assertManifestLockfileMatch,
+  planUpgrade,
+  type PlanUpgradeRequest,
+  type UpgradePlan,
+} from '../modules/dependencies/index.js';
+import {
+  MigrationRunner,
+  type MigrationDb,
+  type MigrationManifest,
+} from '../modules/migrations/index.js';
 
 /**
  * Composition root (.prepare/architecture.md §3).
@@ -108,6 +143,80 @@ export function composeIdentityStore(db: IdentityDb): IdentityComposition {
 }
 
 /**
+ * Hosted jobs wiring (WP3-23).
+ *
+ * The composition root injects the database handle into the jobs store; it
+ * adds no admission, scheduling, or persistence behavior of its own. The
+ * handle is the store's narrow interface — production passes a `pg` pool.
+ */
+export interface JobsComposition {
+  store: JobsStore;
+}
+
+export function composeJobs(db: JobsDb): JobsComposition {
+  return {
+    store: createJobsStore(db),
+  };
+}
+
+/**
+ * Hosted usage wiring (WP3-24).
+ *
+ * The composition root injects the database handle into the usage store; it
+ * adds no entitlement, reservation, or persistence behavior of its own. The
+ * handle is the store's narrow interface — production passes a `pg` pool.
+ */
+export interface UsageComposition {
+  store: UsageStore;
+}
+
+export function composeUsage(db: UsageDb): UsageComposition {
+  return {
+    store: createUsageStore(db),
+  };
+}
+
+/**
+ * Hosted email-identity wiring (WP3-28).
+ *
+ * The composition root injects the database handle, the delivery transport,
+ * and the secret broker into the email store; it adds no identity, session,
+ * or delivery behavior of its own.
+ */
+export interface EmailIdentityComposition {
+  store: EmailIdentityStore;
+}
+
+export function composeEmailIdentity(db: EmailIdentityDb, deps: EmailIdentityDeps): EmailIdentityComposition {
+  return {
+    store: createEmailIdentityStore(db, deps),
+  };
+}
+
+/**
+ * Reasoning-engine wiring (WP3-07).
+ *
+ * The composition root injects the model transport, secret broker, and
+ * budgets into the broker; it adds no reasoning, mutation, or persistence
+ * behavior of its own. Gateway and guard are pure and pass straight through.
+ */
+export interface AgentComposition {
+  client: ReturnType<typeof createModelClient>;
+  authorizeMutation: typeof authorizeMutation;
+  reviewPatch: typeof reviewPatch;
+  createLedger: typeof createHypothesisLedger;
+}
+
+export function composeAgent(config: ModelClientConfig): AgentComposition {
+  return {
+    client: createModelClient(config),
+    authorizeMutation,
+    reviewPatch,
+    createLedger: createHypothesisLedger,
+  };
+}
+
+/**
  * Hosted GitHub wiring (WP3-22).
  *
  * The composition root injects the secret broker and the Octokit transport
@@ -141,5 +250,26 @@ export function composeTelemetryConnector(
 ): TelemetryComposition {
   return {
     connector: createFileTelemetryConnector(rootDir, options),
+  };
+}
+
+/**
+ * Migration + upgrade wiring (WP3-10).
+ *
+ * The composition root injects the database handle into the migration
+ * runner and the trusted broker into upgrade planning; it adds no
+ * migration, resolution, or persistence behavior of its own.
+ */
+export interface MigrationsComposition {
+  createRunner(manifest: MigrationManifest): MigrationRunner;
+  planUpgrade(request: PlanUpgradeRequest): UpgradePlan;
+  assertManifestLockfileMatch: typeof assertManifestLockfileMatch;
+}
+
+export function composeMigrations(db: MigrationDb, broker: DependencyBroker): MigrationsComposition {
+  return {
+    createRunner: (manifest) => new MigrationRunner(db, manifest),
+    planUpgrade: (request) => planUpgrade(broker, request),
+    assertManifestLockfileMatch,
   };
 }

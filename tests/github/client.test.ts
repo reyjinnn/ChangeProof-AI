@@ -75,6 +75,10 @@ function fakeApi(behavior: {
       }
       return Promise.resolve(behavior.repos ?? []);
     },
+    getBranchHead: () => Promise.resolve({ sha: SHA }),
+    openPullRequest: () =>
+      Promise.resolve({ number: 1, url: 'https://github.com/acme/orders/pull/1', headSha: SHA, state: 'open' }),
+    findPullRequestByHead: () => Promise.resolve(null),
   };
   return { api };
 }
@@ -206,6 +210,9 @@ describe('listInstallationRepositories checks scope', () => {
         called = true;
         return Promise.resolve([]);
       },
+      getBranchHead: () => Promise.reject(new Error('must not be called')),
+      openPullRequest: () => Promise.reject(new Error('must not be called')),
+      findPullRequestByHead: () => Promise.reject(new Error('must not be called')),
     };
     const client = createGitHubClient({ broker, transport: () => api });
 
