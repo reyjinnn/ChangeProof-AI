@@ -712,6 +712,15 @@ function eventArticle(runId: string, event: RunEventItem): HTMLElement {
   const download =
     event.kind === 'artifact' && typeof digest === 'string' && digest !== ''
       ? h('p', {}, [
+          h(
+            'a',
+            {
+              class: 'button',
+              href: `#/evidence/view?run=${encodeURIComponent(runId)}&digest=${encodeURIComponent(digest)}`,
+            },
+            [`View ${digest.slice(0, 12)}…`],
+          ),
+          document.createTextNode(' '),
           h('a', { class: 'button', href: `/api/runs/${encodeURIComponent(runId)}/artifacts/${encodeURIComponent(digest)}` }, [
             `Download ${digest.slice(0, 12)}…`,
           ]),
@@ -809,6 +818,9 @@ async function renderDetail(outlet: HTMLElement, ctx: RouteContext): Promise<voi
         ...(current.reservationId === undefined
           ? []
           : [h('dt', {}, ['Reservation']), h('dd', {}, [h('code', { class: 'inline' }, [current.reservationId])])]),
+      ]),
+      h('p', {}, [
+        h('a', { href: `#/evidence?run=${encodeURIComponent(current.runId)}` }, ['Open the evidence library']),
       ]),
     );
   };

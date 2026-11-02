@@ -101,8 +101,13 @@ export async function startInfra(rootDir, migrations, pg) {
     await pool.end();
   }
   const evidenceDir = mkdtempSync(join(tmpdir(), 'cp-e2e-evidence-'));
+  // The server under test connects as app_user (NOBYPASSRLS), never as the
+  // superuser: RLS is the tenant fence, and superusers bypass it. Specs keep
+  // the superuser URL for seeding only. Same pattern as the native suites.
+  const appDatabaseUrl = `postgresql://app_user:app-probe-only@127.0.0.1:${PG_PORT}/e2e`;
   return {
     databaseUrl,
+    appDatabaseUrl,
     mailApi: `http://127.0.0.1:${MAIL_API_PORT}`,
     mailSmtpPort: MAIL_SMTP_PORT,
     evidenceDir,

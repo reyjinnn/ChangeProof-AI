@@ -45,7 +45,7 @@ if (needsDb.length > 0) {
 
 const serverEnv = { ...process.env, PORT: String(port) };
 if (infra !== undefined) {
-  serverEnv.DATABASE_URL = infra.databaseUrl;
+  serverEnv.DATABASE_URL = infra.appDatabaseUrl;
   serverEnv.CP_SMTP_HOST = '127.0.0.1';
   serverEnv.CP_SMTP_PORT = infra.mailSmtpPort;
   serverEnv.CP_SMTP_SENDER = 'e2e@changeproof.test';
@@ -73,7 +73,15 @@ try {
     for (const spec of loaded) {
       const context = await browser.newContext();
       try {
-        await spec.spec({ base, context, rootDir, browser, mailApi: infra?.mailApi, databaseUrl: infra?.databaseUrl });
+        await spec.spec({
+          base,
+          context,
+          rootDir,
+          browser,
+          mailApi: infra?.mailApi,
+          databaseUrl: infra?.databaseUrl,
+          evidenceDir: infra?.evidenceDir,
+        });
         console.log(`e2e ok: ${spec.name}`);
       } catch (error) {
         failures += 1;

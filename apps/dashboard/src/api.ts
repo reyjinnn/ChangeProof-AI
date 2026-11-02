@@ -77,6 +77,47 @@ export function apiGet<T>(path: string): Promise<T> {
   return request<T>(path, { method: 'GET' });
 }
 
+/** Authenticated byte download (T-46): octet-stream on success, JSON envelope on failure. */
+export async function apiGetBytes(path: string): Promise<Uint8Array> {
+  let response: Response;
+  try {
+    response = await fetch(path, {
+      method: 'GET',
+      credentials: 'same-origin',
+      headers: { Accept: 'application/octet-stream' },
+    });
+  } catch {
+    throw new ApiRequestError({
+      status: 0,
+      code: 'offline',
+      message: 'The service cannot be reached. Check your connection and retry.',
+      offline: true,
+    });
+  }
+  if (response.ok) return new Uint8Array(await response.arrayBuffer());
+  const body: unknown = await response.json().catch(() => undefined);
+  const envelope = envelopeOf(body);
+  if (envelope?.ok === false) {
+    throw new ApiRequestError({
+      status: response.status,
+      code: envelope.error.code,
+      message: envelope.error.message,
+      offline: false,
+    });
+  }
+  throw new ApiRequestError({
+    status: response.status,
+    code: 'request_failed',
+    message:
+      response.status === 401
+        ? 'Login is required for this action.'
+        : response.status === 403
+          ? 'Your account is not authorized for this action.'
+          : 'The service returned an unreadable response. Retry, and report it if it persists.',
+    offline: false,
+  });
+}
+
 export function apiPost<T>(path: string, body: unknown): Promise<T> {
   return request<T>(
     path,
