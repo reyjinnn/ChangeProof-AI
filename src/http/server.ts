@@ -11,6 +11,11 @@ import { sendFail, sendOk } from './respond.js';
 import { handleAuthApi, isAuthPath, type AuthDeps } from './routes-auth.js';
 import { handleApi, type ApiContext } from './routes.js';
 import { handleRunsApi, isRunsPath, type RunsDeps } from './routes-runs.js';
+import {
+  handleNotificationsApi,
+  isNotificationsPath,
+  type NotificationsDeps,
+} from './routes-notifications.js';
 
 /**
  * Thin HTTP slice (T-42, WP3-27/25).
@@ -31,6 +36,8 @@ export interface HttpOptions {
   readonly auth?: AuthDeps;
   /** Run-journey services; absent without a database (runs paths answer 503). */
   readonly runs?: RunsDeps;
+  /** Notification services; absent without a database (notifications paths answer 503). */
+  readonly notifications?: NotificationsDeps;
 }
 
 export interface HttpHandle {
@@ -194,6 +201,10 @@ export function createHttpServer(options: HttpOptions): HttpHandle {
         }
         if (isRunsPath(url.pathname)) {
           await handleRunsApi(options.runs, request, response, request.method, url, rawBody);
+          return;
+        }
+        if (isNotificationsPath(url.pathname)) {
+          await handleNotificationsApi(options.notifications, request, response, request.method, url, rawBody);
           return;
         }
         handleApi(ctx, response, request.method, url);

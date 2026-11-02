@@ -7,6 +7,7 @@ import {
   composeJobs,
   composeLifecycle,
   composeMapSecrets,
+  composeNotifications,
   composePublicSite,
   composeQueries,
   composeSmtpDelivery,
@@ -14,6 +15,7 @@ import {
 } from '../orchestrator/index.js';
 import { createHttpServer, type HttpHandle } from './server.js';
 import type { AuthDeps } from './routes-auth.js';
+import type { NotificationsDeps } from './routes-notifications.js';
 import type { RunsDeps } from './routes-runs.js';
 
 /**
@@ -51,7 +53,9 @@ function requiredEnv(
   return value;
 }
 
-function wireAuth(env: StartEnv): { auth: AuthDeps; runs: RunsDeps; close: () => Promise<void> } | undefined {
+function wireAuth(
+  env: StartEnv,
+): { auth: AuthDeps; runs: RunsDeps; notifications: NotificationsDeps; close: () => Promise<void> } | undefined {
   if (env.DATABASE_URL === undefined || env.DATABASE_URL === '') return undefined;
   const secret = requiredEnv(env, 'CP_CHALLENGE_SECRET');
   if (secret.length < 32) {
@@ -73,6 +77,7 @@ function wireAuth(env: StartEnv): { auth: AuthDeps; runs: RunsDeps; close: () =>
     evidence: evidence.store,
   });
   const queries = composeQueries(pool, { identity: identity.store, lifecycle: lifecycle.store });
+  const composedNotifications = composeNotifications(pool, identity.store);
   return {
     auth: {
       identity,
@@ -92,6 +97,10 @@ function wireAuth(env: StartEnv): { auth: AuthDeps; runs: RunsDeps; close: () =>
       lifecycle,
       queries,
     },
+    notifications: {
+      session: { deriveContext: (input) => identity.store.deriveContext(input) },
+      notifications: composedNotifications,
+    },
     close: () => pool.end().then(() => undefined),
   };
 }
@@ -106,7 +115,9 @@ export async function startFromEnv(env: StartEnv, rootDir: string): Promise<{ ha
     publicSite: composePublicSite(),
     manifestPath: env.CP_MANIFEST ?? `${rootDir}/config/publicsite/manifest.json`,
     distDir: env.CP_DIST ?? `${rootDir}/apps/dashboard/dist`,
-    ...(wired === undefined ? {} : { auth: wired.auth, runs: wired.runs }),
+    ...(wired === undefined
+      ? {}
+      : { auth: wired.auth, runs: wired.runs, notifications: wired.notifications }),
   });
   await new Promise<void>((resolve, reject) => {
     handle.server.once('error', reject);

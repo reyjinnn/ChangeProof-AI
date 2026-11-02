@@ -5,6 +5,7 @@ import type { PublicRoute, PublicTemplate, SampleReport } from '../../../src/cor
 import { apiGet } from './api.js';
 import { registerAuthPages } from './pages/auth.js';
 import { registerEvidencePages } from './pages/evidence.js';
+import { registerNotificationPages } from './pages/notifications.js';
 import { registerPublicPages } from './pages/public.js';
 import { registerRunPages } from './pages/runs.js';
 import { registerSettingsPage } from './pages/settings.js';
@@ -47,6 +48,7 @@ async function boot(): Promise<void> {
 
   registerRunPages();
   registerEvidencePages();
+  registerNotificationPages();
 
   const { outlet } = renderShell(app);
   await refreshAccount();

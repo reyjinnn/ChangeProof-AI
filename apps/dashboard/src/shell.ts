@@ -3,6 +3,7 @@
  * and returns focus to the menu button. */
 
 import { h } from './components.js';
+import { openSearchPalette } from './pages/search.js';
 import { navRoutes } from './routes.js';
 import { loadSidebarCollapsed, loadTheme, saveSidebarCollapsed, saveTheme } from './store.js';
 
@@ -87,11 +88,26 @@ export function renderShell(app: HTMLElement): Shell {
     applyCollapsed(next);
   });
 
+  const searchButton = h('button', { id: 'palette-trigger', class: 'button', type: 'button' }, ['Search (Ctrl+K)']);
+  searchButton.setAttribute('aria-keyshortcuts', 'Control+k Meta+k');
+  searchButton.addEventListener('click', () => {
+    openSearchPalette(searchButton);
+  });
+  document.addEventListener('keydown', (event) => {
+    // A replaced shell leaves its listener behind; only the live trigger answers.
+    if (!searchButton.isConnected) return;
+    if ((event.ctrlKey || event.metaKey) && (event.key === 'k' || event.key === 'K')) {
+      event.preventDefault();
+      openSearchPalette(searchButton);
+    }
+  });
+
   const account = h('span', { id: 'account', class: 'account-slot' }, []);
   const topbar = h('header', { class: 'topbar' }, [
     menuButton,
     h('span', { class: 'spacer', 'aria-hidden': 'true' }, []),
     account,
+    searchButton,
     collapseButton,
     themeButton,
   ]);
