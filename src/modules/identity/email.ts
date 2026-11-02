@@ -332,13 +332,20 @@ export function createEmailIdentityStore(db: EmailIdentityDb, deps: EmailIdentit
       const ttlMs = input.rememberMe ? SESSION_REMEMBER_TTL_MS : SESSION_TTL_MS;
       const sessionId = randomId('sess');
       const expiresAt = new Date(Date.parse(nowIso) + ttlMs).toISOString();
-      await db.query(`SELECT create_session($1, $2, $3, $4, $5)`, [
-        sessionId,
-        tenantId,
-        existing.id,
-        nowIso,
-        expiresAt,
-      ]);
+      try {
+        await db.query(`SELECT create_session($1, $2, $3, $4, $5)`, [
+          sessionId,
+          tenantId,
+          existing.id,
+          nowIso,
+          expiresAt,
+        ]);
+      } catch (error) {
+        if (error instanceof Error && error.message.includes('tenant_fenced')) {
+          throw new ChangeProofError('Tenant is deleted; the deletion fence admits nothing new.');
+        }
+        throw error;
+      }
       return { sessionId, expiresAt, tenantId };
     },
 

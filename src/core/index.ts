@@ -46,6 +46,7 @@ export * from './contracts/schemas/soak.js';
 export * from './contracts/schemas/legacy.js';
 export * from './contracts/schemas/modelcheck.js';
 export * from './contracts/schemas/transfer.js';
+export * from './contracts/schemas/http.js';
 
 // Ports (contract surface for cross-module collaboration, wired by orchestrator)
 export * from './ports/index.js';

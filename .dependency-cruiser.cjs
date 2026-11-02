@@ -20,6 +20,7 @@ const MODULES = '(?:^|/)modules/';
 const CORE = '(?:^|/)core/';
 const ENTRY = '(?:^|/)orchestrator/';
 const PROCESS = '(?:^|/)((?:http|workers|cli)/)';
+const APPS = '(?:^|/)apps/';
 
 module.exports = {
   forbidden: [
@@ -45,6 +46,8 @@ module.exports = {
           '(^|/)(vitest|eslint)\\.config\\.(ts|mjs)$',
           // Process entrypoints are roots by design: nothing imports them.
           '(^|/)(http|workers|cli)/[^/]+\\.ts$',
+          // Dashboard entries are roots by design: vite loads them, nothing imports them.
+          '(^|/)apps/.+/src/main\\.ts$',
         ],
       },
       to: {},
@@ -120,13 +123,46 @@ module.exports = {
       },
     },
     {
+      name: 'apps-import-browser-safe-core-only',
+      comment:
+        'The browser receives safe contracts + authenticated HTTP projections only: no orchestrator, ' +
+        'modules, ports, server entries, or secret-bearing schemas. .prepare/architecture.md §3, AGENTS.md §5.',
+      severity: 'error',
+      from: { path: APPS },
+      to: {
+        path: '(?:^|/)(?:core|modules|orchestrator|http|workers|cli)/',
+        pathNot: [`${CORE}contracts/`, `${CORE}errors/`],
+      },
+    },
+    {
+      name: 'apps-no-node-builtins',
+      comment:
+        'Dashboard source runs in the browser; node: imports would fail at build. ' +
+        'Build configs and tests are excluded from the cruise, not exempted by rule.',
+      severity: 'error',
+      from: { path: APPS },
+      to: { dependencyTypes: ['core'] },
+    },
+    {
+      name: 'no-dev-dependency-in-apps',
+      comment:
+        'Shipped dashboard code may not import a devDependency. Tests and configs are excluded from the cruise.',
+      severity: 'error',
+      from: { path: APPS },
+      to: { dependencyTypes: ['npm-dev'] },
+    },
+    {
       name: 'no-unresolvable',
       comment:
         'An unresolved import is a hole in the boundary check: dependency-cruiser cannot ' +
         'prove a rule it cannot follow. FAIL CLOSED (AGENTS.md §3 rule 8).',
       severity: 'error',
       from: {},
-      to: { couldNotResolve: true },
+      to: {
+        couldNotResolve: true,
+        // Vite resolves stylesheet imports at build; the cruiser only proves JS/TS edges.
+        pathNot: ['\\.css$'],
+      },
     },
     {
       name: 'no-non-package-json',
@@ -148,7 +184,9 @@ module.exports = {
 
   options: {
     doNotFollow: { path: 'node_modules' },
-    exclude: { path: '(^|/)node_modules/|(^|/)dist/|(^|/)runs/|(^|/)fixtures/' },
+    exclude: {
+      path: '(^|/)node_modules/|(^|/)dist/|(^|/)runs/|(^|/)fixtures/|\\.test\\.ts$|(^|/)apps/.+/(vite|vitest)\\.config\\.ts$',
+    },
     tsPreCompilationDeps: true,
     tsConfig: { fileName: 'tsconfig.json' },
     enhancedResolveOptions: {

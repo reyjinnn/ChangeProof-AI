@@ -7,6 +7,7 @@ export * from './publication.js';
 
 import {
   type BundleAssessment,
+  type EmailDeliveryPort,
   type SecretBrokerPort,
   type TargetAssessment,
   type TelemetryConnectorPort,
@@ -32,11 +33,13 @@ import {
   createIdentityStore,
   createSamlStore,
   createScimStore,
+  createSmtpDelivery,
   type EmailIdentityDb,
   type EmailIdentityDeps,
   type EmailIdentityStore,
   type IdentityDb,
   type IdentityStore,
+  type SmtpDeliveryOptions,
 } from '../modules/identity/index.js';
 import {
   createJobsStore,
@@ -86,12 +89,13 @@ import {
   getTemplate,
   listDesignNotes,
   listReleases,
+  listRoutes,
   loadManifestFile,
   loadPublicSiteManifest,
   requestTemplateApply,
   searchFaq,
 } from '../modules/publicsite/index.js';
-import type { EvidenceStore } from '../modules/evidence/index.js';
+import { createFileEvidenceStore, type EvidenceStore } from '../modules/evidence/index.js';
 import {
   createLifecycleStore,
   type LifecycleDb,
@@ -230,6 +234,10 @@ export interface EmailIdentityComposition {
   store: EmailIdentityStore;
 }
 
+export function composeSmtpDelivery(options: SmtpDeliveryOptions): EmailDeliveryPort {
+  return createSmtpDelivery(options);
+}
+
 export function composeEmailIdentity(db: EmailIdentityDb, deps: EmailIdentityDeps): EmailIdentityComposition {
   return {
     store: createEmailIdentityStore(db, deps),
@@ -327,6 +335,7 @@ export function composeMigrations(db: MigrationDb, broker: DependencyBroker): Mi
 export interface PublicSiteComposition {
   loadPublicSiteManifest: typeof loadPublicSiteManifest;
   loadManifestFile: typeof loadManifestFile;
+  listRoutes: typeof listRoutes;
   getRoute: typeof getRoute;
   searchFaq: typeof searchFaq;
   getTemplate: typeof getTemplate;
@@ -342,6 +351,7 @@ export function composePublicSite(): PublicSiteComposition {
   return {
     loadPublicSiteManifest,
     loadManifestFile,
+    listRoutes,
     getRoute,
     searchFaq,
     getTemplate,
@@ -361,6 +371,22 @@ export function composePublicSite(): PublicSiteComposition {
  * jobs, and evidence stores through the core ports; it adds no grant,
  * reservation, scheduling, or persistence behavior of its own.
  */
+export interface EvidenceComposition {
+  store: EvidenceStore;
+}
+
+/**
+ * File evidence wiring (T-45, WP3-25).
+ *
+ * Passthrough so `src/http` never imports a leaf module directly; the
+ * directory comes from explicit environment, never a silent default.
+ */
+export function composeFileEvidence(dir: string): EvidenceComposition {
+  return {
+    store: createFileEvidenceStore(dir),
+  };
+}
+
 export interface LifecycleComposition {
   store: LifecycleStore;
 }
