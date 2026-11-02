@@ -3,6 +3,7 @@ export { sendFail, sendOk } from './respond.js';
 export { handleApi, type ApiContext } from './routes.js';
 export { HttpRouteError, actingContext, parseBody, pathSegment, SESSION_COOKIE, sessionCookieId } from './context.js';
 export { handleAuthApi, isAuthPath, type AuthDeps } from './routes-auth.js';
+export { handleEnterpriseApi, isEnterprisePath, type EnterpriseDeps } from './routes-enterprise.js';
 export { handleRunsApi, isRunsPath, type RunsDeps } from './routes-runs.js';
 export { handleNotificationsApi, isNotificationsPath, type NotificationsDeps } from './routes-notifications.js';
 export { handleTeamworkApi, isTeamworkPath, type TeamworkDeps } from './routes-teamwork.js';

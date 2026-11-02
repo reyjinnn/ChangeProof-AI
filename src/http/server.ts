@@ -9,6 +9,7 @@ import type { PublicSiteComposition } from '../orchestrator/index.js';
 import { HttpRouteError } from './context.js';
 import { sendFail, sendOk } from './respond.js';
 import { handleAuthApi, isAuthPath, type AuthDeps } from './routes-auth.js';
+import { handleEnterpriseApi, isEnterprisePath, type EnterpriseDeps } from './routes-enterprise.js';
 import { handleApi, type ApiContext } from './routes.js';
 import { handleRunsApi, isRunsPath, type RunsDeps } from './routes-runs.js';
 import {
@@ -41,6 +42,8 @@ export interface HttpOptions {
   readonly notifications?: NotificationsDeps;
   /** Teamwork services; absent without a database (teamwork paths answer 503). */
   readonly teamwork?: TeamworkDeps;
+  /** Enterprise services; absent without a database (enterprise paths answer 503). */
+  readonly enterprise?: EnterpriseDeps;
 }
 
 export interface HttpHandle {
@@ -212,6 +215,10 @@ export function createHttpServer(options: HttpOptions): HttpHandle {
         }
         if (isTeamworkPath(url.pathname)) {
           await handleTeamworkApi(options.teamwork, request, response, request.method, url, rawBody);
+          return;
+        }
+        if (isEnterprisePath(url.pathname)) {
+          await handleEnterpriseApi(options.enterprise, request, response, request.method, url, rawBody);
           return;
         }
         handleApi(ctx, response, request.method, url);

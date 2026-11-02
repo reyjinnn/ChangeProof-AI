@@ -4,6 +4,8 @@ import type { PublicRoute, PublicTemplate, SampleReport } from '../../../src/cor
 
 import { apiGet } from './api.js';
 import { registerAuthPages } from './pages/auth.js';
+import { registerBillingPages } from './pages/billing.js';
+import { registerEnterprisePages } from './pages/enterprise.js';
 import { registerEvidencePages } from './pages/evidence.js';
 import { registerNotificationPages } from './pages/notifications.js';
 import { registerOperatorPages } from './pages/operator.js';
@@ -50,6 +52,8 @@ async function boot(): Promise<void> {
   registerSettingsPage();
 
   registerRunPages();
+  registerBillingPages();
+  registerEnterprisePages();
   registerEvidencePages();
   registerNotificationPages();
   registerSupportPages();

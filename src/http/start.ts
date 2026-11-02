@@ -2,6 +2,7 @@ import { Pool } from 'pg';
 
 import {
   composeCollaboration,
+  composeDistribution,
   composeEmailIdentity,
   composeFileEvidence,
   composeIdentityStore,
@@ -17,6 +18,7 @@ import {
 } from '../orchestrator/index.js';
 import { createHttpServer, type HttpHandle } from './server.js';
 import type { AuthDeps } from './routes-auth.js';
+import type { EnterpriseDeps } from './routes-enterprise.js';
 import type { NotificationsDeps } from './routes-notifications.js';
 import type { RunsDeps } from './routes-runs.js';
 import type { TeamworkDeps } from './routes-teamwork.js';
@@ -58,7 +60,7 @@ function requiredEnv(
 
 function wireAuth(
   env: StartEnv,
-): { auth: AuthDeps; runs: RunsDeps; notifications: NotificationsDeps; teamwork: TeamworkDeps; close: () => Promise<void> } | undefined {
+): { auth: AuthDeps; runs: RunsDeps; notifications: NotificationsDeps; teamwork: TeamworkDeps; enterprise: EnterpriseDeps; close: () => Promise<void> } | undefined {
   if (env.DATABASE_URL === undefined || env.DATABASE_URL === '') return undefined;
   const secret = requiredEnv(env, 'CP_CHALLENGE_SECRET');
   if (secret.length < 32) {
@@ -81,6 +83,10 @@ function wireAuth(
   });
   const queries = composeQueries(pool, { identity: identity.store, lifecycle: lifecycle.store });
   const composedNotifications = composeNotifications(pool, identity.store);
+  // BYOK values arrive out-of-band (CLI secrets file, vault/KMS in
+  // production); the runtime map starts empty and provision fails closed
+  // until a broker the process can read holds the ref.
+  const distribution = composeDistribution({ db: pool, maintenanceDb: pool, secrets: composeMapSecrets(new Map()) });
   return {
     auth: {
       identity,
@@ -112,6 +118,13 @@ function wireAuth(
         notifications: composedNotifications.store,
       }),
     },
+    enterprise: {
+      session: { deriveContext: (input) => identity.store.deriveContext(input) },
+      usage: { store: usage.store },
+      byok: { store: distribution.byok, secrets: distribution.secrets },
+      saml: { store: identity.saml },
+      scim: { store: identity.scim },
+    },
     close: () => pool.end().then(() => undefined),
   };
 }
@@ -128,7 +141,7 @@ export async function startFromEnv(env: StartEnv, rootDir: string): Promise<{ ha
     distDir: env.CP_DIST ?? `${rootDir}/apps/dashboard/dist`,
     ...(wired === undefined
       ? {}
-      : { auth: wired.auth, runs: wired.runs, notifications: wired.notifications, teamwork: wired.teamwork }),
+      : { auth: wired.auth, runs: wired.runs, notifications: wired.notifications, teamwork: wired.teamwork, enterprise: wired.enterprise }),
   });
   await new Promise<void>((resolve, reject) => {
     handle.server.once('error', reject);
