@@ -1,0 +1,342 @@
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { afterAll, beforeAll, expect, test } from 'vitest';
+
+import {
+  ChangeProofError,
+  type LifecycleRun,
+  type RunEvent,
+  type SearchResult,
+  type TenantContext,
+} from '../../src/core/index.js';
+import type { RunsDeps } from '../../src/http/routes-runs.js';
+import type { LifecycleStore } from '../../src/modules/lifecycle/index.js';
+import type { QueriesStore } from '../../src/modules/queries/index.js';
+import { createHttpServer, type HttpHandle } from '../../src/http/index.js';
+import { composePublicSite } from '../../src/orchestrator/index.js';
+
+// Run-journey HTTP proof (T-45): the real server over stub stores with
+// sentinel ids. No database — the native suite proves the real stores;
+// the no-deps server answers 503 on every runs path.
+const here = dirname(fileURLToPath(import.meta.url));
+const rootDir = join(here, '..', '..');
+const manifestPath = join(rootDir, 'config', 'publicsite', 'manifest.json');
+
+const HEX_64 = 'a'.repeat(64);
+const NOW_ISO = '2026-11-02T00:00:00.000Z';
+
+const ctx: TenantContext = {
+  schemaVersion: '1',
+  tenantId: 'tenant-acme',
+  userId: 'user-owner',
+  sessionId: 'sess-good',
+  role: 'owner',
+  projectGrants: ['project-1'],
+  repositoryGrants: ['repo-1'],
+  grantVersion: 3,
+  expiresAt: '2026-11-03T00:00:00.000Z',
+  authoritySource: 'server',
+};
+
+const run: LifecycleRun = {
+  schemaVersion: '1',
+  runId: 'run-1',
+  tenantId: 'tenant-acme',
+  projectId: 'project-1',
+  draftId: 'draft-1',
+  draftRevision: 2,
+  idempotencyKey: HEX_64,
+  state: 'queued',
+  version: 0,
+  jobId: 'job-1',
+  reservationId: 'res-1',
+  submitDigest: HEX_64,
+  repositoryIds: ['repo-1'],
+  createdAt: NOW_ISO,
+};
+
+const submittedEvent: RunEvent = {
+  schemaVersion: '1',
+  runId: 'run-1',
+  seq: 1,
+  kind: 'submitted',
+  payload: { submitDigest: HEX_64 },
+  createdAt: NOW_ISO,
+};
+
+function unknown(what: string): ChangeProofError {
+  return new ChangeProofError(`${what} is unknown or not shared with you.`);
+}
+
+const lifecycle: LifecycleStore = {
+  createProject: (_actor, input) => Promise.resolve({ projectId: 'project-9', name: input.name }),
+  saveDraftRevision: (_actor, input) =>
+    input.projectId === 'project-missing'
+      ? Promise.reject(unknown('Project'))
+      : Promise.resolve({ draftId: input.draftId ?? 'draft-9', revision: 1 }),
+  getDraft: (_actor, input) =>
+    input.draftId === 'draft-missing'
+      ? Promise.reject(unknown('Draft'))
+      : Promise.resolve({
+          schemaVersion: '1' as const,
+          draftId: input.draftId,
+          tenantId: 'tenant-acme',
+          projectId: 'project-1',
+          revision: input.revision ?? 2,
+          body: { intent: 'restore checkout', notes: 'stub' },
+          createdAt: NOW_ISO,
+        }),
+  submitRun: (_actor, input) =>
+    input.projectId === 'project-missing'
+      ? Promise.reject(unknown('Project'))
+      : Promise.resolve({
+          runId: 'run-2',
+          jobId: 'job-2',
+          reservationId: 'res-2',
+          submitDigest: HEX_64,
+          duplicate: false as const,
+        }),
+  getRun: (_actor, input) => (input.runId === 'run-missing' ? Promise.reject(unknown('Run')) : Promise.resolve(run)),
+  pollEvents: (_actor, input) =>
+    input.runId === 'run-missing'
+      ? Promise.reject(unknown('Run'))
+      : Promise.resolve({ events: input.afterSeq >= 1 ? [] : [submittedEvent], cursor: 1 }),
+  recordRunEvent: () => Promise.reject(new Error('workers only: never over HTTP')),
+  cancelRun: (_actor, input) =>
+    input.runId === 'run-missing'
+      ? Promise.reject(unknown('Run'))
+      : input.runId === 'run-done'
+        ? Promise.reject(new ChangeProofError('Run is already succeeded; only queued or running runs cancel.'))
+        : Promise.resolve({ state: 'cancelled' }),
+  retryRun: (_actor, input) =>
+    input.runId === 'run-missing'
+      ? Promise.reject(unknown('Run'))
+      : input.runId === 'run-queued'
+        ? Promise.reject(new ChangeProofError('Only failed or cancelled runs retry; this run is queued.'))
+        : Promise.resolve({
+            runId: 'run-3',
+            jobId: 'job-3',
+            reservationId: 'res-3',
+            submitDigest: HEX_64,
+            duplicate: false as const,
+          }),
+  applyRepoRevocation: () => Promise.reject(new Error('control-plane only: never over HTTP')),
+  downloadArtifact: (_actor, input) =>
+    input.runId === 'run-missing'
+      ? Promise.reject(unknown('Run'))
+      : Promise.resolve({ digest: input.digest, bytes: new TextEncoder().encode('stub-evidence-bytes') }),
+};
+
+const searchResult: SearchResult = {
+  schemaVersion: '1',
+  hits: [
+    {
+      kind: 'run',
+      id: 'run-1',
+      projectId: 'project-1',
+      title: 'run-1',
+      snippet: 'queued',
+      createdAt: NOW_ISO,
+    },
+  ],
+  totalCount: 1,
+  cursor: 1,
+};
+
+const queries: QueriesStore = {
+  search: () => Promise.resolve(searchResult),
+  exportAudit: () => Promise.reject(new Error('not exposed over HTTP in T-45')),
+  requestReproduction: () => Promise.reject(new Error('not exposed over HTTP in T-45')),
+  bumpGrantEpoch: () => Promise.reject(new Error('control-plane only: never over HTTP')),
+  invalidateTenantCache: () => {
+    throw new Error('control-plane only: never over HTTP');
+  },
+  cacheStats: () => {
+    throw new Error('control-plane only: never over HTTP');
+  },
+};
+
+function deps(): RunsDeps {
+  return {
+    session: {
+      deriveContext: (input) =>
+        input.sessionId === 'sess-good' ? Promise.resolve(ctx) : Promise.reject(new ChangeProofError('nope')),
+    },
+    lifecycle: { store: lifecycle },
+    queries: { store: queries },
+  };
+}
+
+let handle: HttpHandle | undefined;
+let bare: HttpHandle | undefined;
+let base = '';
+let bareBase = '';
+
+beforeAll(async () => {
+  handle = createHttpServer({ publicSite: composePublicSite(), manifestPath, runs: deps() });
+  await new Promise<void>((resolve) => handle?.server.listen(0, '127.0.0.1', resolve));
+  const address = handle.server.address();
+  if (typeof address !== 'object' || address === null) throw new Error('Server did not bind.');
+  base = `http://127.0.0.1:${address.port}`;
+  bare = createHttpServer({ publicSite: composePublicSite(), manifestPath });
+  await new Promise<void>((resolve) => bare?.server.listen(0, '127.0.0.1', resolve));
+  const bareAddress = bare.server.address();
+  if (typeof bareAddress !== 'object' || bareAddress === null) throw new Error('Bare server did not bind.');
+  bareBase = `http://127.0.0.1:${bareAddress.port}`;
+}, 30_000);
+
+afterAll(async () => {
+  await handle?.close();
+  await bare?.close();
+});
+
+const UI = { 'Content-Type': 'application/json', 'X-Requested-With': 'ChangeProofUI' };
+const authed = { ...UI, Cookie: 'cp_session=sess-good' };
+
+async function call(
+  method: string,
+  path: string,
+  options: { headers?: Record<string, string>; body?: unknown; root?: string } = {},
+): Promise<{ status: number; body: unknown; headers: Headers }> {
+  const response = await fetch(`${options.root ?? base}${path}`, {
+    method,
+    ...(options.headers === undefined ? {} : { headers: options.headers }),
+    ...(options.body === undefined ? {} : { body: JSON.stringify(options.body) }),
+  });
+  const text = await response.text();
+  let body: unknown = text;
+  try {
+    body = JSON.parse(text) as unknown;
+  } catch {
+    // Bytes (artifact download) stay text for the assertion below.
+  }
+  return { status: response.status, body, headers: response.headers };
+}
+
+const SUBMIT = {
+  projectId: 'project-1',
+  repositoryIds: ['repo-1'],
+  sourceRefs: ['src/checkout.ts'],
+  intentRef: 'intent-1',
+  executionMode: 'real_runtime',
+  invariantRefs: ['inv-1'],
+  verificationPlanRef: 'plan-1',
+  budgetProfileId: 'budget-1',
+  publicationConsent: false,
+  idempotencyKey: HEX_64,
+  expectedGrantVersion: 3,
+  draftId: 'draft-1',
+  draftRevision: 2,
+  requestedBudget: 50,
+};
+
+test('projects create over a session, refuse guests', async () => {
+  const created = await call('POST', '/api/projects', { headers: authed, body: { name: 'checkout' } });
+  expect(created.status).toBe(201);
+  expect(created.body).toEqual({ ok: true, data: { projectId: 'project-9', name: 'checkout' } });
+  const guest = await call('POST', '/api/projects', { headers: UI, body: { name: 'checkout' } });
+  expect(guest.status).toBe(401);
+  const empty = await call('POST', '/api/projects', { headers: authed, body: { name: '' } });
+  expect(empty.status).toBe(400);
+});
+
+test('drafts save and read back, unknown drafts 404 without disclosure', async () => {
+  const saved = await call('POST', '/api/drafts', {
+    headers: authed,
+    body: { projectId: 'project-1', body: { intent: 'restore checkout' } },
+  });
+  expect(saved.status).toBe(201);
+  const read = await call('GET', '/api/drafts/draft-1?revision=2', { headers: authed });
+  expect(read.status).toBe(200);
+  const missing = await call('GET', '/api/drafts/draft-missing', { headers: authed });
+  expect(missing.status).toBe(404);
+  expect((missing.body as { error: { message: string } }).error.message).not.toMatch(/tenant|project-1/);
+  const bad = await call('POST', '/api/drafts', { headers: authed, body: { projectId: 'project-1', body: {} } });
+  expect(bad.status).toBe(400);
+});
+
+test('runs submit immutably and read back exactly', async () => {
+  const submitted = await call('POST', '/api/runs', { headers: authed, body: SUBMIT });
+  expect(submitted.status).toBe(201);
+  expect(submitted.body).toEqual({
+    ok: true,
+    data: { runId: 'run-2', jobId: 'job-2', reservationId: 'res-2', submitDigest: HEX_64, duplicate: false },
+  });
+  const read = await call('GET', '/api/runs/run-1', { headers: authed });
+  expect(read.status).toBe(200);
+  expect((read.body as { data: { state: string } }).data.state).toBe('queued');
+  const missing = await call('GET', '/api/runs/run-missing', { headers: authed });
+  expect(missing.status).toBe(404);
+  const noKey = await call('POST', '/api/runs', {
+    headers: authed,
+    body: { ...SUBMIT, idempotencyKey: undefined },
+  });
+  expect(noKey.status).toBe(400);
+});
+
+test('events poll with a cursor and refuse bad cursors', async () => {
+  const first = await call('GET', '/api/runs/run-1/events?afterSeq=0&limit=10', { headers: authed });
+  expect(first.status).toBe(200);
+  expect((first.body as { data: { cursor: number } }).data.cursor).toBe(1);
+  const caughtUp = await call('GET', '/api/runs/run-1/events?afterSeq=1&limit=10', { headers: authed });
+  expect((caughtUp.body as { data: { events: unknown[] } }).data.events).toEqual([]);
+  const bad = await call('GET', '/api/runs/run-1/events?afterSeq=0&limit=500', { headers: authed });
+  expect(bad.status).toBe(400);
+  const missing = await call('GET', '/api/runs/run-missing/events?afterSeq=0&limit=10', { headers: authed });
+  expect(missing.status).toBe(404);
+});
+
+test('cancel and retry enforce run states', async () => {
+  const cancelled = await call('POST', '/api/runs/run-1/cancel', { headers: authed, body: {} });
+  expect(cancelled.status).toBe(200);
+  const terminal = await call('POST', '/api/runs/run-done/cancel', { headers: authed, body: {} });
+  expect(terminal.status).toBe(400);
+  const retried = await call('POST', '/api/runs/run-1/retry', { headers: authed, body: { idempotencyKey: HEX_64 } });
+  expect(retried.status).toBe(201);
+  const early = await call('POST', '/api/runs/run-queued/retry', { headers: authed, body: { idempotencyKey: HEX_64 } });
+  expect(early.status).toBe(400);
+  const noKey = await call('POST', '/api/runs/run-1/retry', { headers: authed, body: {} });
+  expect(noKey.status).toBe(400);
+});
+
+test('artifacts download as bytes behind the session', async () => {
+  const downloaded = await call('GET', `/api/runs/run-1/artifacts/${HEX_64}`, { headers: authed });
+  expect(downloaded.status).toBe(200);
+  expect(downloaded.headers.get('content-type')).toContain('application/octet-stream');
+  expect(downloaded.body).toBe('stub-evidence-bytes');
+  const guest = await call('GET', `/api/runs/run-1/artifacts/${HEX_64}`);
+  expect(guest.status).toBe(401);
+  const missing = await call('GET', `/api/runs/run-missing/artifacts/${HEX_64}`, { headers: authed });
+  expect(missing.status).toBe(404);
+});
+
+test('search lists runs and projects with validated queries', async () => {
+  const found = await call('POST', '/api/search', {
+    headers: authed,
+    body: { schemaVersion: '1', scope: 'runs', limit: 20 },
+  });
+  expect(found.status).toBe(200);
+  expect((found.body as { data: SearchResult }).data.totalCount).toBe(1);
+  const blank = await call('POST', '/api/search', {
+    headers: authed,
+    body: { schemaVersion: '1', scope: 'runs', text: '   ', limit: 20 },
+  });
+  expect(blank.status).toBe(400);
+  const guest = await call('POST', '/api/search', {
+    headers: UI,
+    body: { schemaVersion: '1', scope: 'runs', limit: 20 },
+  });
+  expect(guest.status).toBe(401);
+});
+
+test('runs paths fail closed without the marker, without the database, and on unknown paths', async () => {
+  const noMarker = await call('POST', '/api/projects', {
+    headers: { 'Content-Type': 'application/json', Cookie: 'cp_session=sess-good' },
+    body: { name: 'x' },
+  });
+  expect(noMarker.status).toBe(403);
+  const noDb = await call('GET', '/api/runs/run-1', { headers: authed, root: bareBase });
+  expect(noDb.status).toBe(503);
+  const unknownEndpoint = await call('GET', '/api/runs/run-1/merge', { headers: authed });
+  expect(unknownEndpoint.status).toBe(404);
+});
