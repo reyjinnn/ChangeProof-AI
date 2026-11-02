@@ -51,6 +51,42 @@ interface Providers {
   readonly github: boolean;
 }
 
+function authShell(formCard: HTMLElement): HTMLElement {
+  const story = h('aside', { class: 'fresh-auth-story', 'aria-label': 'Security guarantees' }, [
+    h('div', {}, [
+      h('div', { class: 'auth-story-eyebrow' }, ['Tenant Isolation & Identity']),
+      h('h2', {}, ['Evidence-backed change assurance with strict tenant boundaries']),
+      h('p', {}, [
+        'Every run, artifact, and session is scoped to your organization grant version. The browser holds no authority; single-use verification tickets stay in memory only.',
+      ]),
+    ]),
+    h('div', { class: 'auth-proof' }, [
+      h('div', { class: 'auth-proof-row' }, [
+        h('span', { class: 'auth-step-icon', 'aria-hidden': 'true' }, ['01']),
+        h('div', {}, [
+          h('strong', {}, ['Server-validated return targets']),
+          h('small', {}, ['External or untrusted redirect URLs are rejected at the boundary.']),
+        ]),
+      ]),
+      h('div', { class: 'auth-proof-row' }, [
+        h('span', { class: 'auth-step-icon', 'aria-hidden': 'true' }, ['02']),
+        h('div', {}, [
+          h('strong', {}, ['In-memory single-use tickets']),
+          h('small', {}, ['Verification and claim tokens never touch localStorage.']),
+        ]),
+      ]),
+      h('div', { class: 'auth-proof-row' }, [
+        h('span', { class: 'auth-step-icon', 'aria-hidden': 'true' }, ['03']),
+        h('div', {}, [
+          h('strong', {}, ['Explicit tenant selection']),
+          h('small', {}, ['Multi-org accounts choose their active organization explicitly.']),
+        ]),
+      ]),
+    ]),
+  ]);
+  return h('div', { class: 'fresh-auth-shell' }, [story, formCard]);
+}
+
 function providersNote(host: HTMLElement): void {
   void apiGet<Providers>('/api/auth/providers')
     .then((providers) => {
@@ -147,6 +183,7 @@ function loginForm(outlet: HTMLElement, ctx: RouteContext): void {
     })();
   });
   const card = h('section', { class: 'card' }, [
+    h('div', { class: 'eyebrow' }, ['Account Access']),
     h('h1', {}, ['Log in']),
     ret.valid ? h('p', { class: 'muted' }, [`After login you continue inside the app (${ret.target}).`]) : h('p', {}, []),
     form,
@@ -156,7 +193,7 @@ function loginForm(outlet: HTMLElement, ctx: RouteContext): void {
       h('a', { href: '#/register' }, ['Create an account']),
     ]),
   ]);
-  outlet.replaceChildren(card);
+  outlet.replaceChildren(authShell(card));
   providersNote(card);
 }
 
@@ -213,12 +250,15 @@ function registerForm(outlet: HTMLElement): void {
     })();
   });
   outlet.replaceChildren(
-    h('section', { class: 'card' }, [
-      h('h1', {}, ['Create an account']),
-      h('p', { class: 'muted' }, ['One account per email address. Verification mail follows.']),
-      form,
-      h('p', {}, [h('a', { href: '#/login' }, ['Already have an account? Log in'])]),
-    ]),
+    authShell(
+      h('section', { class: 'card' }, [
+        h('div', { class: 'eyebrow' }, ['Account Registration']),
+        h('h1', {}, ['Create an account']),
+        h('p', { class: 'muted' }, ['One account per email address. Verification mail follows.']),
+        form,
+        h('p', {}, [h('a', { href: '#/login' }, ['Already have an account? Log in'])]),
+      ]),
+    ),
   );
 }
 
@@ -251,15 +291,18 @@ function checkEmailPage(outlet: HTMLElement, ctx: RouteContext): void {
     })();
   });
   outlet.replaceChildren(
-    h('section', { class: 'card' }, [
-      h('h1', {}, ['Check your email']),
-      address === ''
-        ? h('p', {}, ['We sent a verification mail with a single-use token. Open the link from the mail to continue.'])
-        : h('p', {}, [`We sent a verification mail to ${address}. Open the link from the mail to continue.`]),
-      done,
-      h('h2', {}, ['Mail did not arrive?']),
-      form,
-    ]),
+    authShell(
+      h('section', { class: 'card' }, [
+        h('div', { class: 'eyebrow' }, ['Email Verification']),
+        h('h1', {}, ['Check your email']),
+        address === ''
+          ? h('p', {}, ['We sent a verification mail with a single-use token. Open the link from the mail to continue.'])
+          : h('p', {}, [`We sent a verification mail to ${address}. Open the link from the mail to continue.`]),
+        done,
+        h('h2', {}, ['Mail did not arrive?']),
+        form,
+      ]),
+    ),
   );
 }
 
@@ -327,7 +370,9 @@ function forgotPasswordPage(outlet: HTMLElement): void {
       }
     })();
   });
-  outlet.replaceChildren(h('section', { class: 'card' }, [h('h1', {}, ['Reset your password']), done, form]));
+  outlet.replaceChildren(
+    authShell(h('section', { class: 'card' }, [h('div', { class: 'eyebrow' }, ['Account Recovery']), h('h1', {}, ['Reset your password']), done, form])),
+  );
 }
 
 function resetPasswordPage(outlet: HTMLElement, ctx: RouteContext): void {
@@ -450,7 +495,14 @@ function createOrgPage(outlet: HTMLElement): void {
     })();
   });
   outlet.replaceChildren(
-    h('section', { class: 'card' }, [h('h1', {}, ['Create your organization']), h('p', { class: 'muted' }, ['You become its owner.']), form]),
+    authShell(
+      h('section', { class: 'card' }, [
+        h('div', { class: 'eyebrow' }, ['Organization Provisioning']),
+        h('h1', {}, ['Create your organization']),
+        h('p', { class: 'muted' }, ['You become its owner.']),
+        form,
+      ]),
+    ),
   );
 }
 

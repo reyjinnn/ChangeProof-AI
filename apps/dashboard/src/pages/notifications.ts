@@ -98,14 +98,17 @@ async function renderInbox(outlet: HTMLElement): Promise<void> {
   ]);
   outlet.replaceChildren(
     h('section', { class: 'card' }, [
+      h('div', { class: 'eyebrow' }, ['Tenant Notification Center']),
       h('h1', {}, ['Inbox']),
       countLine,
       filterWrap,
       h('p', {}, [readAll]),
       actionNote,
     ]),
-    h('section', { class: 'card' }, [h('h2', {}, ['Notifications']), list, moreWrap]),
-    prefsSection,
+    h('div', { class: 'split' }, [
+      h('section', { class: 'card' }, [h('div', { class: 'eyebrow' }, ['Activity Stream']), h('h2', {}, ['Notifications']), list, moreWrap]),
+      prefsSection,
+    ]),
   );
 
   let unreadOnly = false;

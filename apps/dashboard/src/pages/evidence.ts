@@ -286,6 +286,7 @@ async function renderLibrary(outlet: HTMLElement, ctx: RouteContext): Promise<vo
   });
   outlet.replaceChildren(
     h('section', { class: 'card' }, [
+      h('div', { class: 'eyebrow' }, ['Content-Addressed Artifact Store']),
       h('h1', {}, ['Evidence']),
       h('p', { class: 'muted' }, [
         `Run ${run.runId} · ${run.state} · version ${String(run.version)}. Artifacts below are the run's own records; the list shows everything attached, in event order.`,
@@ -296,23 +297,27 @@ async function renderLibrary(outlet: HTMLElement, ctx: RouteContext): Promise<vo
       list,
     ]),
     publication,
-    h('section', { class: 'card' }, [
-      h('h2', {}, ['Export']),
-      h('p', {}, [
-        'A JSON snapshot of the run header and artifact list above, generated in your browser from data this page already fetched. ',
-        'It carries no verdict and proves nothing by itself.',
+    h('div', { class: 'split' }, [
+      h('section', { class: 'card' }, [
+        h('div', { class: 'eyebrow' }, ['Manifest Snapshot']),
+        h('h2', {}, ['Export']),
+        h('p', {}, [
+          'A JSON snapshot of the run header and artifact list above, generated in your browser from data this page already fetched. ',
+          'It carries no verdict and proves nothing by itself.',
+        ]),
+        h('p', {}, [exportButton]),
       ]),
-      h('p', {}, [exportButton]),
-    ]),
-    h('section', { class: 'card' }, [
-      h('h2', {}, ['Outcomes and evaluations']),
-      h('p', {}, [
-        'Owner outcome reporting and evaluation denominators are not exposed by the API yet, so this page shows no figures. ',
-        'Any number here would be invented; invented numbers stay out.',
+      h('section', { class: 'card' }, [
+        h('div', { class: 'eyebrow' }, ['Assurance Boundaries']),
+        h('h2', {}, ['Outcomes and evaluations']),
+        h('p', {}, [
+          'Owner outcome reporting and evaluation denominators are not exposed by the API yet, so this page shows no figures. ',
+          'Any number here would be invented; invented numbers stay out.',
+        ]),
       ]),
     ]),
     h('p', {}, [
-      h('a', { href: `#/run?id=${encodeURIComponent(runId)}` }, ['Back to the run']),
+      h('a', { class: 'button', href: `#/run?id=${encodeURIComponent(runId)}` }, ['Back to the run']),
     ]),
   );
 }

@@ -80,10 +80,36 @@ async function renderBilling(outlet: HTMLElement): Promise<void> {
     ]),
   );
 
+  const remaining = balances.cap - balances.consumed - balances.reservedActive;
+  const stats = h('div', { class: 'stats' }, [
+    h('div', { class: 'stat' }, [
+      h('div', { class: 'label' }, ['Period cap']),
+      h('div', { class: 'value' }, [String(balances.cap)]),
+      h('div', { class: 'sub' }, ['Active billing cycle cap']),
+    ]),
+    h('div', { class: 'stat' }, [
+      h('div', { class: 'label' }, ['Consumed']),
+      h('div', { class: 'value' }, [String(balances.consumed)]),
+      h('div', { class: 'sub' }, ['Settled run usage']),
+    ]),
+    h('div', { class: 'stat' }, [
+      h('div', { class: 'label' }, ['Active reserved']),
+      h('div', { class: 'value' }, [String(balances.reservedActive)]),
+      h('div', { class: 'sub' }, [`${String(balances.reservations.length)} open reservation(s)`]),
+    ]),
+    h('div', { class: 'stat' }, [
+      h('div', { class: 'label' }, ['Remaining']),
+      h('div', { class: 'value' }, [String(remaining)]),
+      h('div', { class: 'sub' }, ['Available for new runs']),
+    ]),
+  ]);
+
   outlet.replaceChildren(
+    stats,
     h('section', { class: 'card' }, [
+      h('div', { class: 'eyebrow' }, ['Usage & Reservations']),
       h('h1', {}, ['Billing']),
-      h('p', {}, [`Period ${balances.periodId}: cap ${balances.cap}, consumed ${balances.consumed}, reserved ${balances.reservedActive}, remaining ${balances.cap - balances.consumed - balances.reservedActive}.`]),
+      h('p', {}, [`Period ${balances.periodId}: cap ${balances.cap}, consumed ${balances.consumed}, reserved ${balances.reservedActive}, remaining ${remaining}.`]),
       balances.reservations.length === 0
         ? h('p', {}, ['No open reservations in this period.'])
         : h('table', {}, [
@@ -100,6 +126,7 @@ async function renderBilling(outlet: HTMLElement): Promise<void> {
           ]),
     ]),
     h('section', { class: 'card' }, [
+      h('div', { class: 'eyebrow' }, ['Provider Settlement']),
       h('h2', {}, ['Invoices']),
       h('p', {}, [
         'There is no invoice listing: the service records provider payment webhooks but exposes no invoice or payment-method endpoint, so charges live with the payment provider.',

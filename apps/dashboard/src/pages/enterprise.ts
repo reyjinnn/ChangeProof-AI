@@ -363,7 +363,11 @@ async function renderEnterprise(outlet: HTMLElement): Promise<void> {
     return;
   }
   outlet.replaceChildren(
-    h('section', { class: 'card' }, [h('h1', {}, ['Enterprise'])]),
+    h('section', { class: 'card' }, [
+      h('div', { class: 'eyebrow' }, ['Enterprise Governance & Identity']),
+      h('h1', {}, ['Enterprise']),
+      h('p', { class: 'muted' }, ['Manage BYOK broker references, SAML SSO connections, and SCIM provisioning tokens.']),
+    ]),
     renderByokCard(),
     renderSamlCard(),
     renderScimCard(),
