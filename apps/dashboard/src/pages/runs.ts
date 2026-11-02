@@ -7,7 +7,7 @@
 import type { PublicTemplate } from '../../../../src/core/contracts/schemas/publicsite.js';
 
 import { apiGet, apiPost, ApiRequestError } from '../api.js';
-import { badge, emptyState, errorState, field, h } from '../components.js';
+import { badge, emptyState, errorState, field, h, pageHead } from '../components.js';
 import { currentRouteEpoch, isCurrentRouteEpoch, registerRoute, type RouteContext } from '../routes.js';
 import { loadDraft, saveDraft, SecretDraftError } from '../store.js';
 
@@ -207,9 +207,14 @@ async function renderLists(outlet: HTMLElement): Promise<void> {
   ]);
   const lists = h('div', {}, []);
   outlet.replaceChildren(
+    pageHead({
+      eyebrow: 'Workspace Runs',
+      title: 'Runs',
+      subtitle: 'Search active and historical verification runs and projects in your organization.',
+      actions: [h('a', { class: 'button primary', href: '#/runs/new' }, ['File a run'])],
+    }),
     h('section', { class: 'card' }, [
-      h('h1', {}, ['Runs']),
-      h('p', {}, [h('a', { class: 'button primary', href: '#/runs/new' }, ['File a run'])]),
+      h('h2', {}, ['Filter runs & projects']),
       filterForm,
     ]),
     lists,
@@ -220,6 +225,28 @@ async function renderLists(outlet: HTMLElement): Promise<void> {
       const [runs, projects] = await Promise.all([
         search('runs', { text: text.input.value.trim(), runState: stateSelect.value }),
         search('projects', { text: text.input.value.trim() }),
+      ]);
+      const stats = h('div', { class: 'stats' }, [
+        h('div', { class: 'stat' }, [
+          h('div', { class: 'label' }, ['Matching runs']),
+          h('div', { class: 'value' }, [String(runs.hits.length)]),
+          h('div', { class: 'sub' }, ['Returned from /api/search']),
+        ]),
+        h('div', { class: 'stat' }, [
+          h('div', { class: 'label' }, ['Matching projects']),
+          h('div', { class: 'value' }, [String(projects.hits.length)]),
+          h('div', { class: 'sub' }, ['Active workspace projects']),
+        ]),
+        h('div', { class: 'stat' }, [
+          h('div', { class: 'label' }, ['State filter']),
+          h('div', { class: 'value' }, [stateSelect.value === '' ? 'All' : stateSelect.value]),
+          h('div', { class: 'sub' }, ['Lifecycle state filter']),
+        ]),
+        h('div', { class: 'stat' }, [
+          h('div', { class: 'label' }, ['Tenant scope']),
+          h('div', { class: 'value' }, [session.tenantId]),
+          h('div', { class: 'sub' }, [`Role: ${session.role}`]),
+        ]),
       ]);
       const runSection = h('section', { class: 'card' }, [h('h2', {}, ['Runs'])]);
       if (runs.hits.length === 0) {
@@ -235,7 +262,7 @@ async function renderLists(outlet: HTMLElement): Promise<void> {
       } else {
         for (const hit of projects.hits) projectSection.appendChild(hitArticle(hit));
       }
-      lists.replaceChildren(runSection, projectSection);
+      lists.replaceChildren(stats, h('div', { class: 'split' }, [runSection, projectSection]));
     } catch (error) {
       if (statusOf(error) === 401) {
         expired(outlet);
@@ -785,9 +812,10 @@ async function renderDetail(outlet: HTMLElement, ctx: RouteContext): Promise<voi
   const header = h('section', { class: 'card' }, []);
   const actions = h('div', {}, []);
   const actionNote = h('div', { 'aria-live': 'polite' }, []);
-  const eventsList = h('div', { id: 'events-list' }, []);
+  const eventsList = h('div', { id: 'events-list', class: 'timeline' }, []);
   const pollNote = h('div', { id: 'poll-note', 'aria-live': 'polite' }, []);
   const review = h('section', { class: 'card' }, [
+    h('div', { class: 'eyebrow' }, ['Deterministic Policy']),
     h('h2', {}, ['Review']),
     h('p', {}, [
       'No assessment records on this run yet — events above are the complete record. ',
@@ -797,6 +825,7 @@ async function renderDetail(outlet: HTMLElement, ctx: RouteContext): Promise<voi
 
   const renderHeader = (current: RunDetail): void => {
     header.replaceChildren(
+      h('div', { class: 'eyebrow' }, ['Run Manifest & Lifecycle']),
       h('h1', {}, ['Run']),
       h('p', {}, [stateBadge(current.state), document.createTextNode(` version ${String(current.version)}`)]),
       h('dl', { class: 'detail-list' }, [
@@ -819,10 +848,9 @@ async function renderDetail(outlet: HTMLElement, ctx: RouteContext): Promise<voi
           ? []
           : [h('dt', {}, ['Reservation']), h('dd', {}, [h('code', { class: 'inline' }, [current.reservationId])])]),
       ]),
-      h('p', {}, [
-        h('a', { href: `#/evidence?run=${encodeURIComponent(current.runId)}` }, ['Open the evidence library']),
-        document.createTextNode(' · '),
-        h('a', { href: `#/threads?run=${encodeURIComponent(current.runId)}` }, ['Open discussions']),
+      h('p', { class: 'btn-row' }, [
+        h('a', { class: 'button', href: `#/evidence?run=${encodeURIComponent(current.runId)}` }, ['Open the evidence library']),
+        h('a', { class: 'button', href: `#/threads?run=${encodeURIComponent(current.runId)}` }, ['Open discussions']),
       ]),
     );
   };
@@ -888,8 +916,13 @@ async function renderDetail(outlet: HTMLElement, ctx: RouteContext): Promise<voi
 
   renderHeader(run);
   renderActions(run);
-  const eventsCard = h('section', { class: 'card' }, [h('h2', {}, ['Events']), eventsList, pollNote]);
-  outlet.replaceChildren(header, h('section', { class: 'card' }, [actions, actionNote]), eventsCard, review);
+  const eventsCard = h('section', { class: 'card' }, [
+    h('div', { class: 'eyebrow' }, ['Live Execution Stream']),
+    h('h2', {}, ['Events']),
+    eventsList,
+    pollNote,
+  ]);
+  outlet.replaceChildren(header, h('section', { class: 'card' }, [actions, actionNote]), h('div', { class: 'split' }, [eventsCard, review]));
 
   let cursor = 0;
   let failures = 0;

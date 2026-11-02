@@ -84,11 +84,244 @@ async function load<T>(
   }
 }
 
+function startGhostFibers(canvas: HTMLCanvasElement): void {
+  if (typeof navigator !== 'undefined' && /jsdom/i.test(navigator.userAgent)) return;
+  let ctx: CanvasRenderingContext2D | null;
+  try {
+    ctx = canvas.getContext('2d');
+  } catch {
+    return;
+  }
+  if (ctx === null) return;
+  const context = ctx;
+  const width = 960;
+  const height = 360;
+  canvas.width = width;
+  canvas.height = height;
+  canvas.setAttribute('aria-hidden', 'true');
+
+  const drawFrame = (t: number): void => {
+    context.clearRect(0, 0, width, height);
+    const dark = document.documentElement.dataset['theme'] === 'dark';
+    const palettes = dark
+      ? ['rgba(155, 188, 233, 0.20)', 'rgba(155, 188, 233, 0.17)', 'rgba(155, 188, 233, 0.14)', 'rgba(155, 188, 233, 0.11)']
+      : ['rgba(54, 94, 150, 0.14)', 'rgba(54, 94, 150, 0.12)', 'rgba(54, 94, 150, 0.10)', 'rgba(54, 94, 150, 0.08)'];
+    for (let i = 0; i < palettes.length; i += 1) {
+      context.beginPath();
+      context.strokeStyle = palettes[i] ?? 'rgba(54, 94, 150, 0.14)';
+      context.lineWidth = 2 + (i % 2);
+      const baseY = 95 + i * 48;
+      for (let x = 0; x <= width; x += 24) {
+        const wave = Math.sin(x * 0.008 + t * 0.0012 + i * 0.9) * 28 + Math.cos(x * 0.004 - t * 0.0008 + i) * 14;
+        const y = baseY + wave;
+        if (x === 0) context.moveTo(x, y);
+        else context.lineTo(x, y);
+      }
+      context.stroke();
+    }
+  };
+
+  drawFrame(0);
+  if (typeof window !== 'undefined' && typeof window.matchMedia === 'function' && window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    return;
+  }
+  let rafId = 0;
+  const tick = (now: number): void => {
+    if (!canvas.isConnected) {
+      cancelAnimationFrame(rafId);
+      return;
+    }
+    drawFrame(now);
+    rafId = requestAnimationFrame(tick);
+  };
+  rafId = requestAnimationFrame(tick);
+}
+
 function pageHead(route: PublicRoute): HTMLElement {
-  return h('section', { class: 'card' }, [
+  const canvas = h('canvas', { class: 'cp-ghost-fibers', 'aria-hidden': 'true' }, []);
+  const shade = h('div', { class: 'cp-ghost-shade', 'aria-hidden': 'true' }, []);
+  const pill = h('div', { class: 'modern-release' }, [
+    h('b', {}, [route.section.toUpperCase()]),
+    h('span', {}, ['Live published manifest · deterministic verification']),
+  ]);
+  const hero = h('section', { class: 'cp-identity-hero' }, [
+    canvas,
+    shade,
+    pill,
     h('h1', {}, [route.title]),
-    h('p', {}, [route.summary]),
+    h('p', { class: 'modern-hero-sub' }, [route.summary]),
     ...(route.ctas.length > 0 ? [ctaRow(route.ctas)] : []),
+  ]);
+  queueMicrotask(() => {
+    startGhostFibers(canvas);
+  });
+  return hero;
+}
+
+function renderPublicNav(activeManifestPath: string): HTMLElement {
+  const items: readonly { readonly path: string; readonly label: string }[] = [
+    { path: '/', label: 'Overview' },
+    { path: '/product', label: 'Product' },
+    { path: '/how-it-works', label: 'How it works' },
+    { path: '/templates', label: 'Templates' },
+    { path: '/sample-report', label: 'Sample reports' },
+    { path: '/pricing', label: 'Pricing' },
+    { path: '/roadmap', label: 'Roadmap' },
+    { path: '/changelog', label: 'Changelog' },
+    { path: '/help', label: 'Help & FAQ' },
+  ];
+  const bar = h('div', { class: 'public-page-nav', role: 'group', 'aria-label': 'Public site sections' }, []);
+  for (const item of items) {
+    const link = h('a', { href: `#/p${item.path}` }, [item.label]);
+    if (item.path === activeManifestPath) {
+      link.setAttribute('aria-current', 'page');
+    }
+    bar.appendChild(link);
+  }
+  return bar;
+}
+
+function renderHomeProofStory(): HTMLElement {
+  const steps = [
+    {
+      id: 'impact',
+      label: '1. Impact & Scope',
+      title: 'Cross-boundary impact graph before any patch is proposed',
+      summary: 'Extracts proven, inferred, and unresolved edges across APIs, schemas, migrations, and consumers so hidden blast radius is visible up front.',
+      nodes: [
+        { k: 'Boundary', v: 'OpenAPI & DB schema' },
+        { k: 'Edge status', v: 'Proven · Inferred · Unresolved' },
+        { k: 'Fail-closed rule', v: 'Unresolved edges stay visible' },
+      ],
+    },
+    {
+      id: 'bundle',
+      label: '2. Candidate Bundle',
+      title: 'Coordinated multi-target patches under a typed mutation gateway',
+      summary: 'Candidate patches are scoped to allowed paths only. Protected oracles, verifier configuration, and policy rules cannot be modified by the candidate.',
+      nodes: [
+        { k: 'Gateway', v: 'Path & operation allowlist' },
+        { k: 'Oracle boundary', v: 'Frozen before execution' },
+        { k: 'Identity', v: 'Content-addressed SHA-256' },
+      ],
+    },
+    {
+      id: 'verifier',
+      label: '3. Independent Verifier',
+      title: 'Real execution inside an isolated guest boundary',
+      summary: 'Runs native compilers, migrations, services, and fault campaigns against the frozen oracle without exposing host sockets or tenant secrets.',
+      nodes: [
+        { k: 'Execution', v: 'Isolated guest runner' },
+        { k: 'Dimensions', v: 'Correctness · Perf · Resilience · Data' },
+        { k: 'Egress', v: 'Closed by default' },
+      ],
+    },
+    {
+      id: 'policy',
+      label: '4. Deterministic Verdict',
+      title: 'Policy computes the verdict from verifier evidence — never the model',
+      summary: 'Dimensions are evaluated separately without averaging. If any required proof is missing or incomplete, the verdict withholds assurance honestly.',
+      nodes: [
+        { k: 'Authority', v: 'Pure deterministic policy' },
+        { k: 'Aggregation', v: 'Zero dimension averaging' },
+        { k: 'Artifact store', v: 'Digest-verified evidence' },
+      ],
+    },
+  ] as const;
+
+  const stageTitle = h('h3', {}, [steps[0].title]);
+  const stageBody = h('p', { class: 'muted' }, [steps[0].summary]);
+  const flow = h('div', { class: 'proof-flow' }, []);
+  const stagePanel = h(
+    'div',
+    { class: 'proof-panel', id: 'proof-story-panel', role: 'tabpanel', 'aria-labelledby': `proof-tab-${steps[0].id}` },
+    [stageTitle, stageBody, flow],
+  );
+
+  const tabList = h('div', { class: 'proof-story-tabs', role: 'tablist', 'aria-label': 'Verification pipeline stages' }, []);
+  const buttons: HTMLButtonElement[] = [];
+
+  const selectStep = (index: number): void => {
+    const step = steps[index] ?? steps[0];
+    buttons.forEach((btn, idx) => {
+      btn.setAttribute('aria-selected', idx === index ? 'true' : 'false');
+    });
+    stagePanel.setAttribute('aria-labelledby', `proof-tab-${step.id}`);
+    stageTitle.textContent = step.title;
+    stageBody.textContent = step.summary;
+    flow.replaceChildren(
+      ...step.nodes.map((node) =>
+        h('div', { class: 'proof-flow-node' }, [
+          h('span', {}, [node.k]),
+          h('strong', {}, [node.v]),
+        ]),
+      ),
+    );
+  };
+
+  steps.forEach((step, idx) => {
+    const btn = h(
+      'button',
+      {
+        type: 'button',
+        role: 'tab',
+        id: `proof-tab-${step.id}`,
+        'aria-controls': 'proof-story-panel',
+        'aria-selected': idx === 0 ? 'true' : 'false',
+      },
+      [step.label],
+    );
+    btn.addEventListener('click', () => {
+      selectStep(idx);
+    });
+    buttons.push(btn);
+    tabList.appendChild(btn);
+  });
+
+  selectStep(0);
+
+  const techStrip = h('div', { class: 'cp-tech-strip' }, [
+    h('p', {}, ['DETERMINISTIC ASSURANCE PIPELINE · ZERO MODEL VERDICT AUTHORITY']),
+    h('div', { class: 'cp-tech-group' }, [
+      h('span', { class: 'cp-tech-logo' }, ['Impact Graph']),
+      h('span', { class: 'cp-tech-logo' }, ['Coordinated Bundle']),
+      h('span', { class: 'cp-tech-logo' }, ['Frozen Oracle']),
+      h('span', { class: 'cp-tech-logo' }, ['Isolated Verifier']),
+      h('span', { class: 'cp-tech-logo' }, ['Pure Policy Verdict']),
+      h('span', { class: 'cp-tech-logo' }, ['SHA-256 Evidence']),
+    ]),
+  ]);
+
+  const story = h('section', { class: 'proof-story' }, [
+    h('div', { class: 'proof-story-layout' }, [
+      h('div', {}, [
+        h('div', { class: 'eyebrow' }, ['Verification Architecture']),
+        h('h2', {}, ['How ChangeProof verifies a software change']),
+        h('p', { class: 'muted' }, [
+          'Explore each stage of the pipeline. Every verdict comes from deterministic policy over independent verifier receipts.',
+        ]),
+        tabList,
+      ]),
+      h('div', { class: 'proof-story-stage' }, [
+        h('div', { class: 'proof-stage-top' }, [
+          h('span', { class: 'proof-stage-dot' }, []),
+          h('span', { class: 'proof-stage-dot' }, []),
+          h('span', { class: 'proof-stage-dot' }, []),
+          h('span', { class: 'proof-stage-sample' }, [' ARCHITECTURE WALKTHROUGH ']),
+        ]),
+        stagePanel,
+      ]),
+    ]),
+  ]);
+
+  const wrap = h('div', {}, [techStrip, story]);
+  return wrap;
+}
+
+function renderPublicFooter(): HTMLElement {
+  return h('div', { class: 'modern-footer' }, [
+    h('span', {}, ['ChangeProof AI · Evidence-backed software change verification']),
+    h('span', {}, ['Deterministic policy · Frozen oracle · Isolated execution']),
   ]);
 }
 
@@ -155,13 +388,14 @@ async function renderFaqBlock(host: HTMLElement): Promise<void> {
 async function renderTemplatesBlock(host: HTMLElement): Promise<void> {
   try {
     const templates = await apiGet<readonly PublicTemplate[]>('/api/site/templates');
-    const cards = h('div', {}, []);
+    const cards = h('div', { class: 'grid3' }, []);
     for (const template of templates) {
       cards.appendChild(
         h('article', { class: 'card' }, [
+          h('div', { class: 'eyebrow' }, ['Starter Template']),
           h('h2', {}, [template.title]),
           h('p', {}, [template.description]),
-          h('p', {}, [h('a', { class: 'button', href: `#/p/templates/${template.id}` }, ['Open template'])]),
+          h('p', {}, [h('a', { class: 'button primary', href: `#/p/templates/${template.id}` }, ['Open template'])]),
         ]),
       );
     }
@@ -175,14 +409,14 @@ async function renderTemplatesBlock(host: HTMLElement): Promise<void> {
 async function renderSamplesBlock(host: HTMLElement): Promise<void> {
   try {
     const samples = await apiGet<readonly SampleReport[]>('/api/site/samples');
-    const cards = h('div', {}, []);
+    const cards = h('div', { class: 'grid2' }, []);
     for (const sample of samples) {
       cards.appendChild(
         h('article', { class: 'card' }, [
-          h('h2', {}, [sample.title]),
           h('p', {}, [badge('info', 'Synthetic sample')]),
+          h('h2', {}, [sample.title]),
           h('p', {}, [sample.summary]),
-          h('p', {}, [h('a', { class: 'button', href: `#/p/samples/${sample.id}` }, ['Open sample'])]),
+          h('p', {}, [h('a', { class: 'button primary', href: `#/p/samples/${sample.id}` }, ['Open sample'])]),
         ]),
       );
     }
@@ -216,7 +450,7 @@ async function renderChangelogBlock(host: HTMLElement): Promise<void> {
       return section;
     };
     // Design notes and shipped releases stay visibly separate (FR3-37).
-    host.append(group('Design notes', log.design), group('Releases', log.releases));
+    host.appendChild(h('div', { class: 'split' }, [group('Design notes', log.design), group('Releases', log.releases)]));
   } catch (error) {
     const message = error instanceof ApiRequestError ? error.failure.message : 'Changelog failed to load.';
     host.appendChild(errorState('Changelog unavailable', message));
@@ -226,10 +460,10 @@ async function renderChangelogBlock(host: HTMLElement): Promise<void> {
 async function renderRoadmapBlock(host: HTMLElement): Promise<void> {
   try {
     const items = await apiGet<readonly RoadmapItem[]>('/api/site/roadmap');
-    const section = h('section', { class: 'card' }, [h('h2', {}, ['Qualification status'])]);
+    const grid = h('div', { class: 'grid2' }, []);
     for (const item of items) {
       const tone = item.status === 'supported' ? 'ok' : item.status === 'in-qualification' ? 'warn' : 'info';
-      section.appendChild(
+      grid.appendChild(
         h('article', { class: 'faq-item' }, [
           h('h3', {}, [item.title]),
           h('p', {}, [badge(tone, item.status)]),
@@ -237,6 +471,7 @@ async function renderRoadmapBlock(host: HTMLElement): Promise<void> {
         ]),
       );
     }
+    const section = h('section', { class: 'card' }, [h('h2', {}, ['Qualification status']), grid]);
     host.appendChild(section);
   } catch (error) {
     const message = error instanceof ApiRequestError ? error.failure.message : 'Roadmap failed to load.';
@@ -247,15 +482,21 @@ async function renderRoadmapBlock(host: HTMLElement): Promise<void> {
 async function renderPricingBlock(host: HTMLElement): Promise<void> {
   try {
     const pricing = await apiGet<PricingSnapshot>('/api/site/pricing');
+    const grid = h('div', { class: 'grid3' }, []);
+    for (const tier of pricing.tiers) {
+      grid.appendChild(
+        h('article', { class: 'faq-item' }, [
+          h('div', { class: 'eyebrow' }, ['Plan Tier']),
+          h('h3', {}, [tier.name]),
+          h('p', {}, [tier.notes]),
+        ]),
+      );
+    }
     const section = h('section', { class: 'card' }, [
       h('h2', {}, ['Plans']),
       h('p', { class: 'muted' }, [`Pricing version ${pricing.pricingVersion} · ${pricing.currency}`]),
+      grid,
     ]);
-    for (const tier of pricing.tiers) {
-      section.appendChild(
-        h('article', { class: 'faq-item' }, [h('h3', {}, [tier.name]), h('p', {}, [tier.notes])]),
-      );
-    }
     host.appendChild(section);
   } catch (error) {
     const message = error instanceof ApiRequestError ? error.failure.message : 'Pricing failed to load.';
@@ -277,9 +518,13 @@ async function renderPublicPage(outlet: HTMLElement, manifestPath: string): Prom
     outlet,
     () => apiGet<PublicRoute>(`/api/site/routes?path=${encodeURIComponent(manifestPath)}`),
     async (route) => {
-      outlet.replaceChildren(pageHead(route));
+      outlet.replaceChildren(renderPublicNav(manifestPath), pageHead(route));
+      if (manifestPath === '/') {
+        outlet.appendChild(renderHomeProofStory());
+      }
       const block = SECTION_BLOCKS[manifestPath];
       if (block !== undefined) await block(outlet);
+      outlet.appendChild(renderPublicFooter());
     },
   );
 }
