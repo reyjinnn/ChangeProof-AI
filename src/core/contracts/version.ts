@@ -33,6 +33,9 @@ export const SCHEMA_VERSIONS = {
   CharacterizationRecord: '1',
   OutcomeValidation: '1',
   VerifyResult: '1',
+  AdapterFixRequest: '1',
+  AdapterPatch: '1',
+  AdapterCheckPlan: '1',
 
   // Readiness, reuse and evaluation contracts (PRD §20)
   ReadinessAssessment: '1',

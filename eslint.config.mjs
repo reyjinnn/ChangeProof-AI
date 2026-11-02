@@ -11,7 +11,7 @@ import tseslint from 'typescript-eslint';
  */
 export default tseslint.config(
   {
-    ignores: ['dist/**', 'node_modules/**', 'runs/**', 'fixtures/**', 'coverage/**'],
+    ignores: ['dist/**', 'node_modules/**', 'runs/**', 'fixtures/**', 'coverage/**', '.venv/**'],
   },
   js.configs.recommended,
   {
