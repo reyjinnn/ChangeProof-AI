@@ -5,13 +5,25 @@ import { z } from 'zod';
 
 import {
   CapabilityRecordSchema,
+  ChangeProofError,
   SystemGraphSchema,
+  type AdapterCheckPlan,
   type CapabilityKey,
   type CapabilityRecord,
   type GraphEdge,
   type GraphNode,
 } from '../../../core/index.js';
-import { snapshotId, type AdapterDefinition, type AdapterExtractInput, type AdapterExtractResult } from '../types.js';
+import {
+  ADAPTER_CONTRACT_VERSION,
+  snapshotId,
+  type AdapterApplyInput,
+  type AdapterApplyResult,
+  type AdapterDefinition,
+  type AdapterExtractInput,
+  type AdapterExtractResult,
+  type AdapterPlanFixResult,
+} from '../types.js';
+import { applyAdapterPatch } from '../apply.js';
 import { parseNativeJson, runNative } from '../native/process.js';
 import { AdapterRegistry } from '../registry/index.js';
 
@@ -136,7 +148,7 @@ const ROSLYN_HELPER_PROJECT = (sdkDirectory: string): string => `
 
 export const DOTNET_ADAPTER: AdapterDefinition = {
   name: 'dotnet',
-  contractVersion: '2',
+  contractVersion: ADAPTER_CONTRACT_VERSION,
   key: DOTNET_KEY,
   records: [DOTNET_ADAPTER_RECORD],
 
@@ -297,6 +309,24 @@ export const DOTNET_ADAPTER: AdapterDefinition = {
         diagnostics.push('Temporary Roslyn helper cleanup failed.');
       }
     }
+  },
+
+  planFix(): Promise<AdapterPlanFixResult> {
+    return Promise.resolve({
+      status: 'unsupported',
+      patch: null,
+      unknowns: [],
+      unsupportedSurfaces: ['.NET is an L1-only scope: discovery and extraction, no fix planning.'],
+      diagnostics: [],
+    });
+  },
+
+  async applyPatch(input: AdapterApplyInput): Promise<AdapterApplyResult> {
+    return applyAdapterPatch(input);
+  },
+
+  planChecks(): Promise<AdapterCheckPlan> {
+    return Promise.reject(new ChangeProofError('.NET plans no fixes, so there is no check plan to produce.'));
   },
 };
 
