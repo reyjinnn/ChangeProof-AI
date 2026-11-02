@@ -2,10 +2,10 @@
 
 **Date:** 2 November 2026
 **Application root:** this repository (`ChangeProof-AI/`), branch `development`
-**Phase status:** `in_progress` — allocated tasks T6-1..T6-4
-(T-42..T-45) `done` (§§2–6 + gate §7); T6-5..T6-8 (T-46..T-49)
-`not_started` (status §8). No full WP and no G3 gate passed;
-local UI pass alone passes no gate.
+**Phase status:** `in_progress` — allocated tasks T6-1..T6-7
+(T-42..T-48) `done` (§§2–6 + gate §7, §9 + gate §10, §12 + gate §13, §15 + gate §16); T6-8
+(T-49) `not_started` (status §17). No full WP and no G3 gate
+passed; local UI pass alone passes no gate.
 **Plan revision:** 2 (24 October 2026).
 
 ## 1. Entry audit (evidence, not summary)
@@ -435,15 +435,514 @@ page `scrollWidth == clientWidth` (390) on run detail with the
 payload `pre` scrolling internally; zero console errors; full
 E2E (incl. axe on runs/new/detail) green. Verdict: ship.
 
-## 8. Phase-6 status: T6-1..T6-4 done, T6-5..T6-8 remain
+## 9. T-46 / T6-5 / WP3-12+29 — evidence / publication / export UI
 
-Allocated tasks T6-1..T6-4 (T-42..T-45) are `done` with the
-proof above. T6-5..T6-8 (T-46..T-49: evidence/publication/
-export, notifications/search, support/collaboration,
-billing/BYOK/enterprise UI) are `not_started`, so phase-6 as a
-whole stays `in_progress`; the next dependency-ready task is
-T-46 (T6-5). Full WP3-12/14/21/22/24/25/26/27/28/29/30/31/32
-and every G3 gate stay open until phase-7: pilot access,
-backend gaps (§§5–6), production hardening, workers/real
-execution, and whole-system qualification all remain. No gate
-passes on UI evidence alone.
+Task ID / parent WP: T-46 (T6-5) / WP3-12+29.
+Requirement IDs: FR3-18/19/20/21/31/35; NEG3-14/33/35 (shape).
+User-visible outcome: per-run evidence library, read-only escaped
+viewer over the digest-verified download, honest publication panel,
+labeled JSON export — every control over a real endpoint, no
+decorative controls, no UI-generated verdict.
+Prerequisite evidence: T-42..T-45 allocated `done`; T-28 lifecycle
+store + wiring (task-level `done`); backend audit in this section.
+Allowed source/config changes: `apps/dashboard/src/{api,main,
+pages/evidence}.ts`, `apps/dashboard/src/pages/{evidence.test,
+runs}.ts`, `tests/e2e/{run,infra,specs/evidence}.mjs`,
+`docs/feature-coverage.md`, this report. No contract, policy,
+verdict, threshold, or store-behavior changes; no new HTTP
+endpoints (all three pages reuse events + artifact bytes +
+providers endpoints).
+
+Backend audit (verified in source before UI work):
+
+- `EvidenceStore` is put/get/has only — no enumeration, no
+  metadata. The only artifact index the backend owns is the run's
+  `kind='artifact'` events (`payload.digest`), served by the
+  existing cursor-paged events endpoint (limit ≤ 100). The library
+  therefore lists one run's artifacts, honestly capped at 500
+  events with a labeled truncation note.
+- `downloadArtifact` is event-linked, tombstone-aware, and
+  digest-verified twice (file-store `get` raises
+  `EvidenceIntegrityError` first; the lifecycle re-hash second).
+  Tamper answers 400 with the store message verbatim; unknown →
+  404 without disclosure; unshared → 403.
+- Publication: `GitHubClient.findPullRequest` exists but needs a
+  broker token + authorized installation; T-44 established no
+  authorized App, and no PR/CI read path is exposed over HTTP.
+  The panel reports availability from `/api/auth/providers` and
+  shows no PR/CI state rather than guessing it.
+- Owner outcome reporting and evaluation denominators have no
+  listing backend (`evaluation` is a file case store). One
+  absence note; no figures invented.
+
+What was built (tests-first):
+
+- `apps/dashboard/src/pages/evidence.ts` (new):
+  `#/evidence?run=` library (artifact filter, hex-64 digest
+  validation, View/Download/Copy per entry, publication +
+  export + outcomes sections) and `#/evidence/view?run=&digest=`
+  viewer (256 KiB preview cap, NUL/UTF-8 binary refusal with
+  download kept, full digest + "verified by the server when
+  served" label, 400→integrity panel / 404→unknown /
+  403→unshared / 401→session-expired).
+- `apiGetBytes` (new in `api.ts`): octet-stream on success,
+  JSON-envelope error mapping on failure, same offline shape.
+- `buildEvidenceExport` (pure, unit-tested): client-side JSON
+  snapshot of fetched server data, provenance-labeled non-proof.
+- `runs.ts`: artifact events gain a View link; run header gains
+  "Open the evidence library". `main.ts` registers the pages.
+- `tests/e2e/run.mjs` passes `evidenceDir` to specs (additive);
+  `tests/e2e/specs/evidence.mjs` (new): guest guard, real
+  register→submit journey, worker-simulation seeding (SQL event
+  row + digest-named bytes), library → viewer → tamper-refusal
+  drive, axe + overflow + console + zero-external asserts, with
+  `CP_E2E_WIDTH`/`CP_E2E_DARK` gate overrides.
+
+Security finding + harness repair (fp-check TRUE POSITIVE):
+
+- The new spec exposed a real cross-tenant leak: with two
+  tenants' runs in the shared suite database, the runs spec's
+  fresh tenant saw the evidence tenant's run + project on `#/runs`
+  (outlet dump captured as evidence).
+- Root cause: `tests/e2e/infra.mjs` handed the server a
+  **superuser** `DATABASE_URL`, and superusers bypass RLS
+  entirely — so `deriveContext` granted all projects globally
+  and search fenced nothing. Product RLS design (policies +
+  NOBYPASSRLS `app_user` + per-table grants) is correct; only
+  the harness role was wrong. Native suites already used
+  `app_user` (T-44 pattern).
+- Repair (harness-only, no product change): `infra.mjs` returns
+  `appDatabaseUrl` (`app_user`, same disposable credential as
+  native tests); `run.mjs` starts the server on it; specs keep
+  the superuser URL for seeding. Before: leak reproduced
+  (`evidence runs` → runs FAIL). After: full suite green. The
+  suite itself is now the concurrent-tenant regression guard
+  (runs spec's `No runs yet` fails on any future leak).
+
+Acceptance checks: component 91/91 (12 new); typecheck 0; lint 0
+(158 modules / 469 deps, zero violations); `pnpm build` 0;
+`pnpm build:ui` 0; native E2E evidence spec plus auth + public +
+runs + shell, all green (gate §10).
+Protected oracle / proof scope: evidence mechanics only; the
+viewer repeats the server's integrity verdict verbatim and
+renders no verdict of its own; export is labeled non-proof.
+Artifacts expected: evidence pages, bytes helper, E2E spec,
+coverage rows — present.
+Actual commands + exit codes: `pnpm test:ui` → 0 (91/91);
+`pnpm typecheck` → 0; `pnpm lint` → 0 (158/469);
+`pnpm build` → 0; `pnpm build:ui` → 0;
+`node tests/e2e/run.mjs evidence` → 0 (`e2e ok: evidence`,
+also at 390px and dark); `pnpm test:e2e` → 0 (all five specs).
+Status + remaining blocker: allocated task `done`. Full
+WP3-12/29 stay open: backend gaps above + phase-7 acceptance.
+Next dependency-ready task: T-47 (executed next, §11+).
+
+## 10. T-46 interface-quality gate (required before handoff)
+
+Method: the evidence spec itself carries the gate — axe on the
+library + viewer, overflow query (page `scrollWidth` plus every
+`main#outlet` element except internally-scrolling `pre`/`code`),
+console/pageerror collection, and zero-external-request assert —
+run at 1280px, at 390px (`CP_E2E_WIDTH=390`), and dark
+(`CP_E2E_DARK=1`, OS dark scheme).
+
+Findings (both spec-side, product needed no change):
+
+- Strict-mode duplicate `Evidence viewer` text (h1 + route
+  announcer): spec waits on `.first()`. No product change —
+  the announcer is required accessibility behavior.
+- Console-error assert caught the browser's own resource-load
+  log for the intentional 400 tamper refusal: spec filters
+  `Failed to load resource` lines (expected HTTP negatives),
+  keeps pageerror + all other console errors fatal.
+
+Evidence after fix: `e2e ok: evidence` at all three
+configurations; zero axe violations; zero overflow; zero console
+errors; zero external requests. Verdict: ship.
+
+## 12. T-47 / T6-6 / WP3-29 — notifications / search UI
+
+Task ID / parent WP: T-47 (T6-6) / WP3-29.
+Requirement IDs: FR3-39; NEG3-31/32/34 (mapping layer).
+User-visible outcome: persisted inbox (cursor paging, unread
+filter, read/dismiss/read-all, live count), five-category
+preferences, and a Ctrl/Cmd+K search palette over grant-scoped
+search — every control over a real endpoint, deep links safe,
+no stale counts anywhere.
+Prerequisite evidence: T-42..T-46 allocated `done`; T-29
+notifications store + wiring (task-level `done`); backend audit
+in this section.
+Allowed source/config changes: `src/http/{routes-
+notifications,index,server,start}.ts`, `apps/dashboard/src/
+{shell,main,pages/notifications,pages/search}.ts`,
+`apps/dashboard/src/pages/{notifications.test,search.test}.ts`,
+`tests/{http/t47-notifications,native/notifications-http,
+e2e/specs/inbox}.mjs`, `docs/feature-coverage.md`, this report.
+No contract, policy, verdict, threshold, or store-behavior
+changes.
+
+Backend audit (verified in source before UI work):
+
+- `NotificationsStore` exposes exactly what the UI needs:
+  `listNotifications` (limit ≤ 50, opaque cursor, unreadOnly,
+  per-user rows, dismissed excluded, project/repository/run
+  links re-checked at list time so a lost grant hides item +
+  snippet + count), `markRead` (idempotent) /
+  `markDismissed` / `markAllRead` (counted),
+  `getPreferences` / `setPreferences` (five categories).
+- `publishFromEvent` refuses forged recipients (NEG3-31),
+  suppresses muted categories, and collapses duplicate event
+  ids; it and the outbox claim/ack pair stay
+  worker/control-plane-only and are not exposed over HTTP —
+  the 404-on-publish route is asserted, not assumed.
+- Operator sessions carry no inbox authority (NEG3-34 refusal
+  in the store); the HTTP layer maps it to 403.
+- Search (`POST /api/search`, T-45) is reused unchanged for
+  the palette; counts/snippets arrive post-grant-filter.
+
+What was built (tests-first):
+
+- `src/http/routes-notifications.ts` (new): six endpoints —
+  inbox list (limit/cursor/unreadOnly query), per-row
+  read/dismiss, read-all, preference get/set. Unknown ids →
+  404 without disclosure; operator → 403; guest → 401;
+  worker-only calls unexposed. `server.ts` dispatches the
+  paths (503 without a database); `start.ts` wires
+  `composeNotifications` from the shared pool.
+- `apps/dashboard/src/pages/notifications.ts` (new): `#/inbox`
+  (workspace nav) with fresh-count header, unread filter,
+  cursor Load more, per-item read/dismiss, read-all with
+  marked-count confirmation, and the preferences fieldset.
+  Every action re-lists from the server instead of guessing
+  the new count locally. Run ids link to run detail;
+  `deepLink` values render as plain text (`[DERIVED]`: the
+  `/app` surface they name is not dashboard hashes, so they
+  are never hrefs).
+- `apps/dashboard/src/pages/search.ts` (new) + shell trigger:
+  topbar `Search (Ctrl+K)` button with `aria-keyshortcuts`,
+  document-level Ctrl/Cmd+K, modal palette (reused focus
+  trap + Escape + trigger refocus) with text + scope form,
+  run/project/audit-event links, total count, and guest /
+  empty / error states that keep the form.
+- `[DERIVED]` non-build: no shell unread badge — a polling
+  badge could show the stale counts NEG3-32 forbids, so the
+  count renders only from fresh list responses.
+
+Acceptance checks: component 106/106 (15 new: 11 inbox +
+4 palette); http 27/27 (7 new, stub stores); native
+notifications-http 6/6 (real PG16 + real server as app_user,
+incl. NEG3-31 forged publish, NEG3-32 lost-grant hide,
+cross-tenant 404 + isolation); typecheck 0; lint 0 (161
+modules / 485 deps, zero violations); `pnpm build` 0;
+`pnpm build:ui` 0; native E2E inbox spec plus auth + evidence
++ public + runs + shell, all green (gate §13).
+Protected oracle / proof scope: inbox mechanics only; no
+verdicts; publish/outbox unreachable from the browser.
+Artifacts expected: notifications routes, inbox + palette,
+native + E2E tests, coverage rows — present.
+Actual commands + exit codes: `pnpm test:ui` → 0 (106/106);
+`pnpm vitest run tests/http` → 0 (27/27);
+`pnpm vitest run --config vitest.native.config.ts
+tests/native/notifications-http.test.ts` → 0 (6/6, disposable
+PG16 `cp-notifhttp-pg`, torn down);
+`pnpm typecheck` → 0; `pnpm lint` → 0 (161/485);
+`pnpm build` → 0; `pnpm build:ui` → 0;
+`node tests/e2e/run.mjs inbox` → 0 (`e2e ok: inbox`, also at
+390px and dark); `pnpm test:e2e` → 0 (all six specs).
+Full unit suite: 822 passed, 4 failed — all 4 pre-existing
+on the stashed baseline (Python-adapter environment x3 +
+one ESLint-inline timeout under parallel load), none in
+this task's scope.
+Status + remaining blocker: allocated task `done`. Full
+WP3-29 stays open: phase-7 acceptance (workers, channels).
+Next dependency-ready task: T-48 (executed next, §14+).
+
+## 13. T-47 interface-quality gate (required before handoff)
+
+Method: the inbox spec carries the gate — axe on the inbox +
+open palette, overflow query, console/pageerror collection,
+zero-external-request assert — at 1280px, 390px
+(`CP_E2E_WIDTH=390`), and dark (`CP_E2E_DARK=1`). Palette
+Escape/refocus and checkbox toggle behavior are asserted in
+the real browser (the component suite drives `change`
+directly; real activation is E2E by design).
+
+Findings: none — `e2e ok: inbox` at all three configurations
+on the first gate run; zero axe violations; zero overflow;
+zero console errors; zero external requests. Verdict: ship.
+
+## 15. T-48 / T6-7 / WP3-30 — support / collaboration UI
+
+Task ID / parent WP: T-48 (T6-7) / WP3-30.
+Requirement IDs: FR3-41/42; NEG3-34/35.
+User-visible outcome: support desk (tickets, access
+request/decide/revoke, tenant incident list), an operator console
+that owners cannot reach (incidents, lease-fenced
+inspect/drain/quarantine, action audit), and run discussions
+(threads, comments, edits, history, audience, shares) — every
+control over a real endpoint, hostile markup refused at the
+boundary and escaped in render.
+Prerequisite evidence: T-42..T-47 allocated `done`; T-30 support
++ collaboration stores and wiring (task-level `done`); backend
+audit in this section.
+Allowed source/config changes: `src/http/{routes-teamwork,
+index,server,start}.ts`, `apps/dashboard/src/{main,
+pages/support,operator,threads,runs}.ts`, component tests,
+`tests/{http/t48-teamwork,native/teamwork-http,
+e2e/specs/teamwork}.mjs`, `docs/feature-coverage.md`, this
+report. No contract, policy, verdict, threshold, or
+store-behavior changes.
+
+Backend audit (verified in source before UI work):
+
+- `SupportStore`: owner/admin triage+decide gates, member-only
+  ticket visibility, ticket open→triaged→resolved→closed flow,
+  request/approve+grant/deny/revoke with scope-holding checks
+  (request is never a grant), tenant-visible incident list,
+  operator-only report/ack/resolve + inspect/drain/quarantine
+  under the lease fence with stale-epoch refusal, and an
+  action audit owners may read. Internal scope/audit calls
+  stay unexposed.
+- `CollaborationStore`: run-scoped threads pinned to a
+  candidate digest, comments with versions + superseded-only
+  history, `CommentBodySchema` refusing active markup at
+  write time (400), audience internal/reviewer, shares with
+  membership checks, worker-only `recordCandidateRevision`
+  marking older comments outdated (displayed, never computed
+  by the UI).
+- Gaps recorded, not faked: no access-request/grant listing
+  (decide/revoke take pasted receipt ids), no user lookup
+  (shares take typed user ids), no operator-membership API
+  (tests flip the role over SQL).
+
+What was built (tests-first):
+
+- `src/http/routes-teamwork.ts` (new): 21 endpoints across
+  `/api/support`, `/api/operator`, `/api/threads`,
+  `/api/comments`. Unknown ids → 404 without disclosure;
+  role refusals → 403; worker/internal calls unexposed
+  (404 asserted). `server.ts` dispatches (503 without a
+  database); `start.ts` wires support + collaboration (the
+  notifications composition is shared, not doubled).
+- `#/support` (workspace nav): ticket list with per-status
+  transition, file form, access request/decide/revoke forms
+  with receipt ids, incident list, operator link only for
+  operator sessions.
+- `#/operator` (no nav): session-role gate refuses owners
+  before any data fetch; operators get incident
+  report/ack/resolve, inspect-then-fenced-action with the
+  epoch from inspect (reset after every attempt), and the
+  action audit.
+- `#/threads?run=` (linked from run detail): run-scoped
+  thread list, create form prefilled with the run's own
+  submit digest, per-thread comments with post/edit/history,
+  resolve, audience, share/revoke, and outdated labels.
+  Bodies render through the escaping builder; the server's
+  active-markup refusal surfaces verbatim.
+
+Acceptance checks: component 122/122 (16 new: 6 support +
+4 operator + 6 threads); http 33/33 (6 new, stub stores);
+native teamwork-http 6/6 (real PG16 + real server as
+app_user, incl. member invite/accept, NEG3-34 both
+directions, lease-fence drain, XSS boundary refusal,
+outdated marking, cross-tenant 404); typecheck 0; lint 0
+(165 modules / 508 deps, zero violations); `pnpm build` 0;
+`pnpm build:ui` 0; native E2E teamwork spec plus six prior
+specs, all green (gate §16).
+Protected oracle / proof scope: teamwork mechanics only;
+comments carry no verdict linkage; publish/outbox untouched.
+Artifacts expected: teamwork routes, three pages, native +
+E2E tests, coverage rows — present.
+Actual commands + exit codes: `pnpm test:ui` → 0 (122/122);
+`pnpm vitest run tests/http` → 0 (33/33);
+`pnpm vitest run --config vitest.native.config.ts
+tests/native/teamwork-http.test.ts` → 0 (6/6, disposable
+PG16 `cp-teamworkhttp-pg`, torn down);
+`pnpm typecheck` → 0; `pnpm lint` → 0 (165/508);
+`pnpm build` → 0; `pnpm build:ui` → 0;
+`node tests/e2e/run.mjs teamwork` → 0 (`e2e ok: teamwork`,
+also at 390px and dark); `pnpm test:e2e` → 0 (all seven
+specs).
+Status + remaining blocker: allocated task `done`. Full
+WP3-30 stays open: phase-7 acceptance (gap APIs, workers).
+Next dependency-ready task: T-49 (executed next, §17+).
+
+## 16. T-48 interface-quality gate (required before handoff)
+
+Method: the teamwork spec carries the gate — axe on support
++ operator console + threads, overflow query,
+console/pageerror collection, zero-external-request assert —
+at 1280px, 390px (`CP_E2E_WIDTH=390`), and dark
+(`CP_E2E_DARK=1`).
+
+Findings:
+
+- Overflow probe flagged an `input`: form controls scroll
+  long values internally by design, so the probe now skips
+  `input`/`textarea`/`select` like `pre`/`code` (probe
+  correction in all three owning specs, not a product
+  change).
+- axe `select-name` on the threads page: the per-thread
+  audience select had no accessible name — fixed with an
+  `aria-label` in `threads.ts`, then green.
+
+Evidence after fix: `e2e ok: teamwork` at all three
+configurations; zero axe violations; zero overflow; zero
+console errors; zero external requests. Verdict: ship.
+
+## 17. Phase-6 status: T6-1..T6-7 done, T6-8 remains
+
+Allocated tasks T6-1..T6-7 (T-42..T-48) are `done` with the
+proof above. T6-8 (T-49: billing/BYOK/enterprise UI) is
+`not_started`, so phase-6 as a whole stays `in_progress`; the
+next dependency-ready task is T-49 (T6-8). Full
+WP3-12/14/21/22/24/25/26/27/28/29/30/31/32 and every G3 gate stay
+open until phase-7: pilot access, backend gaps (§§5–6, §9),
+production hardening, workers/real execution, and
+whole-system qualification all remain. No gate passes on UI
+evidence alone.
+
+## 18. T-49 / T6-8 / WP3-24+31+32 — billing / BYOK / enterprise UI
+
+Task ID / parent WP: T-49 (T6-8) / WP3-24+31+32.
+Requirement IDs: FR3-34/43/44; NEG3-21/36/37/38.
+User-visible outcome: a billing page (period cap, consumed,
+reserved, remaining, open reservations, and an honest
+no-invoice-listing note) and an enterprise page (BYOK
+provision/lookup/rotate/revoke over fingerprints only, SAML
+provision/rotate/link/disable, SCIM mint-once/revoke) — every
+control over a real endpoint, key material never rendered.
+Prerequisite evidence: T-42..T-48 allocated `done`; T-24 usage
++ T-31 distribution + T-32 identity stores and wiring
+(task-level `done`); backend audit in this section.
+Allowed source/config changes: `src/http/{routes-enterprise,
+index,server,start}.ts`, `apps/dashboard/src/{main,
+pages/billing,enterprise}.ts`, component tests,
+`tests/{http/t49-enterprise,native/enterprise-http,
+e2e/specs/enterprise}.mjs`, `docs/feature-coverage.md`, this
+report. One route-mapping fix (`owner or admin`), one
+boundary-typing fix (orchestrator types); no contract,
+policy, verdict, threshold, or store-behavior changes.
+
+Backend audit (verified in source before UI work):
+
+- `UsageStore`: entitlement + reservation + consumption
+  ledger with `readBalances`; `recordPaymentEvent` verifies
+  the provider HMAC, ignores idempotent replays, and refuses
+  a refund without a recorded charge (NEG3-36). No HTTP
+  exposes the webhook — native calls the store directly.
+- `ByokStore` (V9): provision requires the broker to already
+  hold the ref (out-of-band CLI/vault onboarding; fails
+  closed otherwise), rows carry fingerprints only, rotation
+  versions, revoke-then-read shows `revoked` (NEG3-37).
+  Member writes refused; member reads allowed.
+- `SamlStore`: owner/admin provision with a real
+  certificate-fingerprint gate (garbage PEM refused),
+  rotation, disablement, and subject links that require a
+  current membership — email similarity never merges
+  (NEG3-38). Issuer/audience/destination pinned per tenant.
+- `ScimStore`: owner/admin mint returns the value once
+  (stored hashed); revoke is tenant-scoped and idempotent —
+  foreign and already-revoked ids both answer
+  `revoked: false`, indistinguishably, so no existence leaks
+  across tenants (NEG3-21). An earlier draft mapped foreign
+  revokes to 404; source review showed that would leak
+  token existence, so the route keeps the store's quiet
+  contract and the tests assert it.
+- Gaps recorded, not faked: no invoice/payment-method
+  listing, no credential/token listing (pasted ids), no user
+  lookup (typed ids), broker preload out-of-band only.
+
+What was built (tests-first):
+
+- `src/http/routes-enterprise.ts` (new): balances read,
+  BYOK provision/get/rotate/revoke, SAML get/provision/
+  rotate/link/disable, SCIM mint/revoke. Unknown/missing →
+  404; `owner or admin` refusals → 403 (fixed mid-task: the
+  real guard says "requires", the first pattern matched
+  only "require"); unmapped store errors → 400 by the
+  server frame. `server.ts` dispatches (503 without a
+  database); `start.ts` wires usage + distribution +
+  identity saml/scim with an empty runtime broker (fail
+  closed by construction). Route types come from
+  orchestrator compositions only (boundary fix §19).
+- `#/billing` (workspace nav): period line with remaining
+  arithmetic, reservations table with run links, empty
+  state, invoices card with the no-listing note, error
+  retry, guest login card.
+- `#/enterprise` (workspace nav): BYOK card (provision
+  form, lookup-by-ref with fingerprint/rotation detail,
+  rotate, revoke), SAML card (empty-state provision form
+  with PEM textareas, connection detail, rotate, explicit
+  subject link, disable), SCIM card (mint-once display,
+  revoke-by-id with the quiet already-revoked-or-unknown
+  message). Server refusals surface verbatim.
+
+Acceptance checks: component 132/132 (10 new: 4 billing +
+6 enterprise); http 38/38 (5 new, stub stores); native
+enterprise-http 5/5 (real PG16 + real server as app_user,
+incl. HMAC webhook +/- replay, charge-before-refund,
+broker-missing 404, rotation 2, member-write 403,
+real-key SAML cycle, SCIM fence proof via own-revoke-true
+after the foreign attempt); typecheck 0; lint 0
+(168 modules / 526 deps, zero violations); `pnpm build` 0;
+`pnpm build:ui` 0; native E2E enterprise spec plus seven
+prior specs, all green (gate §19).
+Protected oracle / proof scope: enterprise mechanics only;
+no verdict, policy, or publication linkage; payment
+provider stays a recorded decision (test HMAC only).
+Artifacts expected: enterprise routes, two pages, native +
+E2E tests, coverage rows — present.
+Actual commands + exit codes: `pnpm test:ui` → 0 (132/132);
+`pnpm vitest run tests/http` → 0 (38/38);
+`pnpm vitest run --config vitest.native.config.ts
+tests/native/enterprise-http.test.ts` → 0 (5/5, disposable
+PG16 `cp-enterprisehttp-pg`, torn down);
+`pnpm typecheck` → 0; `pnpm lint` → 0 (168/526);
+`pnpm build` → 0; `pnpm build:ui` → 0;
+`node tests/e2e/run.mjs enterprise` → 0 (`e2e ok:
+enterprise`, also at 390px and dark); `pnpm test:e2e` → 0
+(all eight specs).
+Status + remaining blocker: allocated task `done`. Full
+WP3-24/31/32 stay open: phase-7 acceptance (live-IdP row,
+payment provider, gap APIs, workers).
+Next dependency-ready task: T-50 (phase-7, G3-01/G3-02).
+
+## 19. T-49 interface-quality gate (required before handoff)
+
+Method: the enterprise spec carries the gate — axe on
+billing + enterprise, overflow query, console/pageerror
+collection, zero-external-request assert — at 1280px,
+390px (`CP_E2E_WIDTH=390`), and dark (`CP_E2E_DARK=1`).
+
+Findings:
+
+- E2E SAML-link timeout: the rotate step waited on issuer
+  text that was already visible, so the follow-up fills
+  raced the card re-render (spec race, not a product bug).
+  Fixed by waiting for the rotate POST response before
+  touching the re-rendered form — then green.
+- Component-test stubs: a malformed error envelope
+  (`error:` as a string, which the server never sends)
+  crashed `errorState` in happy-dom — stub corrected to
+  the real envelope; and PEM fields moved from `input`
+  (which strips newlines) to `textarea`.
+
+Evidence after fix: `e2e ok: enterprise` at all three
+configurations; zero axe violations; zero overflow; zero
+console errors; zero external requests. Verdict: ship.
+
+## 20. Phase-6 status: T6-1..T6-8 done, phase-7 next
+
+Allocated tasks T6-1..T6-8 (T-42..T-49) are `done` with the
+proof above: shell, public site, auth/settings, runs,
+evidence, inbox/search, teamwork, billing/enterprise —
+132 component, 38 HTTP-unit, full native per slice, and
+eight E2E specs green with the quality gate shipped per
+task. Phase-6 as a whole is `done` on its allocation. Full
+WP3-12/14/21/22/24/25/26/27/28/29/30/31/32 and every G3
+gate stay open until phase-7: pilot access, backend gaps
+(coverage gaps list), production hardening, workers/real
+execution, and whole-system qualification all remain. No
+gate passes on UI evidence alone. Next dependency-ready
+task: T-50 (phase-7, G3-01/G3-02 + qualified-guest probes).

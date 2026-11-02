@@ -38,6 +38,7 @@ coverage/
 *.log
 npm-debug.log*
 pnpm-debug.log*
+pnpm-error.log
 /tmp/
 /temp/
 *.tmp
@@ -65,6 +66,9 @@ __pycache__/
 *.p12
 *.pfx
 *.jks
+id_rsa*
+id_ed25519*
+id_ecdsa*
 credentials.json
 *credentials*.json
 secrets/
