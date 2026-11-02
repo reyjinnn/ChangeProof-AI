@@ -30,6 +30,8 @@ import type {
   SupportAccessPort,
 } from '../../core/ports/index.js';
 
+import { assertArtifactNotTombstonedClient, assertTenantUnfencedClient } from './deletion-store.js';
+
 /**
  * PostgreSQL-backed run lifecycle (WP3-25, FR3-31/35).
  *
@@ -514,6 +516,7 @@ export function createLifecycleStore(
       const jobId = randomId('job');
 
       const existing = await inTenant(context.tenantId, async (client) => {
+        await assertTenantUnfencedClient(client, context.tenantId, 'runs');
         await requireProject(client, submit.projectId);
         await requireRepos(client, submit.repositoryIds);
         const draft = await client.query(
@@ -831,6 +834,7 @@ export function createLifecycleStore(
         if (linked.rows.length === 0) {
           throw new ChangeProofError('Artifact is unknown for this run.');
         }
+        await assertArtifactNotTombstonedClient(client, context.tenantId, digest);
         return parsed;
       });
       const membership = await authorizeOperatorRead(

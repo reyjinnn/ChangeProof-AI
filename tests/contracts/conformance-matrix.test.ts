@@ -9,6 +9,8 @@ import {
   CanonicalObjectHash,
   ChangeIntentSchema,
   CheckResultValueSchema,
+  CloudProfileSchema,
+  CloudReceiptSchema,
   DataLifecycleRecordSchema,
   DeploymentProfileSchema,
   DeploymentQualificationSchema,
@@ -30,6 +32,7 @@ import {
   ExecutionBudgetSchema,
   ExecutionModeSchema,
   ExperimentPlanSchema,
+  FiniteModelSchema,
   HostedRunRequestSchema,
   HostedServiceProfileSchema,
   HypothesisRecordSchema,
@@ -39,7 +42,13 @@ import {
   InvariantProposalSchema,
   InvitationSchema,
   JobLeaseSchema,
+  LegacyBaselineSchema,
+  LegacyCorpusSchema,
+  LegacyDiagnosisSchema,
+  LegacyIntentSchema,
   MeasurementValiditySchema,
+  ModelCheckReceiptSchema,
+  ModelCheckReportSchema,
   NodeKindSchema,
   OriginSchema,
   OutcomeValidationSchema,
@@ -69,11 +78,13 @@ import {
   TargetOutcomeSchema,
   TaskStatusSchema,
   TenantContextSchema,
+  TransferChunkSchema,
   TrialReceiptSchema,
   UsageLedgerEntrySchema,
   VerificationPlanSchema,
   VerificationStageSchema,
   VerifyResultSchema,
+  VolumeProfileSchema,
   identitiesMatch,
 } from '../../src/core/index.js';
 
@@ -1058,6 +1069,197 @@ describe('soak plans freeze horizons beyond the known onset', () => {
   it('keeps soak receipts explicit about aborts and calibration', () => {
     expect(SoakReceiptSchema.parse(soakReceipt()).abortReason).toBeNull();
     expect(SoakReceiptSchema.parse({ ...soakReceipt(), abortReason: 'workload aborted at cycle 4: boom' }).abortReason).toContain('aborted');
+  });
+});
+
+describe('legacy recovery refuses self-stamped oracles', () => {
+  function corpus() {
+    return {
+      schemaVersion: '1',
+      corpusId: 'legacy-1',
+      contentDigest: SHA_A,
+      sanitization: 'PII redacted',
+      inventory: [{ kind: 'entrypoint', ref: 'main.cob' }],
+      pinnedAt: ISO,
+      pinnedBy: 'trusted-author-1',
+      digest: SHA_B,
+    };
+  }
+
+  function intent() {
+    return {
+      schemaVersion: '1',
+      intentId: 'intent-1',
+      corpusDigest: SHA_B,
+      invariants: ['balances hold'],
+      characterizedBy: 'agent-1',
+      ownerApproval: { ownerId: 'owner-1', approvedAt: ISO, statement: 'balances hold' },
+      frozenAt: ISO,
+      digest: SHA_A,
+    };
+  }
+
+  it('pins corpus, intent, baseline, and diagnosis-only exits', () => {
+    expect(LegacyCorpusSchema.parse(corpus()).corpusId).toBe('legacy-1');
+    expect(() => LegacyCorpusSchema.parse({ ...corpus(), inventory: [] })).toThrow();
+    expect(LegacyIntentSchema.parse(intent()).ownerApproval.ownerId).toBe('owner-1');
+    expect(() =>
+      LegacyIntentSchema.parse({
+        ...intent(),
+        ownerApproval: { ownerId: 'agent-1', approvedAt: ISO, statement: 'self' },
+      }),
+    ).toThrow(/self-stamp/);
+    expect(
+      LegacyBaselineSchema.parse({
+        schemaVersion: '1',
+        baselineId: 'base-1',
+        intentDigest: SHA_A,
+        observationsDigest: SHA_B,
+        validatorId: 'validator-2',
+        validatedAt: ISO,
+        knownValid: true,
+        digest: SHA_A,
+      }).knownValid,
+    ).toBe(true);
+    expect(
+      LegacyDiagnosisSchema.parse({
+        schemaVersion: '1',
+        diagnosisId: 'diag-1',
+        corpusDigest: SHA_B,
+        reason: 'behavior_contract_unknown',
+        knownFacts: ['posts nightly'],
+        competingHypotheses: ['rounds to cents'],
+        uncertainty: 'rounding unconfirmed',
+        blockedCapabilities: ['legacy-repair'],
+        nextEvidence: 'owner invariant',
+        decisionOwner: 'owner-1',
+        nextSafeProbe: 'read-only replay',
+        mutations: 'none',
+        diagnosedAt: ISO,
+      }).mutations,
+    ).toBe('none');
+  });
+});
+
+describe('finite models pin bounds and claim scope', () => {
+  function finiteModel() {
+    return {
+      schemaVersion: '1',
+      modelId: 'mutex-1',
+      states: ['idle', 'locked'],
+      initial: 'idle',
+      transitions: [{ from: 'idle', op: 'acquire', to: 'locked' }],
+      invariants: ['never-both'],
+      bound: { maxDepth: 3, maxSchedules: 100 },
+      frozenAt: ISO,
+      digest: SHA_B,
+    };
+  }
+
+  it('rejects dangling states and undeclared bounds', () => {
+    expect(FiniteModelSchema.parse(finiteModel()).initial).toBe('idle');
+    expect(() => FiniteModelSchema.parse({ ...finiteModel(), initial: 'elsewhere' })).toThrow(/Initial/);
+    expect(() =>
+      FiniteModelSchema.parse({
+        ...finiteModel(),
+        transitions: [{ from: 'idle', op: 'acquire', to: 'elsewhere' }],
+      }),
+    ).toThrow(/undeclared/);
+    expect(
+      ModelCheckReceiptSchema.parse({
+        schemaVersion: '1',
+        modelDigest: SHA_B,
+        schedulesExplored: 4,
+        boundExhausted: false,
+        counterexamples: [],
+        exploredAt: ISO,
+      }).boundExhausted,
+    ).toBe(false);
+    expect(
+      ModelCheckReportSchema.parse({
+        schemaVersion: '1',
+        modelDigest: SHA_B,
+        verdict: 'bound_incomplete',
+        confirmed: [],
+        refuted: [],
+        claimScope: { modelId: 'mutex-1', maxDepth: 3, maxSchedules: 100 },
+        reportedAt: ISO,
+      }).verdict,
+    ).toBe('bound_incomplete');
+  });
+});
+
+describe('volume profiles pin bytes and engine pairs', () => {
+  function volumeProfile() {
+    return {
+      schemaVersion: '1',
+      profileId: 'tb-1',
+      declaredLogicalBytes: 1000000000000,
+      sourceEngine: 'postgresql',
+      sourceVersion: '16.4',
+      targetEngine: 'spanner',
+      targetVersion: '2026-09',
+      crossEngine: true,
+      activeWriters: { writers: 8, opsPerWriter: 500 },
+      frozenAt: ISO,
+      digest: SHA_B,
+    };
+  }
+
+  it('refuses same-engine pairs and miscounted chunks', () => {
+    expect(VolumeProfileSchema.parse(volumeProfile()).declaredLogicalBytes).toBe(1000000000000);
+    expect(() =>
+      VolumeProfileSchema.parse({ ...volumeProfile(), targetEngine: 'postgresql', targetVersion: '16.4' }),
+    ).toThrow(/differ/);
+    expect(
+      TransferChunkSchema.parse({ chunkId: 'c0', rows: 10, logicalBytes: 512, checksum: SHA_A }).rows,
+    ).toBe(10);
+    expect(() =>
+      TransferChunkSchema.parse({ chunkId: 'c0', rows: 10, logicalBytes: -1, checksum: SHA_A }),
+    ).toThrow();
+  });
+});
+
+describe('cloud profiles pin provider reality without secrets', () => {
+  function cloudProfile() {
+    return {
+      schemaVersion: '1',
+      profileId: 'aws-1',
+      provider: 'aws',
+      region: 'eu-central-1',
+      computeType: 'ecs-fargate',
+      imageDigest: 'sha256:' + SHA_A,
+      nodePin: '26.12.1',
+      pnpmPin: '12.5.1',
+      postgresPin: '16',
+      secretBroker: { kind: 'broker', refPrefix: 'changeproof/aws-1/' },
+      maxConcurrentRuns: 4,
+      diskGb: 20,
+      qualificationMethod: 'qual-1',
+    };
+  }
+
+  it('pins digests and refuses unpinned or smuggled fields', () => {
+    expect(CloudProfileSchema.parse(cloudProfile()).provider).toBe('aws');
+    expect(() => CloudProfileSchema.parse({ ...cloudProfile(), imageDigest: 'latest' })).toThrow(/digest/);
+    expect(() => CloudProfileSchema.parse({ ...cloudProfile(), provider: 'hetzner' })).toThrow();
+    expect(() => CloudProfileSchema.parse({ ...cloudProfile(), accessKey: 'AKIA-X' })).toThrow();
+    expect(
+      CloudReceiptSchema.parse({
+        schemaVersion: '1',
+        receiptId: 'provision-aaa',
+        profileId: 'aws-1',
+        provider: 'aws',
+        region: 'eu-central-1',
+        step: 'provision',
+        artifactDigest: SHA_A,
+        externalId: 'stack-1',
+        success: true,
+        startedAt: ISO,
+        finishedAt: ISO,
+        detail: 'provisioned',
+      }).success,
+    ).toBe(true);
   });
 });
 

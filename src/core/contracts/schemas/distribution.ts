@@ -82,3 +82,75 @@ export const DeploymentReceiptSchema = z
   })
   .describe('Receipt for one deployment step; artifact-bound and timestamped');
 export type DeploymentReceipt = z.infer<typeof DeploymentReceiptSchema>;
+/**
+ * Cloud deployment contracts (FR3-43, WP3-34).
+ *
+ * A cloud profile pins provider, region, compute type, image digest,
+ * runtime pins, and the secret-broker ref prefix — metadata and refs only,
+ * never key material (NEG3-37). Every lifecycle step executes through a
+ * driver and drift-checks observed reality against the pins; config
+ * rendering alone never yields a success receipt (NEG3-40).
+ */
+
+export const CloudProviderSchema = z.enum(['aws', 'azure', 'gcp']);
+export type CloudProvider = z.infer<typeof CloudProviderSchema>;
+
+export const CloudStepSchema = z.enum([
+  'provision',
+  'run',
+  'upgrade',
+  'rollback',
+  'snapshot',
+  'restore',
+  'delete',
+  'teardown',
+]);
+export type CloudStep = z.infer<typeof CloudStepSchema>;
+
+export const CloudProfileSchema = z
+  .strictObject({
+    schemaVersion: z.literal('1'),
+    profileId: IdSchema,
+    provider: CloudProviderSchema,
+    region: NonEmptyStringSchema,
+    computeType: NonEmptyStringSchema,
+    imageDigest: z.string().regex(/^sha256:[0-9a-f]{64}$/, 'compute image must be pinned by sha256 digest'),
+    nodePin: NonEmptyStringSchema,
+    pnpmPin: NonEmptyStringSchema,
+    postgresPin: NonEmptyStringSchema,
+    secretBroker: z.strictObject({ kind: z.literal('broker'), refPrefix: NonEmptyStringSchema }),
+    maxConcurrentRuns: z.number().int().gt(0),
+    diskGb: z.number().int().gt(0),
+    qualificationMethod: IdSchema,
+  })
+  .describe('Pinned cloud deployment profile; refs only, never key material');
+export type CloudProfile = z.infer<typeof CloudProfileSchema>;
+
+export const CloudQualificationSchema = z
+  .strictObject({
+    schemaVersion: z.literal('1'),
+    profileId: IdSchema,
+    method: IdSchema,
+    receiptRefs: z.array(NonEmptyStringSchema).min(1),
+    qualifiedAt: InstantSchema,
+  })
+  .describe('Proof that a cloud profile was qualified; required before provision');
+export type CloudQualification = z.infer<typeof CloudQualificationSchema>;
+
+export const CloudReceiptSchema = z
+  .strictObject({
+    schemaVersion: z.literal('1'),
+    receiptId: IdSchema,
+    profileId: IdSchema,
+    provider: CloudProviderSchema,
+    region: NonEmptyStringSchema,
+    step: CloudStepSchema,
+    artifactDigest: Sha256Schema,
+    externalId: NonEmptyStringSchema,
+    success: z.boolean(),
+    startedAt: InstantSchema,
+    finishedAt: InstantSchema,
+    detail: z.string().max(2000),
+  })
+  .describe('Receipt for one cloud step; bound to driver-observed reality');
+export type CloudReceipt = z.infer<typeof CloudReceiptSchema>;

@@ -1,3 +1,5 @@
+import { createHash } from 'node:crypto';
+
 import { z } from 'zod';
 
 import {
@@ -9,6 +11,14 @@ import {
 } from '../../core/index.js';
 
 import { assertReservationAdmitted } from './accounting.js';
+import { assertPaymentEventApplies, verifyPaymentSignature, type PaymentEventKind } from './billing.js';
+
+function errorCode(error: unknown): string | null {
+  if (typeof error === 'object' && error !== null && 'code' in error && typeof error.code === 'string') {
+    return error.code;
+  }
+  return null;
+}
 
 /**
  * PostgreSQL-backed atomic usage store (WP3-24, FR3-34).
@@ -144,6 +154,17 @@ export interface UsageStore {
     providerReceiptRef: string;
     nowIso: string;
   }): Promise<{ consumed: number; released: number; duplicate: boolean; settleEffectId: string }>;
+  recordPaymentEvent(input: {
+    tenantId: string;
+    eventId: string;
+    kind: string;
+    amount: number;
+    periodId: string;
+    payload: string;
+    signature: string;
+    webhookSecret: string;
+    nowIso: string;
+  }): Promise<{ duplicate: boolean }>;
   readBalances(input: { tenantId: string }): Promise<{
     periodId: string | null;
     cap: number | null;
@@ -529,6 +550,75 @@ export function createUsageStore(db: UsageDb): UsageStore {
           reservationId,
         ]);
         return { consumed: balances.consumed, released: balances.reserved, duplicate: false, settleEffectId: effectId };
+      });
+    },
+
+    async recordPaymentEvent(input: {
+      tenantId: string;
+      eventId: string;
+      kind: string;
+      amount: number;
+      periodId: string;
+      payload: string;
+      signature: string;
+      webhookSecret: string;
+      nowIso: string;
+    }): Promise<{ duplicate: boolean }> {
+      const tenantId = IdSchema.parse(input.tenantId);
+      const eventId = NonEmptyStringSchema.parse(input.eventId);
+      const kind: PaymentEventKind = z
+        .enum(['checkout.completed', 'invoice.paid', 'refund.issued', 'subscription.cancelled'])
+        .parse(input.kind);
+      if (!Number.isFinite(input.amount) || input.amount < 0) {
+        throw new ChangeProofError('Payment amount must be finite and non-negative.');
+      }
+      const periodId = NonEmptyStringSchema.parse(input.periodId);
+      const nowIso = InstantSchema.parse(input.nowIso);
+      // The broker secret verifies here and is never stored, logged, or returned.
+      verifyPaymentSignature({ payload: input.payload, signature: input.signature, secret: input.webhookSecret });
+      await assertTenantAdmitted(tenantId);
+      return inTenant(tenantId, async (client) => {
+        const table = await client.query(`SELECT to_regclass('public.payment_events') AS reg`);
+        if ((table.rows[0] as { reg: string | null }).reg === null) {
+          try {
+            await client.query(
+              `CREATE TABLE IF NOT EXISTS payment_events (event_id TEXT PRIMARY KEY, tenant_id TEXT NOT NULL, kind TEXT NOT NULL, amount NUMERIC NOT NULL, period_id TEXT NOT NULL, payload_hash TEXT NOT NULL, received_at TIMESTAMPTZ NOT NULL)`,
+            );
+          } catch (error) {
+            if (errorCode(error) === '42501') {
+              throw new ChangeProofError(
+                'Payment tables are missing and this role cannot create them; apply infra/postgres/V11__service_operations.sql.',
+              );
+            }
+            throw error;
+          }
+        }
+        const prior = await client.query(`SELECT tenant_id, kind FROM payment_events WHERE event_id = $1`, [eventId]);
+        const seen = prior.rows[0] as { tenant_id: string; kind: string } | undefined;
+        if (seen !== undefined) {
+          if (seen.tenant_id !== tenantId || seen.kind !== kind) {
+            throw new ChangeProofError(
+              'Payment event identity collision: the same identity names different content; refusing.',
+            );
+          }
+          return { duplicate: true };
+        }
+        const charges = await client.query(
+          `SELECT 1 FROM payment_events WHERE tenant_id = $1 AND kind IN ('checkout.completed', 'invoice.paid') LIMIT 1`,
+          [tenantId],
+        );
+        const charged = new Set<string>();
+        if (charges.rows.length > 0) {
+          charged.add(tenantId);
+        }
+        assertPaymentEventApplies({ eventId, kind, tenantId }, new Set(), charged);
+        const payloadHash = createHash('sha256').update(input.payload, 'utf8').digest('hex');
+        await client.query(
+          `INSERT INTO payment_events (event_id, tenant_id, kind, amount, period_id, payload_hash, received_at)
+           VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+          [eventId, tenantId, kind, input.amount, periodId, payloadHash, nowIso],
+        );
+        return { duplicate: false };
       });
     },
 

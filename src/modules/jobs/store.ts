@@ -11,6 +11,7 @@ import {
 } from '../../core/index.js';
 
 import { assertLeaseWritable, nextRetryCount } from './fencing.js';
+import { assertOpsAdmissibleClient } from './ops-store.js';
 
 /**
  * PostgreSQL-backed durable dispatcher (WP3-23, FR3-32/33).
@@ -321,6 +322,7 @@ export function createJobsStore(db: JobsDb): JobsStore {
       const nowIso = InstantSchema.parse(input.nowIso);
       await assertTenantAdmitted(tenantId);
       return inTenant(tenantId, async (client) => {
+        await assertOpsAdmissibleClient(client, { component: 'admission' });
         const inserted = await client.query(
           `INSERT INTO runs (id, tenant_id, idempotency_key, reservation_id, state, created_at)
            VALUES ($1, $2, $3, $4, 'queued', $5)
@@ -364,6 +366,7 @@ export function createJobsStore(db: JobsDb): JobsStore {
       const nowMs = Date.parse(nowIso);
       await assertTenantAdmitted(tenantId);
       return inTenant(tenantId, async (client) => {
+        await assertOpsAdmissibleClient(client, { workerId, component: 'dispatch' });
         const active = await client.query(
           `SELECT COUNT(*)::int AS count FROM jobs WHERE tenant_id = $1 AND state IN ('claimed', 'running')`,
           [tenantId],

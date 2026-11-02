@@ -251,6 +251,7 @@ export * from './executor.js';
 export * from './reducers.js';
 export * from './regions.js';
 export * from './soak.js';
+export * from './checker.js';
 
 /** Explicitly throw when a required runner setting is missing. */
 export function requireRunnerImage(value: string | undefined): string {

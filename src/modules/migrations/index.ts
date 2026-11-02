@@ -2,6 +2,15 @@ import { z } from 'zod';
 
 import { ChangeProofError } from '../../core/index.js';
 
+import {
+  IntegrityReportSchema,
+  MigrationIntegrityError,
+  type IntegrityCheck,
+  type IntegrityReport,
+} from './transfer.js';
+
+export * from './transfer.js';
+
 /**
  * Online migration runner (WP3-10 slice, FR3-11).
  *
@@ -109,37 +118,6 @@ export const MigrationManifestSchema = z.strictObject({
     message: 'an external-only expand must pin the applied-history baseline it verifies',
   });
 export type MigrationManifest = z.infer<typeof MigrationManifestSchema>;
-
-export const IntegrityCheckSchema = z.strictObject({
-  name: z.string().min(1),
-  expected: z.string(),
-  actual: z.string(),
-  passed: z.boolean(),
-  detail: z.string().optional(),
-});
-export type IntegrityCheck = z.infer<typeof IntegrityCheckSchema>;
-
-export const IntegrityReportSchema = z.strictObject({
-  schemaVersion: z.literal('1'),
-  migrationId: z.string().min(1),
-  passed: z.boolean(),
-  checks: z.array(IntegrityCheckSchema).min(1),
-});
-export type IntegrityReport = z.infer<typeof IntegrityReportSchema>;
-
-export class MigrationIntegrityError extends ChangeProofError {
-  readonly report: IntegrityReport;
-
-  constructor(report: IntegrityReport) {
-    const failing = report.checks.filter((check) => !check.passed).map((check) => check.name);
-    super(
-      `Migration "${report.migrationId}" failed data-integrity verification: ${failing.join(', ')}. ` +
-        'No fix is claimed; the full report is attached.',
-    );
-    this.name = 'MigrationIntegrityError';
-    this.report = report;
-  }
-}
 
 export interface AppliedHistoryRow {
   readonly version: string;
