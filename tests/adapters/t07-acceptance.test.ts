@@ -1,6 +1,7 @@
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeAll, describe, expect, it } from 'vitest';
 
 import type { CapabilityKey } from '../../src/core/index.js';
+import { runNative } from '../../src/modules/adapters/native/process.js';
 import { DOTNET_ADAPTER, GO_ADAPTER, PHP_ADAPTER, PYTHON_ADAPTER, type AdapterDefinition } from '../../src/modules/adapters/index.js';
 import { createFixture } from './fixtures.js';
 
@@ -8,6 +9,24 @@ import { createFixture } from './fixtures.js';
 // Linux-profile qualification. No customer application is built or imported.
 const fixtures: { cleanup: () => void }[] = [];
 afterEach(() => { for (const fixture of fixtures.splice(0)) fixture.cleanup(); });
+
+// T-51 env-only fix: cases[0] hardcodes the 3.10.0 python pin but the
+// dev-machine interpreter is 3.12.7, so the python malformed-source case
+// exercised the (correct) toolchain-mismatch path instead of parser failure.
+// Probe the observed interpreter for the python case only; every other
+// case keeps its pinned version. 3.10.0-pin qualification itself remains
+// unproven here and needs a pinned python-linux runner.
+let observedPythonVersion = '';
+beforeAll(async () => {
+  const probe = await runNative('python', ['-c', 'import sys; print(".".join(map(str, sys.version_info[:3])))'], {
+    cwd: process.cwd(),
+    timeoutMs: 10_000,
+    maxOutputBytes: 1024,
+  });
+  expect(probe.exitCode, probe.stderr).toBe(0);
+  observedPythonVersion = probe.stdout.trim();
+  expect(observedPythonVersion).toMatch(/^\d+\.\d+\.\d+$/);
+});
 
 const cases = [
   { adapter: PYTHON_ADAPTER, version: '3.10.0', file: 'main.py', source: '@app.get("/orders")\ndef orders():\n    return {}\n' },
@@ -76,7 +95,8 @@ describe('T-07 parser failures and unresolved provenance', () => {
     const broken = `broken.${file.split('.').at(-1)}`;
     const invalid = adapter === PHP_ADAPTER ? '<?php function broken( {' : '{ invalid syntax !!!';
     const fixture = createFixture({ [file]: source, [broken]: invalid }); fixtures.push(fixture);
-    const result = await adapter.extract({ root: fixture.root, files: [file, broken], version, capability: record(adapter) });
+    const requestVersion = adapter === PYTHON_ADAPTER ? observedPythonVersion : version;
+    const result = await adapter.extract({ root: fixture.root, files: [file, broken], version: requestVersion, capability: record(adapter) });
     expect(result.status).toBe('failed');
     expect([...result.unknowns, ...result.diagnostics].join(' ')).toContain(broken);
     expect(result.graph.edges).toEqual([]);

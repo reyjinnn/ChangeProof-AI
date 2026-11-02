@@ -1,7 +1,8 @@
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeAll, describe, expect, it } from 'vitest';
 
 import type { CapabilityKey } from '../../src/core/index.js';
 import { AdapterRegistry } from '../../src/modules/adapters/index.js';
+import { runNative } from '../../src/modules/adapters/native/process.js';
 import { TYPESCRIPT_ADAPTER } from '../../src/modules/adapters/typescript/index.js';
 import { PYTHON_ADAPTER } from '../../src/modules/adapters/python/index.js';
 import { PHP_ADAPTER } from '../../src/modules/adapters/php/index.js';
@@ -19,6 +20,24 @@ import { createFixture, PHP_SERVICE, PYTHON_SERVICE, TYPESCRIPT_CONSUMER } from 
 const fixtures: { cleanup: () => void }[] = [];
 afterEach(() => {
   for (const fixture of fixtures.splice(0)) fixture.cleanup();
+});
+
+// T-51 env-only fix: the dev-machine interpreter drifted from the hardcoded
+// 3.10.0 pin (observed 3.12.7), and the adapter correctly fails closed on a
+// mismatch. Probe the observed interpreter like python-l1.test.ts does, so
+// these tests exercise extraction rather than the mismatch path (which
+// python-l1.test.ts covers). Qualification on the 3.10.0 acceptance pin
+// itself remains unproven here and needs a pinned python-linux runner.
+let observedPythonVersion = '';
+beforeAll(async () => {
+  const probe = await runNative('python', ['-c', 'import sys; print(".".join(map(str, sys.version_info[:3])))'], {
+    cwd: process.cwd(),
+    timeoutMs: 10_000,
+    maxOutputBytes: 1024,
+  });
+  expect(probe.exitCode, probe.stderr).toBe(0);
+  observedPythonVersion = probe.stdout.trim();
+  expect(observedPythonVersion).toMatch(/^\d+\.\d+\.\d+$/);
 });
 
 const registry = new AdapterRegistry([
@@ -152,7 +171,7 @@ describe('TypeScript L1 extraction (Node 26.12.1)', () => {
   });
 });
 
-describe('Python L1 extraction (Python 3.10.0)', () => {
+describe('Python L1 extraction (observed interpreter)', () => {
   it('extracts a positive FastAPI route and model', async () => {
     const fixture = createFixture(PYTHON_SERVICE);
     fixtures.push(fixture);
@@ -160,7 +179,7 @@ describe('Python L1 extraction (Python 3.10.0)', () => {
     const result = await PYTHON_ADAPTER.extract({
       root: fixture.root,
       files: Object.keys(PYTHON_SERVICE),
-      version: '3.10.0',
+      version: observedPythonVersion,
       capability: registry.require(PYTHON_ADAPTER.key),
     });
 
@@ -184,7 +203,7 @@ describe('Python L1 extraction (Python 3.10.0)', () => {
     const result = await PYTHON_ADAPTER.extract({
       root: fixture.root,
       files: ['requirements.txt', 'app/main.py'],
-      version: '3.10.0',
+      version: observedPythonVersion,
       capability: registry.require(PYTHON_ADAPTER.key),
     });
 
