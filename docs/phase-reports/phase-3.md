@@ -2,7 +2,7 @@
 
 **Date:** 1 November 2026 (turn 1 — same day as phase-2 turn 6)
 **Application root:** this repository (`ChangeProof-AI/`), branch `development`
-**Phase status:** `in_progress` — T3-1/T3-2 allocated tasks (T-19/T-20) `done`, and this turn T-21/T-22/T-23/T-24/T-25 `done` (see §4). No full WP and no G3 gate passed; phase stays `in_progress`.
+**Phase status:** `in_progress` — T3-1/T3-2 allocated tasks (T-19/T-20) `done`, turn 2 T-21/T-22/T-23/T-24/T-25 `done` (see §4), turn 3 T-26 `done` (see §5). No full WP and no G3 gate passed; phase stays `in_progress`.
 **Turn-1 scope (T-19/T-20)** `done`:
 hypothesis ledger + revision + stopper, model broker + typed gateway +
 report-only guard, 46/46 unit green with wiring. Full WP3-07 stays
@@ -281,6 +281,101 @@ adapter/migration sources and tests listed in §4.1–4.3); (modified):
 (T-21..T-25 `done` + headers). No contract, policy, threshold, or schema
 semantic change to existing versioned items; no version bump needed.
 
-**Next dependency-ready task:** T-26 / WP3-18 (complex scenario suite
-SC3-03/04/07/08/09, after WP3-11/17) — needs its scope confirmation before
-starting; do not start the next phase automatically.
+**Next dependency-ready task:** phase-3 allocated work is complete through
+T-26; phase-4 back-end tasks T-27..T-30 executed 2 November 2026 (see
+`docs/phase-reports/phase-4.md`). Remaining phase-4 back-end: T4-5 (WP3-31)
+and T4-6 (WP3-32) per the readiness rule; do not start the next phase
+automatically.
+
+## 5. Turn 3 (2 November 2026) — T-26 allocated task `done`
+
+Task ID / parent WP: T-26 (T3-18) / WP3-18 (complex scenario qualification).
+Requirement IDs: SC3-03/04/07/08/09, NEG3-08/15/16/17/18/19/20 (suite pins;
+NEG3-11 pinned as the SC3-04 no-dedup negative).
+User-visible outcome: each complex scenario runs as a pre-registered native
+campaign with validated per-trial receipts; one green run reports
+`campaign_incomplete`; SC3-09 diagnosis-only never counts as repair.
+Prerequisite evidence: T-24 (`coordinateBundle`/recovery), T-12 (reducers +
+threshold), fixture rig + disposable PG/Redis, MigrationRunner, observability
+connector, agent ledger/gateway.
+Allowed source/config changes: tests + fixtures only (no `src/` change —
+pure qualification over existing modules).
+Input snapshots + intended intervention: frozen ExperimentPlans per
+scenario (seeds, schedules, Amax/Qmax/Tdrain/Tconverge/SLO bounds) with
+real PG16/Redis7 containers; faults are real (terminated backend, SIGKILL,
+deadlock, pool leak).
+Acceptance checks (positive, negative, native): unit pins 19/19; native
+15/15 (SC3-03 4, SC3-04 4, SC3-07 5, SC3-08 2); negatives NEG3-08/11/15–20
+pinned (see below).
+Protected oracle / proof scope: no frozen oracle exists yet (WP3-06) — these
+campaigns qualify verifier/fixture behavior on real systems, not AI repair
+capability; no verdict above `campaign_complete`/`campaign_incomplete` is
+claimed.
+Artifacts expected: receipts under `runs/sc3-18/` (gitignored) — present.
+Actual commands + exit codes: see §5.1.
+Status + remaining blocker: allocated task `done`. Full WP3-18 stays open:
+frozen oracle, live model, multi-system runs, G3-11 (phase-7).
+Next dependency-ready task: phase-4 back-end (executed same day; see
+phase-4 report).
+
+What was built (tests-first, then minimal fixtures):
+
+- `tests/verifier/t26-suite-negatives.test.ts` (9/9): single green of n=3 →
+  `campaign_incomplete` incl. repeated-seed accounting (NEG3-15); dead
+  injector → `experiment_invalid` (NEG3-17); dropped observations/removed
+  timeouts → measurement invalid, never pass (NEG3-18); verifier timeout →
+  policy `unverified` + cleanup quarantine (NEG3-08); cosmetic retry →
+  stop-branch with usage retained (NEG3-20).
+- `tests/observability/t26-sc3-09.test.ts` (10/10): SC3-09 complete variant
+  earns a discriminating probe only; missing owner/baseline →
+  `behavior_contract_unknown` (NEG3-19); missing join, clock skew, stale
+  deploy → `causality_unproven` (NEG3-16); gateway denies prod-write and
+  uncapped probes (denied-mutation receipts).
+- `tests/native/sc3-03-backfill.test.ts` (4/4, real PG16): crash-before-commit
+  via a real terminated backend rolls back and resumes to verified
+  completion; merged-window asserted per chunk; concurrent update/delete
+  with dual-write + journal reconciles; skipped dual-write fails
+  `exact_sum`; lost journal row fails `row_counts`.
+- `tests/native/sc3-04-convergence.test.ts` (4/4, real PG16+Redis7) +
+  `fixtures/sc3-convergence/consumer.mjs`: dropped-response retry dedups;
+  out-of-order duplicates converge inside Qmax; real SIGKILL partition
+  holds backlog and heals with drain inside Tdrain, attempts within Amax;
+  `--no-dedup` double-applies while transport stays green (NEG3-11).
+- `tests/native/sc3-07-concurrency.test.ts` (5/5, real PG16): lost update
+  reproduced in 2 reset trials pre-fix, zero lost with `FOR UPDATE`;
+  conflicting lock order deadlocks (real 40P01) in 2 reset trials pre-fix,
+  ordered locking commits both; duplicate op before/after commit dedups via
+  unique constraint (real 23505).
+- `tests/native/sc3-08-pool.test.ts` (2/2, real PG16): paired load blocks
+  meet frozen absolute + relative SLO with balanced leases; leaky error
+  path exhausts the pool and its short sample is measurement-invalid
+  (NEG3-18), never a pass.
+
+Full WP3-18 stays open: frozen WP3-06 oracle, live model proposals,
+multi-system bundle runs, and G3-11 formal qualification (phase-7).
+
+### 5.1 Verification (this turn, actual commands + exit codes)
+
+- `pnpm typecheck` → 0 · `pnpm lint` → 0 (79 modules / 222 deps, zero
+  violations, incl. depcruise boundaries)
+- New unit: `tests/verifier/t26-suite-negatives` 9/9 +
+  `tests/observability/t26-sc3-09` 10/10
+- Native (`vitest.native.config.ts`, disposable
+  `changeproof-pg-t26`/`changeproof-redis-t26` created for T-26, reused
+  through T-30, removed at session end): sc3-03 4/4 + sc3-04 4/4 + sc3-07
+  5/5 + sc3-08 2/2 (15/15)
+- Full `pnpm test` at T-26 close: 598 passed, 3 failed — the 3 failures are
+  the pre-existing Python adapter failures, proven identical on the
+  untouched tree via `git stash -u` rerun (adapter files untouched by T-26,
+  which adds tests/fixtures only).
+- Receipts: `runs/sc3-18/*.json` (gitignored run dirs, per-scenario
+  plan+receipts+histories).
+- `semgrep` → still missing (binary absent on dev machine).
+- Security self-review (code-security rules on new tests/fixture: all SQL
+  parameterized with fixed identifiers, no secrets, no shell interpolation;
+  security-model skill read per phase binding): no findings.
+- Missing checks / honest limits: network-edge partition with disposable
+  topology control beyond process-kill (SC3-04 partition here is a real
+  consumer SIGKILL with real backlog/heal receipts); barrier-controlled
+  fault injection is out of slice (FR3-26.3) — SC3-07 uses exact
+  statement-order interleaving over real overlapping transactions instead.
