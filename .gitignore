@@ -46,3 +46,24 @@ $RECYCLE.BIN/
 
 # Project-local Python venv (Modal probe helper lives here; never commit it)
 .venv/
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.mypy_cache/
+
+# Key material — never commit private keys or certificates
+*.pem
+*.key
+*.p12
+*.pfx
+*.jks
+credentials.json
+*credentials*.json
+secrets/
+.secrets/
+
+# Browser / E2E report output
+test-results/
+playwright-report/
+playwright/.cache/
