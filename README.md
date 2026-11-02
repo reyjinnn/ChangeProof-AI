@@ -232,11 +232,11 @@ pnpm lint
 pnpm test
 ```
 
-The `pnpm verify` shortcut runs those same checks in sequence. In the checkout used to update this README, typecheck and lint passed, while the test suite reported 187 passed and 4 failed adapter tests. Run the checks yourself and compare against the latest [phase report](docs/phase-reports/phase-1.md); do not attribute an existing failure to your change without checking its baseline.
+The `pnpm verify` shortcut runs those same checks in sequence. The latest recorded close (phase-5 report §12, 2 November 2026) has typecheck, lint/boundaries (134 modules / 385 deps), and build passing, with the unit suite at 794 passed and 3 pre-existing Python adapter failures (`l1-extraction` 2, `t07-acceptance` 1). Run the checks yourself and compare against the latest [phase report](docs/phase-reports/phase-5.md); do not attribute an existing failure to your change without checking its baseline.
 
 ### Run the project
 
-This checkout does not yet have an application server, CLI, or dashboard entry point, so there is no `pnpm dev` command to launch a user-facing app. To run the code that exists today, use the build and test commands from the project root:
+This checkout has a `changeproof` CLI (`pnpm build`, then `changeproof help`) but no application server or worker entry point yet. A dashboard scaffold exists in the working tree (`apps/dashboard`, `src/http`) as uncommitted phase-6 work-in-progress, with `pnpm dev` serving it. To run the code that exists today, use the build and test commands from the project root:
 
 ```powershell
 pnpm build          # compile TypeScript into dist/
@@ -258,7 +258,7 @@ The base install does not require every language toolchain. If your task runs na
 
 1. Read `AGENTS.md` and `SKILL.md` for the working rules, task format, and negative-case index.
 2. Read `.prepare/BRD.md`, `.prepare/PRD.md`, `.prepare/MVP.md`, then `.prepare/architecture.md` in that order.
-3. Pick a dependency-ready task from the MVP work-package dependency graph. Do not pick by WP number alone. The current next task recorded in the phase report is WP3-01; verify [the latest report](docs/phase-reports/phase-1.md) before starting because task status can change.
+3. Pick a dependency-ready task from the MVP work-package dependency graph. Do not pick by WP number alone. The current next task recorded in the phase report is phase-6 T-42 (T6-1); verify [the latest report](docs/phase-reports/phase-6.md) and `task-brief.md` before starting because task status can change.
 4. Before changing code, write down the task scope, requirement IDs, expected behavior, failure cases, and proof checks using the task header in `AGENTS.md`.
 5. Add or update positive and negative tests, make the smallest change that meets the task, then run the checks for the affected area and `pnpm verify`.
 6. In your pull request, summarize the behavior changed, tests and commands run with results, remaining limitations, and any contract or decision record changes. Never present mock/replay success as real-runtime proof.
@@ -267,7 +267,7 @@ Do not add credentials or `.env` files to commits. Do not run paid API calls, ch
 
 ### Current verification status
 
-At the time this README was updated, `pnpm verify` was **not green** in this checkout: typecheck and lint/boundary checks passed, but 4 adapter tests failed across `capability-catalog.test.ts` and `go-dotnet-extraction.test.ts` (187 passed, 4 failed). Treat this as a known baseline issue, not as a failure caused by your contribution. Re-run verification on your checkout and report the current output; this status may become stale as the failures are fixed.
+At the time this README was updated, `pnpm verify` was **not green** in the last recorded close (phase-5 report §12, 2 November 2026): typecheck, lint/boundary checks (134 modules / 385 deps), and build passed, but 3 pre-existing Python adapter tests failed (`l1-extraction` 2, `t07-acceptance` 1) — 794 passed, 3 failed. The full native suite stood at 160/162 with 2 pre-existing/environmental failures. Treat these as known baseline issues, not as failures caused by your contribution. Re-run verification on your checkout and report the current output; this status may become stale as the failures are fixed.
 
 ### Reading before coding
 
@@ -394,15 +394,16 @@ Honest snapshot of the repository — verify anything you intend to rely on:
 
 **Present**
 
-- TypeScript source and toolchain: strict `tsc`, ESLint, dependency-cruiser boundary rules, Vitest suites (`contracts`, `policy`, `architecture`, `adapters`, `graph`, `dependencies`, `security`, `orchestrator`).
-- `src/core/contracts`, `src/core/ports`, `src/core/errors`, `src/orchestrator`, and modules for `detector`, `analyzer`, `graph`, `policy`, `verifier`, `dependencies`, and language adapters.
+- TypeScript source and toolchain: strict `tsc`, ESLint, dependency-cruiser boundary rules, Vitest suites (unit + native configs; 118 test files).
+- `src/core` (contracts, ports, errors), `src/orchestrator`, `src/cli` (`changeproof` bin), and modules for `detector`, `analyzer`, `graph`, `policy`, `verifier`, `agent`, `adapters`, `dependencies`, `migrations`, `fixtures`, `evidence`, `github`, `identity`, `jobs`, `usage`, `lifecycle`, `notifications`, `queries`, `support`, `collaboration`, `publicsite`, `distribution`, `providers`, and `evaluation`.
+- PostgreSQL migrations `V1`–`V11` with RLS stores, `bench/` dev suites, self-host profile, pilot-prep package (working tree, uncommitted), phase reports through phase-5 plus a started phase-6 report.
 - Specification package in `.prepare/`, phase playbooks in `phases/`, decision records in `docs/decisions/`.
-- Latest verification run in this session: typecheck passed; lint and boundaries passed; tests 187 passed and 4 failed. The full `pnpm verify` exited 1.
+- Latest recorded verification (phase-5 report §12, 2 November 2026): typecheck, lint/boundaries, and build passed; unit 794 passed + 3 pre-existing Python adapter failures; native 160/162 with 2 pre-existing/environmental failures. The full `pnpm verify` exited 1. Re-run on your checkout; this snapshot goes stale fast.
 
 **Not present / not claimed**
 
-- `src/http`, `src/workers`, `src/cli`, `apps/dashboard`, `apps/trace-viewer` — landing in their work packages (phase-6 owns the front-end).
-- PostgreSQL/object-storage wiring, GitHub App integration, hosted job pipeline.
+- `src/workers` and `apps/trace-viewer` — not present. `src/http` and `apps/dashboard` exist only as uncommitted phase-6 work-in-progress in the working tree.
+- Hosted object-storage wiring, live GitHub App (client + broker code present, no authorized App), qualified-guest hosted execution.
 - Hosted gates, pilot repository access, and `G3-08`/`G3-10` evidence.
 - Measured SLOs, cost, performance, adoption figures — **none have been measured**.
 

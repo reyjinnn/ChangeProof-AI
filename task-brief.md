@@ -2,11 +2,11 @@
 
 **Plan revision:** 2 (24 October 2026)  
 
-**Coordination status last reconciled:** 2 November 2026 (T-16..T-30 done; see §4, phase-3 report §5, phase-4 report). T-10..T-15 pushed to runnable limits turn 5, 31 October 2026 UTC (see §4 and the phase-2 report §10); T-16..T-18 done turn 6 and T-19/T-20 done phase-3 turn 1, 1 November 2026 UTC (see §4, phase-2 report §11, phase-3 report).
+**Coordination status last reconciled:** 2 November 2026 (T-16..T-41 done; see §4, phase-4 report §7–§9, phase-5 report §2–§13). T-10..T-15 pushed to runnable limits turn 5, 31 October 2026 UTC (see §4 and the phase-2 report §10); T-16..T-18 done turn 6 and T-19/T-20 done phase-3 turn 1, 1 November 2026 UTC (see §4, phase-2 report §11, phase-3 report); T-27..T-32 done phase-4 and T-33..T-41 done phase-5, 2 November 2026 UTC. Allocated-task `done` only — no full WP or G3 gate is recorded as passed.
 
 **Purpose:** Coordinate work between Reyn and Hoang while preserving the repository's dependency order, verification rules, and honest status reporting.  
 
-**Current verified project status:** Phases 1 and 2 are `in_progress`, not complete. Use the latest recorded evidence in [`docs/phase-reports/phase-2.md`](docs/phase-reports/phase-2.md), alongside the historical Phase-1 report. No full WP or G3 gate is recorded as complete.
+**Current verified project status:** Phases 1–5 are `in_progress`, not complete (phase-6 started; see [`docs/phase-reports/phase-6.md`](docs/phase-reports/phase-6.md)). Use the latest recorded evidence in [`docs/phase-reports/phase-5.md`](docs/phase-reports/phase-5.md), alongside the historical Phase-1–4 reports. No full WP or G3 gate is recorded as complete.
 
 **This brief is a coordination document. It does not authorize external changes, paid services, production deployment, or claims that any work package or gate has passed.**
 
@@ -91,17 +91,17 @@ Every phase task has exactly one named owner. Owners alternate deliberately (Rey
 | T-28 | T4-2 / WP3-25 | Run-lifecycle API | **Reyn** | `done` | Allocated done 2 Nov 2026 (V6 store + wiring, 7/7 unit + 7/7 native; NEG3-22/27/33). Full WP3-25 open (streaming, dispatcher role, browser). |
 | T-29 | T4-3 / WP3-29 | Queries + notifications | **Reyn** | `done` | Allocated done 2 Nov 2026 (V7 stores + wiring, 8/8 unit + 11/11 native; NEG3-31/32). Full WP3-29 open (multi-channel delivery, reconnect, browser). |
 | T-30 | T4-4 / WP3-30 | Support + collaboration services | **Reyn** | `done` | Allocated done 2 Nov 2026 (V8 stores + wiring, 7/7 unit + 14/14 native; NEG3-34/35). Full WP3-30 open (mail/push fan-out, execution-tree kill, browser). |
-| T-31 | T4-5 / WP3-31 | BYOK + self-host deployment tooling | **Reyn** | `not_started` | `tentative`. |
-| T-32 | T4-6 / WP3-32 | SAML/SCIM + GitLab/Bitbucket adapters | **Reyn** | `not_started` | `tentative`. |
-| T-33 | T5-1 / WP3-13 | Bench harness + evaluation contracts | **Reyn** | `not_started` | `tentative` — uses WP3-08/09/10/11/12/18 task evidence. |
-| T-34 | T5-2 / WP3-19 | Multi-region supervisor | **Reyn** | `not_started` | `tentative` — needs WP3-18. |
-| T-35 | T5-3 / WP3-19 | Long-horizon profiler | **Reyn** | `not_started` | `tentative` — needs WP3-18. |
-| T-36 | T5-4 / WP3-20 | Legacy fixtures / recovery | **Reyn** | `not_started` | `tentative` — needs WP3-15/18. |
-| T-37 | T5-5 / WP3-33 | Finite schedule/model checker | **Reyn** | `not_started` | `tentative`. |
-| T-38 | T5-6 / WP3-33 | TB-scale / cross-engine migration | **Reyn** | `not_started` | `tentative` — after WP3-10/18. |
-| T-39 | T5-7 / WP3-34 | Cloud deployment automation | **Reyn** | `not_started` | `tentative` — after WP3-03/31/33. |
-| T-40 | T5-8 / WP3-26 | Service operations (capacity/drain/restore/billing) | **Reyn** | `not_started` | `tentative`. |
-| T-41 | T5-9 / WP3-14 | Organic pilot preparation | **Reyn** | `not_started` | `tentative` — needs owner/pilot access decisions. |
+| T-31 | T4-5 / WP3-31 | BYOK + self-host deployment tooling | **Reyn** | `done` | Allocated done 2 Nov 2026 (BYOK metadata-only + `changeproof` CLI + V9, 24/24 unit + 7/7 native; NEG3-37). Full WP3-31 open (platform catalog + license, Windows/macOS profiles, live pull-through qualification). |
+| T-32 | T4-6 / WP3-32 | SAML/SCIM + GitLab/Bitbucket adapters | **Reyn** | `done` | Allocated done 2 Nov 2026 (SAML/SCIM + provider port + V10, 30/30 unit + 9/9 native; NEG3-38/39). Full WP3-32 open (live IdP + XML/C14N vendor, self-managed/Server matrix, authorized test orgs). |
+| T-33 | T5-1 / WP3-13 | Bench harness + evaluation contracts | **Reyn** | `done` | Allocated done 2 Nov 2026 (frozen B0/B1/B2/Full manifests + bench suites, 46/46 unit, native N/A; NEG3-13/15). Full WP3-13 open (frozen holdout/datasets/oracles, live model freeze, phase-7 release evaluation). |
+| T-34 | T5-2 / WP3-19 | Multi-region supervisor | **Reyn** | `done` | Allocated done 2 Nov 2026 (frozen region plans + injected seams, 6/6 unit + 2/2 native on 2× real PG16; NEG3-08/17/40). Full WP3-19 region half open (provisioned regions, owner RPO/RTO approval, phase-7 SC3-10). |
+| T-35 | T5-3 / WP3-19 | Long-horizon profiler | **Reyn** | `done` | Allocated done 2 Nov 2026 (frozen soak catalog + plans, 14/14 unit + 2/2 native smoke; NEG3-18/40). Full WP3-19 horizon half open (provisioned soak envs, calibrated overhead, horizon approval, phase-7 SC3-11). |
+| T-36 | T5-4 / WP3-20 | Legacy fixtures / recovery | **Reyn** | `done` | Allocated done 2 Nov 2026 (corpus/intent/baseline freezes + diagnosis-only gate, 6/6 unit + 2/2 native; NEG3-19). Full WP3-20 open (real owner intent/corpus + independent baseline + fixable-case campaign). |
+| T-37 | T5-5 / WP3-33 | Finite schedule/model checker | **Reyn** | `done` | Allocated done 2 Nov 2026 (frozen finite models + replay-validated counterexamples, 6/6 unit + 2/2 native; NEG3-40). Full WP3-33 checker half open (registered bounds + full-volume/horizon proof + independent reproduction). |
+| T-38 | T5-6 / WP3-33 | TB-scale / cross-engine migration | **Reyn** | `done` | Allocated done 2 Nov 2026 (volume profiles + byte ledger + reconcile, 9/9 unit + 2/2 native probe-only; NEG3-05/40). Full WP3-33 transfer half open (≥1 TB dataset + live cross-engine target + independent campaign). |
+| T-39 | T5-7 / WP3-34 | Cloud deployment automation | **Reyn** | `done` | Allocated done 2 Nov 2026 (frozen cloud profiles + injected driver + receipt chain, 6/6 unit + 1/1 native docker lifecycle; NEG3-37/40). Full WP3-34 open (live AWS/Azure/GCP receipts per profile). |
+| T-40 | T5-8 / WP3-26 | Service operations (capacity/drain/restore/billing) | **Reyn** | `done` | Allocated done 2 Nov 2026 (pure gates + durable stores + V11 + runbook, 11/11 unit + 3/3 native; NEG3-26/27/36). Full WP3-26 open (3-org campaign + payment provider + license/vendor/SLO). |
+| T-41 | T5-9 / WP3-14 | Organic pilot preparation | **Reyn** | `done` | Allocated done 2 Nov 2026 (frozen scope template + checklists + empty register + guard test, 2/2 unit; NEG3-28; zero authorized pilots). Files + phase-5 report §13 uncommitted at reconciliation. Full WP3-14 open (authorized pilot repo + owner, phase-7 G3-10). |
 | T-42 | T6-1 / WP3-27 | Design tokens + responsive shell | **Reyn** | `not_started` | `tentative` — phase-6; extract tokens from the active mockup skin. |
 | T-43 | T6-2 / WP3-27 | Public site front-end | **Reyn** | `not_started` | `tentative`. |
 | T-44 | T6-3 / WP3-21/22/28 | Auth / onboarding / settings UI | **Reyn** | `not_started` | `tentative`. |
@@ -113,13 +113,13 @@ Every phase task has exactly one named owner. Owners alternate deliberately (Rey
 | T-50 | T7-1 / G3-01, G3-02 | Contract/identity/policy/import negatives + qualified guest probes | **Reyn** | `not_started` | `tentative` — acceptance phase. |
 | T-51 | T7-2 / G3-03 | Six-ecosystem L1/L2/L3 tuple matrix | **Reyn** | `not_started` | `tentative` — acceptance phase. |
 | T-52 | T7-3 / G3-04, G3-05, G3-11 | Frozen baselines, independent oracle, causality, real scenarios | **Reyn** | `not_started` | `tentative` — acceptance phase. |
-| T-53 | T7-4 / G3-06, G3-13 | NEG3-01..40 mapping + concurrent-tenant isolation | **Hoang** | `not_started` | `tentative` — acceptance phase. |
+| T-53 | T7-4 / G3-06, G3-13 | NEG3-01..40 mapping + concurrent-tenant isolation | **Reyn** | `not_started` | `tentative` — acceptance phase. |
 | T-54 | T7-5 / G3-07, G3-08 | Clean full-campaign reproduction + authorized publication | **Reyn** | `not_started` | `tentative` — blocked without an authorized publication repository. |
-| T-55 | T7-6 / G3-09 | Frozen dev/holdout evaluation (B0/B1/B2/Full + ablations) | **Hoang** | `not_started` | `tentative` — acceptance phase. |
+| T-55 | T7-6 / G3-09 | Frozen dev/holdout evaluation (B0/B1/B2/Full + ablations) | **Reyn** | `not_started` | `tentative` — acceptance phase. |
 | T-56 | T7-7 / G3-10 | Organic pilot acceptance (SC3-06) | **Reyn** | `not_started` | `tentative` — blocked without organic pilot/owner access. |
-| T-57 | T7-8 / G3-12, G3-15 | Full real browser journey | **Hoang** | `not_started` | `tentative` — acceptance phase. |
+| T-57 | T7-8 / G3-12, G3-15 | Full real browser journey | **Reyn** | `not_started` | `tentative` — acceptance phase. |
 | T-58 | T7-9 / G3-14 | Capacity/fairness/outage/restore + billing lifecycle | **Reyn** | `not_started` | `tentative` — acceptance phase. |
-| T-59 | T7-10 / G3-16 | Hosted/self-host/BYOK + provider publication matrix | **Hoang** | `not_started` | `tentative` — acceptance phase. |
+| T-59 | T7-10 / G3-16 | Hosted/self-host/BYOK + provider publication matrix | **Reyn** | `not_started` | `tentative` — acceptance phase. |
 | T-60 | T7-11 / G3-17 | Multi-region/RPO-RTO/long-soak/TB qualification | **Reyn** | `not_started` | `tentative` — acceptance phase. |
 
 The hackathon-slice playbook has no phase task table and is not part of this index; it is scheduled only by its exact prompt and never implies the assignments above.
