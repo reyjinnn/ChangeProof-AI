@@ -93,3 +93,20 @@ describe('login return targets are validated server-side (NEG3-29)', () => {
     expect(() => { assertSafeReturnTarget(''); }).toThrow(/return target/i);
   });
 });
+
+describe('organization-claim tickets (T-18)', () => {
+  it('mints and verifies a claim_organization challenge for onboarding', () => {
+    const token = mint({ purpose: 'claim_organization', nonce: 'nonce-claim' });
+    const verified = verifyChallenge({ token, expectedPurpose: 'claim_organization', nowMs: NOW + 1000, secret: SECRET });
+
+    expect(verified.subjectId).toBe('user-1');
+  });
+
+  it('refuses to spend a claim ticket as an email verification', () => {
+    const token = mint({ purpose: 'claim_organization', nonce: 'nonce-claim-2' });
+
+    expect(() => verifyChallenge({ token, expectedPurpose: 'verify_email', nowMs: NOW + 1000, secret: SECRET })).toThrow(
+      /purpose/i,
+    );
+  });
+});

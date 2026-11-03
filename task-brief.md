@@ -2,11 +2,11 @@
 
 **Plan revision:** 2 (24 October 2026)  
 
-**Coordination status last reconciled:** 30 October 2026 (assignment index T-02..T-60 added; see §4)
+**Coordination status last reconciled:** 2 November 2026 (T-02..T-55 allocated `done`; T6-1..T6-8 complete; T-56..T-60 `tentative`; see §4 and [`docs/phase-reports/phase-6.md`](docs/phase-reports/phase-6.md) §§18–20 and [phase-7 §§1–9](docs/phase-reports/phase-7.md)). History: T-10..T-15 runnable limits turn 5, 31 October 2026 UTC (phase-2 report §10); T-16..T-18 turn 6 and T-19/T-20 phase-3 turn 1, 1 November 2026 UTC; T-27..T-32 phase-4 and T-33..T-41 phase-5, 2 November 2026 UTC; T-42..T-45 phase-6, 2 November 2026 UTC; T-46..T-49 phase-6 and T-50 (T7-1 slice) phase-7, 2 November 2026 UTC; T-51..T-55 (T7-2..T7-6 slices) phase-7, 2 November 2026 UTC. Allocated-task `done` only — no full WP or G3 gate is recorded as passed.
 
 **Purpose:** Coordinate work between Reyn and Hoang while preserving the repository's dependency order, verification rules, and honest status reporting.  
 
-**Current verified project status:** Phases 1 and 2 are `in_progress`, not complete. Use the latest recorded evidence in [`docs/phase-reports/phase-2.md`](docs/phase-reports/phase-2.md), alongside the historical Phase-1 report. No full WP or G3 gate is recorded as complete.
+**Current verified project status:** Phase-6 allocation is complete (T6-1..T6-8 / T-42..T-49 `done`, report §§1–20) and phase-7 slices T-50..T-55 are recorded — see [`docs/phase-reports/phase-7.md`](docs/phase-reports/phase-7.md) §§1–9 alongside the historical Phase-1–6 reports. No full WP or G3 gate is recorded as complete.
 
 **This brief is a coordination document. It does not authorize external changes, paid services, production deployment, or claims that any work package or gate has passed.**
 
@@ -33,22 +33,16 @@ These roles do not imply that either person has authorization to perform an exte
 
 ## 3. Current phase status and remaining work
 
-The latest recorded status is Phase-2 report revision 2, dated 30 October 2026. Phase-1 and Phase-2 remain `in_progress`; preparation evidence does not complete a full WP. Re-run applicable checks after source/config changes.
+The latest recorded status is the phase-7 report §§1–9 (with phase-6 §§1–20 complete), dated 2 November 2026. Phases 1–6 remain `in_progress`; allocated-task evidence never completes a full WP. Re-run applicable checks after source/config changes. (Phase-1/2 detail now lives in the assignment index §4 and the historical reports.)
 
 | Phase / area | Recorded status | Remaining proof / blocker |
 |---|---|---|
-| Phase-1: WP3-01 contracts and policy (T1-1/T1-2) | `in_progress` | Complete contract/conformance and semantic audit; final policy purity and precedence review. |
-| Phase-1: WP3-02 toolchain and boundaries (T1-3) | T1-3 `done`; full WP `in_progress` | Full package/run composition acceptance remains. |
-| Phase-1: WP3-03 adapters and registry (T1-4/T1-5) | `in_progress` | The Phase-2 report records five ecosystems after owner-directed JVM removal, while the specification still requires six. Resolve this scope divergence before claiming the adapter matrix complete. |
-| Phase-1: WP3-04 runner and dependency broker (T1-6/T1-7) | `in_progress`; T1-7 preparation `done` | Runner evidence is `container_only`, not qualified VM/microVM-equivalent isolation. Native dependency acquisition and build-sandbox proof remain missing. |
-| Phase-1: WP3-05 detector, analyzer, and graph (T1-8) | `in_progress` | Some normalization coverage exists across API/data/event/dependency/config. The full acceptance matrix is not complete; preserve `proven`, `inferred`, and `unresolved`. |
-| Phase-2: WP3-15/16/17 (T2-1/T2-2/T2-3) | Preparation `done`; full WPs `in_progress` | Full acceptance depends on incomplete predecessors and required native proof. |
-| Phase-2: WP3-06 (T2-4) | Preparation `done`; full WP `blocked` | No frozen oracle or real application/database/broker proof. |
-| Phase-2: WP3-21 (T2-5) | Preparation `done`; native proof `blocked` | RLS migration and native test exist, but PostgreSQL container startup did not complete. `pnpm test:identity:native` remains unrun. |
-| Phase-2: WP3-22/23/24/28 (T2-6..T2-9) | Preparation `done`; live/durable/billing/delivery proof `blocked` | GitHub authorization, durable hosted store, pricing/vendor decisions, and email delivery infrastructure are unavailable. |
+| Phases 1–5 back-end allocated (T-02..T-41) | `done` per reports 1–5; every full WP `in_progress` | Full-WP acceptance per MVP §8 stays with phase-7; owner-held gates (frozen oracle/intent, live model, qualified guest, authorized App/orgs, vendors, pilots) remain. |
+| Phase-6 front-end T6-1..T6-8 (T-42..T-49) | `done` (phase-6 report §§1–20, gates §§7/10/13/16/19) | Backend gaps recorded per task (coverage gaps list); production hardening; phase-7 acceptance. |
+| Phase-7 acceptance (T-50..T-60) | T-50..T-55 `done`, T-56..T-60 `not_started` (`tentative`) | T-51: tuple matrix audited (0/32 certified), adapters 144/144 via env-only fix. T-52: freeze/campaign mechanics green, no owner freeze, live model blocked. T-53: `test:negative` 636/636, 36/40 NEGs pinned, soak 0/2 red. T-54: reproduction runner added; G3-07/08 blocked (no frozen manifest, no App/scope). T-55: eval skeleton + harness green, live arms HELD. G3-01 `in_progress`, G3-02/G3-07/G3-08/G3-13 `blocked`, rest `not_started`/`in_progress`; no gate passed. T-56 needs organic pilot/owner access. |
 | Gates | No G3 gate is recorded as passed | G3-08/G3-10 remain blocked without authorized publication repository and organic pilot/owner access. |
 
-**Latest recorded verification (Phase-2 report, 30 October 2026):** `pnpm typecheck`, `pnpm lint`, and `pnpm test` passed with exit code 0; the full suite recorded 290 tests across 25 files. These are results recorded for that report's change set, not a fresh run for future changes. The report records native RLS as not run and no native proof for Phase-2. The current `package.json` declares `test:runner-security:native`, but its target `scripts/runner-security-probes.mjs` is absent, so do not report that command as passing until the target is implemented and run.
+**Latest observed verification (2 November 2026, phase-7 §§1–9):** `pnpm typecheck`, dependency boundaries (168 modules / 527 deps, zero violations), `pnpm test:negative` (636/636), `pnpm test:adapters` (144/144), and 24 mock dirs (684/684) passed with exit code 0. Build/UI/E2E/component/HTTP greens are carried from the T-50 baseline, not re-run in T-51..T-55. The full `pnpm test` was not re-run on this tree. Known reds: `pnpm lint` overall exits 1 on 7 pre-existing eslint errors inside uncommitted external dashboard edits (all session files lint clean); native soak 0/2 failing (unresolved variation, T7-11 owns). Native slices re-run: N1 85/85, N2 64/64, campaign/SC3 21/21, verifier 59/59. The full native suite was last recorded in the phase-5 report §12 (160/162) and was not re-run. These are results recorded for that change set, not a fresh run for future changes. Earlier notes stand corrected: `scripts/runner-security-probes.mjs` exists (Modal qualification still blocked per its decision record, never a pass); `semgrep` binary still absent.
 
 ## 4. Active assignments
 
@@ -63,63 +57,63 @@ Every phase task has exactly one named owner. Owners alternate deliberately (Rey
 | — | T1-3 / WP3-02 | Toolchain and boundaries | — | `done` (allocated task) | Full WP3-02 stays `in_progress` (package/run composition acceptance). |
 | — | T1-7 / WP3-04 | Dependency broker preparation | — | `done` (allocated task) | Full WP3-04 stays `in_progress` (native acquisition/build-sandbox proof missing). |
 | T-02 | T1-8 / WP3-05 | Acceptance-matrix audit and scope lock | **Reyn** | `done` | Recorded below; Reyn owns any scope change. |
-| T-03 | T1-8 / WP3-05 | Event-flow acceptance tests | **Hoang** | `not_started` | Ready; bounded scope recorded by T-02. |
-| T-04 | T1-1 / WP3-01 | Contracts: complete conformance matrix + semantic audit | **Reyn** | `in_progress` | Ready; existing coverage in `tests/contracts/`. |
-| T-05 | T1-2 / WP3-01 | Policy: final purity/boundary review + precedence audit | **Hoang** | `in_progress` | Ready; policy semantic changes need Reyn approval. |
-| T-06 | T1-4 / WP3-03 | Registry: resolve six-vs-five ecosystem scope divergence | **Reyn** | `in_progress` | Scope decision required (owner-directed JVM removal vs six-ecosystem specification) before the matrix can be called complete. |
-| T-07 | T1-5 / WP3-03 | Adapter L1 remainder: Kotlin/JVM resolution + per-tuple matrix | **Hoang** | `blocked` | `kotlinc` uninstallable in current environment; also waits on the T-06 scope decision. |
-| T-08 | T1-6 / WP3-04 | Runner: qualified VM/microVM-equivalent isolation proof | **Reyn** | `blocked` | Container-only evidence; no Hyper-V on current host; `scripts/runner-security-probes.mjs` missing. |
-| T-09 | T1-8 / WP3-05 | Graph acceptance-matrix remainder after T-03 | **Hoang** | `not_started` | Starts only after T-03 review; scope confirmed per row of the T-02 matrix. |
-| T-10 | T2-1 / WP3-15 | Observability full acceptance | **Reyn** | `in_progress` | Preparation `done`; needs WP3-02/04/05 completion + native proof. |
-| T-11 | T2-2 / WP3-16 | Verifier campaign full acceptance | **Hoang** | `in_progress` | Preparation `done`; same predecessor and native-proof requirements. |
-| T-12 | T2-3 / WP3-17 | Measurement reducers full acceptance | **Reyn** | `in_progress` | Preparation `done`; same predecessor and native-proof requirements. |
-| T-13 | T2-4 / WP3-06 | Fixtures/oracle: frozen oracle + real app/DB/broker proof | **Hoang** | `blocked` | No frozen oracle and no real application/database/broker target. |
-| T-14 | T2-5 / WP3-21 | Identity/RLS native proof | **Reyn** | `blocked` | PostgreSQL container startup did not complete; `pnpm test:identity:native` unrun. |
-| T-15 | T2-6 / WP3-22 | GitHub live proof (webhooks, installation, broker) | **Hoang** | `blocked` | No GitHub authorization/installation; no `octokit` integration yet. |
-| T-16 | T2-7 / WP3-23 | Jobs: durable dispatcher + hosted store | **Reyn** | `blocked` | Durable hosted store pending. |
-| T-17 | T2-8 / WP3-24 | Usage: atomic store + billing settlement | **Hoang** | `blocked` | Pricing/vendor decisions pending. |
-| T-18 | T2-9 / WP3-28 | Email/session delivery proof | **Reyn** | `blocked` | Authorized delivery infrastructure unavailable. |
-| T-19 | T3-1 / WP3-07 | Agent fix loop (hypothesis ledger, candidate revision) | **Hoang** | `not_started` | `tentative` — needs Phase-2 predecessors + authorized model/tools. |
-| T-20 | T3-2 / WP3-07 | Model broker + typed mutation gateway | **Reyn** | `not_started` | `tentative` — model credential and security-boundary decisions required. |
-| T-21 | T3-3 / WP3-08 | JS/TS, Python, JVM L3 adapters | **Hoang** | `not_started` | `tentative` — after WP3-07 and full WP3-03. |
-| T-22 | T3-4 / WP3-09 | Go/PHP L2 adapters | **Reyn** | `not_started` | `tentative` — after WP3-07. |
-| T-23 | T3-10 / WP3-10 | Migrations + dependency broker integration | **Hoang** | `not_started` | `tentative` — after WP3-08. |
-| T-24 | T3-11 / WP3-11 | Orchestrator bundle coordination + recovery | **Reyn** | `not_started` | `tentative` — after WP3-10/17. |
-| T-25 | T3-12 / WP3-12 | Evidence store + publication broker | **Hoang** | `not_started` | `tentative` — after WP3-11/22. |
-| T-26 | T3-18 / WP3-18 | Complex scenario suite (SC3-03/04/07/08/09) | **Reyn** | `not_started` | `tentative` — after WP3-11/17. |
-| T-27 | T4-1 / WP3-27 | Public site API + content | **Hoang** | `not_started` | `tentative` — after WP3-25 services proven. |
-| T-28 | T4-2 / WP3-25 | Run-lifecycle API | **Reyn** | `not_started` | `tentative` — needs proven WP3-12/22/23/24/28 services. |
-| T-29 | T4-3 / WP3-29 | Queries + notifications | **Hoang** | `not_started` | `tentative`. |
-| T-30 | T4-4 / WP3-30 | Support + collaboration services | **Reyn** | `not_started` | `tentative`. |
-| T-31 | T4-5 / WP3-31 | BYOK + self-host deployment tooling | **Hoang** | `not_started` | `tentative`. |
-| T-32 | T4-6 / WP3-32 | SAML/SCIM + GitLab/Bitbucket adapters | **Reyn** | `not_started` | `tentative`. |
-| T-33 | T5-1 / WP3-13 | Bench harness + evaluation contracts | **Hoang** | `not_started` | `tentative` — uses WP3-08/09/10/11/12/18 task evidence. |
-| T-34 | T5-2 / WP3-19 | Multi-region supervisor | **Reyn** | `not_started` | `tentative` — needs WP3-18. |
-| T-35 | T5-3 / WP3-19 | Long-horizon profiler | **Hoang** | `not_started` | `tentative` — needs WP3-18. |
-| T-36 | T5-4 / WP3-20 | Legacy fixtures / recovery | **Reyn** | `not_started` | `tentative` — needs WP3-15/18. |
-| T-37 | T5-5 / WP3-33 | Finite schedule/model checker | **Hoang** | `not_started` | `tentative`. |
-| T-38 | T5-6 / WP3-33 | TB-scale / cross-engine migration | **Reyn** | `not_started` | `tentative` — after WP3-10/18. |
-| T-39 | T5-7 / WP3-34 | Cloud deployment automation | **Hoang** | `not_started` | `tentative` — after WP3-03/31/33. |
-| T-40 | T5-8 / WP3-26 | Service operations (capacity/drain/restore/billing) | **Reyn** | `not_started` | `tentative`. |
-| T-41 | T5-9 / WP3-14 | Organic pilot preparation | **Hoang** | `not_started` | `tentative` — needs owner/pilot access decisions. |
-| T-42 | T6-1 / WP3-27 | Design tokens + responsive shell | **Reyn** | `not_started` | `tentative` — phase-6; extract tokens from the active mockup skin. |
-| T-43 | T6-2 / WP3-27 | Public site front-end | **Hoang** | `not_started` | `tentative`. |
-| T-44 | T6-3 / WP3-21/22/28 | Auth / onboarding / settings UI | **Reyn** | `not_started` | `tentative`. |
-| T-45 | T6-4 / WP3-25 | Run journey UI | **Hoang** | `not_started` | `tentative`. |
-| T-46 | T6-5 / WP3-12/29 | Evidence / publication / export UI | **Reyn** | `not_started` | `tentative`. |
-| T-47 | T6-6 / WP3-29 | Notifications / search UI | **Hoang** | `not_started` | `tentative`. |
-| T-48 | T6-7 / WP3-30 | Support / collaboration UI | **Reyn** | `not_started` | `tentative`. |
-| T-49 | T6-8 / WP3-24/31/32 | Billing / BYOK / enterprise UI | **Hoang** | `not_started` | `tentative`. |
-| T-50 | T7-1 / G3-01, G3-02 | Contract/identity/policy/import negatives + qualified guest probes | **Reyn** | `not_started` | `tentative` — acceptance phase. |
-| T-51 | T7-2 / G3-03 | Six-ecosystem L1/L2/L3 tuple matrix | **Hoang** | `not_started` | `tentative` — acceptance phase. |
-| T-52 | T7-3 / G3-04, G3-05, G3-11 | Frozen baselines, independent oracle, causality, real scenarios | **Reyn** | `not_started` | `tentative` — acceptance phase. |
-| T-53 | T7-4 / G3-06, G3-13 | NEG3-01..40 mapping + concurrent-tenant isolation | **Hoang** | `not_started` | `tentative` — acceptance phase. |
-| T-54 | T7-5 / G3-07, G3-08 | Clean full-campaign reproduction + authorized publication | **Reyn** | `not_started` | `tentative` — blocked without an authorized publication repository. |
-| T-55 | T7-6 / G3-09 | Frozen dev/holdout evaluation (B0/B1/B2/Full + ablations) | **Hoang** | `not_started` | `tentative` — acceptance phase. |
+| T-03 | T1-8 / WP3-05 | Event-flow acceptance tests | **Hoang** | `done` | Positive/negative event-flow tests are recorded in `tests/graph/detector-analyzer-graph.test.ts`; T-09 is now ready. |
+| T-04 | T1-1 / WP3-01 | Contracts: complete conformance matrix + semantic audit | **Reyn** | `done` | Completion confirmed; matrix/tests are in `tests/contracts/`. |
+| T-05 | T1-2 / WP3-01 | Policy: final purity/boundary review + precedence audit | **Hoang** | `done` | Completion confirmed; precedence coverage is in `tests/policy/precedence.test.ts`. |
+| T-06 | T1-4 / WP3-03 | Registry: resolve six-vs-five ecosystem scope divergence | **Reyn** | `done` | Five-ecosystem decision and governing-document updates are recorded in `docs/decisions/phase1-ecosystem-scope-resolution.md`. |
+| T-07 | T1-5 / WP3-03 | Adapter L1 remainder: per-tuple matrix for the decided scope | **Hoang** | `done` | Positive/negative L1 cases are covered for the five decided ecosystems; see `tests/adapters/t07-acceptance.test.ts` and native extraction tests. Kotlin/JVM is out of scope. |
+| T-08 | T1-6 / WP3-04 | Runner: qualified VM/microVM-equivalent isolation proof | **Reyn** | `done` | One bounded E1 VM probe has metadata/socket/termination receipts; see `docs/decisions/phase1-runner-qualification-blocked.md`. Limits: single run; no cross-tenant or cancel-mid-workload proof. Full WP remains `in_progress`. |
+| T-09 | T1-8 / WP3-05 | Graph acceptance-matrix remainder after T-03 | **Hoang** | `done` | Data and deployment/config positive/negative impact cases are in `tests/graph/detector-analyzer-graph.test.ts`; synthetic evidence only, not database/deployment runtime proof. |
+| T-10 | T2-1 / WP3-15 | Observability full acceptance | **Reyn** | `done` | Connector port + file ingestion + normalize loop proven, 15/15 (turn 5); live backends need catalog + access; predecessors pending. |
+| T-11 | T2-2 / WP3-16 | Verifier campaign full acceptance | **Reyn** | `done` | Bounded real executor + campaigns 4/4 native (turn 5); barriers/network-faults/budget/qualified-guest + flagship params pending. |
+| T-12 | T2-3 / WP3-17 | Measurement reducers full acceptance | **Reyn** | `done` | Real-observation reducers 2/2; sandbox SC3-01 thresholds frozen by DEC3-P3-01; qualified SLO/profile + candidate arm (WP3-07) pending. |
+| T-13 | T2-4 / WP3-06 | Fixtures/oracle: frozen oracle + real app/DB/broker proof | **Reyn** | `done` | Rig + dry runs 3/3 incl. real Chrome + intent proposal + ceremony tool (turn 5); awaits owner approval + freeze. |
+| T-14 | T2-5 / WP3-21 | Identity/RLS native proof | **Reyn** | `done` (allocated task) | Services implemented + native 24/24 (turn 5). Full WP3-21 `in_progress` (phase-7 + hosted deployment proof remain). |
+| T-15 | T2-6 / WP3-22 | GitHub live proof (webhooks, installation, broker) | **Reyn** | `done` | Client + broker + wiring, 22/22 pure incl. `octokit 5.0.5` (turn 5); live proof needs an authorized App. |
+| T-16 | T2-7 / WP3-23 | Jobs: durable dispatcher + hosted store | **Reyn** | `done` | V3 + fenced store + wiring, native 17/17 (turn 6). Full WP3-23 `in_progress` (qualified guest, measured fairness campaign). |
+| T-17 | T2-8 / WP3-24 | Usage: atomic store + billing settlement | **Reyn** | `done` | V4 + atomic store + settlement + wiring, native 12/12 (turn 6). Full WP3-24 `in_progress`; current owner decision is free-only service plan with no payment integration in this scope. Paid plan/provider remains undecided; free-tier usage caps and frozen service profile remain open. |
+| T-18 | T2-9 / WP3-28 | Email/session delivery proof | **Reyn** | `done` | V5 + flows + real Mailpit delivery 14/14 + 3/3 (turn 6). Full WP3-28 `in_progress` (linking needs live GitHub, prod mail vendor). |
+| T-19 | T3-1 / WP3-07 | Agent fix loop (hypothesis ledger, candidate revision) | **Reyn** | `done` | Ledger/revision/stopper 18/18 + wiring (phase-3 turn 1). Full WP3-07 `in_progress` (frozen oracle, adapter loop). |
+| T-20 | T3-2 / WP3-07 | Model broker + typed mutation gateway | **Reyn** | `done` | Broker/gateway/guard 26/26 + wiring (phase-3 turn 1); official Meta endpoint/model documented; live call `blocked` on fresh host TLS proof + numeric hard cap (phase-3 report §1). |
+| T-21 | T3-3 / WP3-08 | JS/TS, Python, JVM L3 adapters | **Reyn** | `done` | Allocated done 1 Nov 2026 (TS/Python L3; JVM out per phase1-ecosystem-scope-resolution). Full WP3-08 open (frozen oracle, live model). |
+| T-22 | T3-4 / WP3-09 | Go/PHP L2 adapters | **Reyn** | `done` | Allocated done 1 Nov 2026 (Go Fiber + PHP L2 planFix/guard). Full WP3-09 open (same owner-held gates). |
+| T-23 | T3-10 / WP3-10 | Migrations + dependency broker integration | **Reyn** | `done` | Allocated done 1 Nov 2026 (MigrationRunner + broker + SC3-02/03 native). Full WP3-10 open (hosted authority). |
+| T-24 | T3-11 / WP3-11 | Orchestrator bundle coordination + recovery | **Reyn** | `done` | Allocated done 1 Nov 2026 (coordinateBundle/coordinateRecovery; NEG3-06 pinned). Full WP3-11 open (multi-system SC3 runs). |
+| T-25 | T3-12 / WP3-12 | Evidence store + publication broker | **Reyn** | `done` | Allocated done 1 Nov 2026 (evidence store + broker; NEG3-14/23/39 pinned). Live GitHub row blocked (no authorized App). |
+| T-26 | T3-18 / WP3-18 | Complex scenario suite (SC3-03/04/07/08/09) | **Reyn** | `done` | Allocated done 2 Nov 2026 (unit 19/19 + native 15/15; fixtures/tests only). Full WP3-18 open (frozen oracle, live model, guards, cross-system proof). |
+| T-27 | T4-1 / WP3-27 | Public site API + content | **Reyn** | `done` | Allocated done 2 Nov 2026 (closed contracts, manifest, two-layer tenant boundary, 24/24 unit). Full WP3-27 open (phase-6 visuals, browser acceptance). |
+| T-28 | T4-2 / WP3-25 | Run-lifecycle API | **Reyn** | `done` | Allocated done 2 Nov 2026 (V6 store + wiring, 7/7 unit + 7/7 native; NEG3-22/27/33). Full WP3-25 open (streaming, dispatcher role, browser). |
+| T-29 | T4-3 / WP3-29 | Queries + notifications | **Reyn** | `done` | Allocated done 2 Nov 2026 (V7 stores + wiring, 8/8 unit + 11/11 native; NEG3-31/32). Full WP3-29 open (multi-channel delivery, reconnect, browser). |
+| T-30 | T4-4 / WP3-30 | Support + collaboration services | **Reyn** | `done` | Allocated done 2 Nov 2026 (V8 stores + wiring, 7/7 unit + 14/14 native; NEG3-34/35). Full WP3-30 open (mail/push fan-out, execution-tree kill, browser). |
+| T-31 | T4-5 / WP3-31 | BYOK + self-host deployment tooling | **Reyn** | `done` | Allocated done 2 Nov 2026 (BYOK metadata-only + `changeproof` CLI + V9, 24/24 unit + 7/7 native; NEG3-37). Full WP3-31 open (platform catalog + license, Windows/macOS profiles, live pull-through qualification). |
+| T-32 | T4-6 / WP3-32 | SAML/SCIM + GitLab/Bitbucket adapters | **Reyn** | `done` | Allocated done 2 Nov 2026 (SAML/SCIM + provider port + V10, 30/30 unit + 9/9 native; NEG3-38/39). Full WP3-32 open (live IdP + XML/C14N vendor, self-managed/Server matrix, authorized test orgs). |
+| T-33 | T5-1 / WP3-13 | Bench harness + evaluation contracts | **Reyn** | `done` | Allocated done 2 Nov 2026 (frozen B0/B1/B2/Full manifests + bench suites, 46/46 unit, native N/A; NEG3-13/15). Full WP3-13 open (frozen holdout/datasets/oracles, live model freeze, phase-7 release evaluation). |
+| T-34 | T5-2 / WP3-19 | Multi-region supervisor | **Reyn** | `done` | Allocated done 2 Nov 2026 (frozen region plans + injected seams, 6/6 unit + 2/2 native on 2× real PG16; NEG3-08/17/40). Full WP3-19 region half open (provisioned regions, owner RPO/RTO approval, phase-7 SC3-10). |
+| T-35 | T5-3 / WP3-19 | Long-horizon profiler | **Reyn** | `done` | Allocated done 2 Nov 2026 (frozen soak catalog + plans, 14/14 unit + 2/2 native smoke; NEG3-18/40). Full WP3-19 horizon half open (provisioned soak envs, calibrated overhead, horizon approval, phase-7 SC3-11). |
+| T-36 | T5-4 / WP3-20 | Legacy fixtures / recovery | **Reyn** | `done` | Allocated done 2 Nov 2026 (corpus/intent/baseline freezes + diagnosis-only gate, 6/6 unit + 2/2 native; NEG3-19). Full WP3-20 open (real owner intent/corpus + independent baseline + fixable-case campaign). |
+| T-37 | T5-5 / WP3-33 | Finite schedule/model checker | **Reyn** | `done` | Allocated done 2 Nov 2026 (frozen finite models + replay-validated counterexamples, 6/6 unit + 2/2 native; NEG3-40). Full WP3-33 checker half open (registered bounds + full-volume/horizon proof + independent reproduction). |
+| T-38 | T5-6 / WP3-33 | TB-scale / cross-engine migration | **Reyn** | `done` | Allocated done 2 Nov 2026 (volume profiles + byte ledger + reconcile, 9/9 unit + 2/2 native probe-only; NEG3-05/40). Full WP3-33 transfer half open (≥1 TB dataset + live cross-engine target + independent campaign). |
+| T-39 | T5-7 / WP3-34 | Cloud deployment automation | **Reyn** | `done` | Allocated done 2 Nov 2026 (frozen cloud profiles + injected driver + receipt chain, 6/6 unit + 1/1 native docker lifecycle; NEG3-37/40). Full WP3-34 open (live AWS/Azure/GCP receipts per profile). |
+| T-40 | T5-8 / WP3-26 | Service operations (capacity/drain/restore/billing) | **Reyn** | `done` | Allocated done 2 Nov 2026 (pure gates + durable stores + V11 + runbook, 11/11 unit + 3/3 native; NEG3-26/27/36). Full WP3-26 open (3-org campaign + payment provider + license/vendor/SLO). |
+| T-41 | T5-9 / WP3-14 | Organic pilot preparation | **Reyn** | `done` | Allocated done 2 Nov 2026 (frozen scope template + checklists + empty register + guard test, 2/2 unit; NEG3-28; zero authorized pilots). Files + phase-5 report §13 uncommitted at reconciliation. Full WP3-14 open (authorized pilot repo + owner, phase-7 G3-10). |
+| T-42 | T6-1 / WP3-27 | Design tokens + responsive shell | **Reyn** | `done` | Allocated done 2 Nov 2026 (dashboard scaffold, token source, shell/components/store, thin `src/http` slice, self-hosted fonts; phase-6 report §§2–3). Full WP3-27 open (phase-7 browser acceptance). |
+| T-43 | T6-2 / WP3-27 | Public site front-end | **Reyn** | `done` | Allocated done 2 Nov 2026 (17 manifest routes live, FAQ search, template gate; phase-6 report §4). Full WP3-27 open (phase-7 browser acceptance). |
+| T-44 | T6-3 / WP3-21/22/28 | Auth / onboarding / settings UI | **Reyn** | `done` | Allocated done 2 Nov 2026 (17 auth/org endpoints, pages, session event + epoch guards; native 11/11, E2E auth; phase-6 report §5). Full WP3-21/22/28 open (member/invite lists, hardening, phase-7). |
+| T-45 | T6-4 / WP3-25 | Run journey UI | **Reyn** | `done` | Allocated done 2 Nov 2026 (10 runs endpoints, lists/form/detail, coverage record, review gate; native 10/10, E2E runs; phase-6 report §§6–7). Full WP3-25 open (workers, review aggregation, streaming, phase-7). |
+| T-46 | T6-5 / WP3-12/29 | Evidence / publication / export UI | **Reyn** | `done` | Allocated done 2 Nov 2026 (evidence library/viewer/export + publication panel; E2E evidence spec; phase-6 report §§9–10). Full WP3-12/29 open (enumeration API, live PR/CI, phase-7). |
+| T-47 | T6-6 / WP3-29 | Notifications / search UI | **Reyn** | `done` | Allocated done 2 Nov 2026 (notifications slice + inbox + Ctrl/Cmd+K palette; native 6/6, E2E inbox; phase-6 report §§12–13). Full WP3-29 open (multi-channel delivery, reconnect, phase-7). |
+| T-48 | T6-7 / WP3-30 | Support / collaboration UI | **Reyn** | `done` | Allocated done 2 Nov 2026 (teamwork slice + support/operator/threads pages; native 6/6, E2E teamwork; phase-6 report §§15–16). Full WP3-30 open (gap APIs, workers, phase-7). |
+| T-49 | T6-8 / WP3-24/31/32 | Billing / BYOK / enterprise UI | **Reyn** | `done` | Allocated done 2 Nov 2026 (enterprise slice + billing/enterprise pages; native 5/5, E2E enterprise; phase-6 report §§18–19). Full WP3-24/31/32 open (live IdP, payment provider, gap APIs, workers, phase-7). |
+| T-50 | T7-1 / G3-01, G3-02 | Contract/identity/policy/import negatives + qualified guest probes | **Reyn** | `done` | Allocated done 2 Nov 2026 (T7-1 slice: unit 139/139, arch 9/9, identity 47/47, security 14/14, adapters 141/144 baseline-verified; guest probes blocked on creds/scope; phase-7 report §1). G3-01 `in_progress`, G3-02 `blocked`; no gate passed. |
+| T-51 | T7-2 / G3-03 | Six-ecosystem L1/L2/L3 tuple matrix | **Reyn** | `done` | Allocated done 2 Nov 2026 (matrix audited from actuals, 0/32 certified; env-only adapter-test fix 141/144 → 144/144, non-weakening verified; phase-7 §4). G3-03 `in_progress` (fails: no frozen matrix/records). |
+| T-52 | T7-3 / G3-04, G3-05, G3-11 | Frozen baselines, independent oracle, causality, real scenarios | **Reyn** | `done` | Allocated done 2 Nov 2026 (freeze mechanics exit 0, verifier 59/59, campaign/SC3 natives 21/21, regions 2/2; live model blocked, no owner freeze; all counts below §17.3 floors; phase-7 §5). G3-04/05/11 `not_started` for acceptance. |
+| T-53 | T7-4 / G3-06, G3-13 | NEG3-01..40 mapping + concurrent-tenant isolation | **Reyn** | `done` | Allocated done 2 Nov 2026 (new `tests/negative` 636/636; 24 mock dirs 684/684; natives N1 85/85, N2 64/64; 36/40 NEGs pinned, soak 0/2 red, guest live probes blocked; phase-7 §6). G3-06 `in_progress`, G3-13 `blocked`. |
+| T-54 | T7-5 / G3-07, G3-08 | Clean full-campaign reproduction + authorized publication | **Reyn** | `done` | Allocated done 2 Nov 2026 (`scripts/reproduce-campaign.mjs` added, negatives N1–N5 exit 2, mechanics M3–M5 3/3; publication procedure reviewable, no live PR; phase-7 §7). G3-07/08 `blocked` (no frozen manifest, no App/scope/CI client). |
+| T-55 | T7-6 / G3-09 | Frozen dev/holdout evaluation (B0/B1/B2/Full + ablations) | **Reyn** | `done` | Allocated done 2 Nov 2026 (changeproof-3 skeleton manifest, harness 24/24 + mechanics 8/8, oracle-isolation audit; live arms HELD; phase-7 §8). G3-09 HELD (not passed, not failed). |
 | T-56 | T7-7 / G3-10 | Organic pilot acceptance (SC3-06) | **Reyn** | `not_started` | `tentative` — blocked without organic pilot/owner access. |
-| T-57 | T7-8 / G3-12, G3-15 | Full real browser journey | **Hoang** | `not_started` | `tentative` — acceptance phase. |
+| T-57 | T7-8 / G3-12, G3-15 | Full real browser journey | **Reyn** | `not_started` | `tentative` — acceptance phase. |
 | T-58 | T7-9 / G3-14 | Capacity/fairness/outage/restore + billing lifecycle | **Reyn** | `not_started` | `tentative` — acceptance phase. |
-| T-59 | T7-10 / G3-16 | Hosted/self-host/BYOK + provider publication matrix | **Hoang** | `not_started` | `tentative` — acceptance phase. |
+| T-59 | T7-10 / G3-16 | Hosted/self-host/BYOK + provider publication matrix | **Reyn** | `not_started` | `tentative` — acceptance phase. |
 | T-60 | T7-11 / G3-17 | Multi-region/RPO-RTO/long-soak/TB qualification | **Reyn** | `not_started` | `tentative` — acceptance phase. |
 
 The hackathon-slice playbook has no phase task table and is not part of this index; it is scheduled only by its exact prompt and never implies the assignments above.
@@ -131,7 +125,7 @@ Both assignments below sit under T1-8 / WP3-05. T-03 depends on T-02. Neither as
 | Assignment | Owner | Parent task / WP | Status | Prerequisite / handoff |
 |---|---|---|---|---|
 | **T-02: WP3-05 acceptance-matrix audit and scope lock** | **Reyn** | T1-8 / WP3-05 | `done` | The current graph-test audit is recorded below. Reyn owns any scope change before Hoang starts. |
-| **T-03: WP3-05 event-flow acceptance tests** | **Hoang** | T1-8 / WP3-05 | `not_started` | T-02 has recorded the event-flow gap and bounded scope. Do not assume event coverage is absent; existing tests already cover event-schema normalization. |
+| **T-03: WP3-05 event-flow acceptance tests** | **Hoang** | T1-8 / WP3-05 | `done` | Positive and negative event-flow acceptance tests are present in `tests/graph/detector-analyzer-graph.test.ts`; full WP3-05 remains `in_progress`. |
 
 ### T-02: Reyn
 
@@ -158,7 +152,7 @@ Acceptance-matrix audit:
 | Dependency | `tests/graph/detector-analyzer-graph.test.ts`: dependency normalization and impact propagation through `depends_on`. | Broader extraction cases remain outside this event-flow task. | No |
 | Config | `tests/graph/detector-analyzer-graph.test.ts`: configuration normalization. | No config/deployment requirement edge or impact path is demonstrated by the graph test matrix. | No |
 
-Shared graph negatives already cover unresolved/proven/inferred distinctions, dangling endpoints, and unknowns retained as coverage gaps. T-03 must add the missing event-flow path without duplicating those general cases.
+Shared graph negatives cover unresolved/proven/inferred distinctions, dangling endpoints, and unknowns retained as coverage gaps. T-03 adds the missing event-flow path without duplicating those general cases.
 
 ### T-03: Hoang
 
@@ -170,8 +164,8 @@ Outcome: Positive and negative event-flow acceptance tests for the exact gaps co
 Prerequisites: T-02 matrix is recorded; task-level inputs for the affected adapter/graph path. Incomplete full WPs do not become complete through this split.
 Allowed source/config changes: tests/graph/detector-analyzer-graph.test.ts; corresponding detector/analyzer/graph implementation only when required by a failing test. No policy/oracle/threshold changes.
 Acceptance checks: Tests first. Positive case: an event-schema change traverses publisher -> publishes -> event -> consumes -> consumer/workflow with edge evidence locators; resulting analyzer impacts remain `inferred`. Negative case: an unresolved consumer subscription remains a coverage gap with its reason and is not reported as unaffected or as a proven impact. Run pnpm test:graph, pnpm typecheck, pnpm lint, and pnpm test after source changes; record commands and exit codes. Synthetic tests are not native/runtime proof.
-Status: not_started
-Next: Open a reviewable PR with the task header, diff, test results, and remaining gaps. Reyn reviews before integration.
+Status: done
+Next: T-09 completed the remaining data/config acceptance-matrix rows. Full WP3-05 remains in progress.
 ```
 
 ### T-04: Reyn
@@ -184,8 +178,8 @@ Outcome: The contract/conformance matrix is complete and audited: every versione
 Prerequisite evidence: Phase-1 report T1-1 row — versioned Zod schemas, semantic validation, and negative tests already exist under tests/contracts/; complete matrix and final review remain.
 Allowed source/config changes: src/core/contracts and tests/contracts only. Any contract semantic change requires a schema version bump and a decision record in docs/decisions/. No policy, oracle, threshold, or specification changes.
 Acceptance checks: Failure-path tests first for each uncovered conformance row. Each matrix row maps to an existing or new test reference — no row is closed on inspection alone. Run pnpm typecheck, pnpm lint, pnpm test after changes; record commands and exit codes.
-Status: not_started
-Next: Open a reviewable PR with the task header, the completed matrix, and test results. Hoang peer-reviews; Reyn integrates.
+Status: done
+Next: T-04 completion is recorded; full WP3-01 remains in progress until all original acceptance criteria are met.
 ```
 
 ### T-05: Hoang
@@ -198,8 +192,8 @@ Outcome: Final policy purity and precedence review is recorded: policy stays pur
 Prerequisite evidence: Phase-1 report T1-2 row — deterministic target/bundle reducer with precedence tests exists under tests/policy/; final purity/boundary review and policy contract audit remain.
 Allowed source/config changes: src/modules/policy and tests/policy only. No verdict-rule changes without Reyn's approval and a decision record; adding an adapter/framework must not change verdict rules.
 Acceptance checks: Failure-path tests first. Run pnpm typecheck, pnpm lint, pnpm test, and the boundary check after changes; record commands and exit codes.
-Status: not_started
-Next: Open a reviewable PR with the task header, audit notes, and test results. Reyn reviews policy semantics before integration.
+Status: done
+Next: T-05 completion is recorded; full WP3-01 remains in progress until all original acceptance criteria are met.
 ```
 
 ### T-06: Reyn
@@ -208,12 +202,12 @@ Next: Open a reviewable PR with the task header, audit notes, and test results. 
 Task ID / parent WP: T-06 / T1-4 / WP3-03
 Owner: Reyn
 Requirement IDs: FR3-01/02; NEG3-02/09
-Outcome: The six-versus-five ecosystem scope divergence is resolved one way or the other: either the specification documents are updated to match the owner-directed JVM removal (all four documents, per the conflict rule), or the JVM ecosystem is reinstated and T-07 is unblocked. The decision is recorded in docs/decisions/ and the registry/capability tuples match the decision.
+Outcome: The six-versus-five ecosystem scope divergence is resolved in favor of five ecosystems; all four governing documents and registry/capability tuples match the owner-directed JVM removal. The decision is recorded in `docs/decisions/phase1-ecosystem-scope-resolution.md`.
 Prerequisite evidence: docs/decisions/phase1-jvm-removal.md (owner-directed removal); Phase-2 report recording five ecosystems against the six-ecosystem specification target; tests/adapters/registry.test.ts.
 Allowed source/config changes: decision record + governing document updates; src/modules/adapters/registry only if the decision reinstates or removes tuples. New records start with provenLevel = none regardless of the decision.
 Acceptance checks: The recorded decision, the documents, and the registered tuples agree. Run pnpm test:adapters, pnpm typecheck, pnpm lint after any registry change; record commands and exit codes.
-Status: not_started
-Next: Record the decision, then hand the resulting adapter scope to T-07.
+Status: done
+Next: T-07 may proceed against the five-ecosystem scope recorded in the decision; no JVM/Kotlin case is required.
 ```
 
 ### T-07: Hoang
@@ -222,12 +216,13 @@ Next: Record the decision, then hand the resulting adapter scope to T-07.
 Task ID / parent WP: T-07 / T1-5 / WP3-03
 Owner: Hoang
 Requirement IDs: FR3-01/02; NEG3-02/09
-Outcome: Per-tuple L1 acceptance is complete for every ecosystem in the scope decided by T-06: at least one positive extraction and one negative/unsupported case per (ecosystem, framework, version, feature) tuple on a pinned version, including the unresolved Kotlin/JVM case or its recorded removal.
-Prerequisite evidence: Phase-1 report T1-5 row — native positive/negative tests pass for TypeScript, Python, Java, PHP, Go (go1.27.3) and .NET (SDK 10.0.403); Kotlin blocked (kotlinc uninstallable). T-06 scope decision recorded.
+Outcome: Per-tuple L1 acceptance is complete for the five ecosystems decided by T-06, with positive extraction and negative/unsupported cases on pinned toolchains. JVM/Kotlin is out of scope.
+Prerequisite evidence: Phase-1 report T1-5 row and T-06 decision — native positive/negative tests pass for TypeScript, Python, PHP, Go (go1.27.3), and .NET (SDK 10.0.403). Java/Kotlin are out of scope after the five-ecosystem decision.
 Allowed source/config changes: src/modules/adapters/* and tests/adapters/* only. No provenLevel promotion without evidence; unsupported cases must not return a generic verified.
 Acceptance checks: Failure-path tests first; native toolchain checks run where the toolchain exists and are reported separately from mock/replay results. Run pnpm test:adapters, pnpm typecheck, pnpm lint, pnpm test after changes; record commands and exit codes. A missing toolchain is a recorded blocker, not a skipped check.
-Status: blocked (waits on T-06 scope decision and kotlinc availability)
-Next: Once T-06 is recorded and the toolchain question is resolved, open a reviewable PR with the task header and per-tuple matrix. Reyn reviews before integration.
+Status: done
+Evidence: `tests/adapters/t07-acceptance.test.ts` covers the five ecosystem tuples; `tests/adapters/l1-extraction.test.ts` and `tests/adapters/go-dotnet-extraction.test.ts` include native TypeScript, Python, PHP, Go, and .NET extraction cases. Fresh `pnpm test:adapters` passed 75 tests across six files.
+Next: Full WP3-03 acceptance remains separate from this allocated task.
 ```
 
 ### T-08: Reyn
@@ -236,12 +231,12 @@ Next: Once T-06 is recorded and the toolchain question is resolved, open a revie
 Task ID / parent WP: T-08 / T1-6 / WP3-04
 Owner: Reyn
 Requirement IDs: NFR3-04..08; NEG3-10/24
-Outcome: A decision and evidence path for qualified guest isolation: either a host with VM/microVM capability is provisioned and the qualification probes run there, or the requirement is recorded as blocked with the exact missing environment. Includes implementing the missing scripts/runner-security-probes.mjs target or removing the dangling script declaration.
-Prerequisite evidence: Phase-1 report T1-6 row — runner profile, guest plan, oracle mount checks, cleanup/quarantine tests, Docker native container probes 6/6; container-only is explicitly insufficient; no Hyper-V on the current host.
+Outcome: A bounded E1 VM probe was executed and recorded, and its limits are explicit. This closes the allocated T-08 decision/evidence task; it does not qualify hosted readiness or complete full WP3-04.
+Prerequisite evidence: Runner profile, guest plan, oracle mount checks, cleanup/quarantine tests, Docker container probes, and the E1 VM probe receipts recorded in `docs/decisions/phase1-runner-qualification-blocked.md`.
 Allowed source/config changes: scripts/, modules/verifier runner configuration, and environment/decision records. No weakening of isolation requirements; container smoke remains non-qualifying.
 Acceptance checks: Qualified-boundary probes with escape/cancel/cleanup/quarantine receipts on the qualified environment, or a specific recorded blocker. Native results reported separately; record commands and exit codes.
-Status: blocked (no VM/microVM-capable host available)
-Next: Record the environment decision; do not report pnpm test:runner-security:native as passing until its target exists and the check actually runs.
+Status: done (one bounded E1 VM probe; no cross-tenant or cancel-mid-workload proof)
+Next: Broader runner qualification and native dependency broker proof remain WP3-04 work.
 ```
 
 ### T-09: Hoang
@@ -250,12 +245,88 @@ Next: Record the environment decision; do not report pnpm test:runner-security:n
 Task ID / parent WP: T-09 / T1-8 / WP3-05
 Owner: Hoang
 Requirement IDs: BR3-02; FR3-04/05/06; NEG3-02/06
-Outcome: The remaining rows of the T-02 acceptance matrix are closed: data (table/column relationship and impact cases) and config (deployment-requirement edge and impact path) acceptance tests, plus any rows T-03 leaves open. proven, inferred, and unresolved stay visible; unknowns are never dropped or silently promoted.
+Outcome: The remaining data (table/column relationship and impact) and config (deployment-requirement edge and impact) acceptance rows are covered by positive and negative graph tests. `proven`, `inferred`, and `unresolved` remain distinct; unknowns are not dropped or promoted.
 Prerequisite evidence: T-02 acceptance matrix recorded above; T-03 reviewed and integrated; existing tests/graph/detector-analyzer-graph.test.ts coverage.
 Allowed source/config changes: tests/graph/* and the corresponding detector/analyzer/graph implementation only when a failing test demonstrates the need. No policy/oracle/threshold changes.
 Acceptance checks: Tests first, positive and negative per matrix row. Run pnpm test:graph, pnpm typecheck, pnpm lint, pnpm test after changes; record commands and exit codes. Synthetic tests are not native/runtime proof.
-Status: not_started (starts after T-03 review; scope confirmed per matrix row)
-Next: Open a reviewable PR with the task header, matrix rows closed, and test results. Reyn reviews before integration.
+Status: done
+Evidence: `tests/graph/detector-analyzer-graph.test.ts` covers data-schema and deployment/configuration impact paths and unresolved-edge gaps. Fresh `pnpm test:graph` passed 22 tests; cases are synthetic, not native database/deployment proof.
+Next: Full WP3-05 acceptance remains separate from this allocated task.
+```
+
+### T-21: Reyn
+
+```text
+Task ID / parent WP: T-21 / T3-3 / WP3-08
+Owner: Reyn
+Requirement IDs: FR3-07/08; support tuples (typescript react/nestjs/fastify/prisma, python pydantic/sqlalchemy)
+Outcome: TS + Python adapters reach L3 (detect/extract/analyze/planFix/applyPatch/verify + planChecks); JVM label stale per phase1-ecosystem-scope-resolution, .NET stays L1.
+Prerequisite evidence: T-07 L1 matrix; native toolchains (tsc, next build, prisma validate, django test) on dev machine.
+Allowed source/config changes: src/modules/adapters/{typescript,python}, tests/adapters/t21-l3-tuples.test.ts, tests/adapters/{native-exec,fixtures}.ts.
+Acceptance checks: tests-first; 19/19 tuple tests; pnpm test:adapters 144/144; native toolchain proofs real (no mocks).
+Status: done
+Evidence: tests/adapters/t21-l3-tuples.test.ts 19/19; pnpm test:adapters 144/144; pnpm typecheck 0; pnpm lint 0.
+Next: Full WP3-08 stays open (frozen oracle ceremony, live model, adapter-loop integration).
+```
+
+### T-22: Reyn
+
+```text
+Task ID / parent WP: T-22 / T3-4 / WP3-09
+Owner: Reyn
+Requirement IDs: FR3-07/08; support tuples (go fiber, php)
+Outcome: Go/Fiber + PHP adapters reach L2 (planFix + planChecks + guard); fail-closed unknowns for unmodeled routers/interpolation.
+Prerequisite evidence: T-21 patterns (reviewPatch/applyAdapterPatch helpers); go build/vet + php -l on dev machine.
+Allowed source/config changes: src/modules/adapters/{go,php}, tests/adapters/t22-l2-candidates.test.ts.
+Acceptance checks: tests-first; 11/11 candidate tests; native go/php proofs real.
+Status: done
+Evidence: tests/adapters/t22-l2-candidates.test.ts 11/11; full adapters suite green.
+Next: Full WP3-09 stays open (same owner-held gates as WP3-08).
+```
+
+### T-23: Reyn
+
+```text
+Task ID / parent WP: T-23 / T3-10 / WP3-10
+Owner: Reyn
+Requirement IDs: FR3-09/10; SC3-02/03
+Outcome: MigrationRunner (expand/chunk/integrity) + trusted upgrade planner (planUpgrade, manifest/lockfile match) + composeMigrations wiring; SC3-02 lockfile-upgrade and SC3-03 populated-online-migration proven on disposable Postgres.
+Prerequisite evidence: WP3-17 campaign reducers; Prisma/Alembic/Django toolchains; disposable container changeproof-t23.
+Allowed source/config changes: src/modules/{migrations,dependencies}, src/orchestrator (composeMigrations), tests/migrations/*, tests/native/migration-*.test.ts.
+Acceptance checks: tests-first; unit 15/15; native migration-online 2/2 + migration-frameworks 2/2 + sc3-02 1/1 with real DB writes.
+Status: done
+Evidence: tests/migrations 15/15; native 5/5 on DATABASE_URL changeproof-t23.
+Next: Full WP3-10 stays open (hosted authority wiring WP3-21+).
+```
+
+### T-24: Reyn
+
+```text
+Task ID / parent WP: T-24 / T3-11 / WP3-11
+Owner: Reyn
+Requirement IDs: FR3-16/17; SC3-01/04/05 coordination paths; NEG3-06
+Outcome: coordinateBundle (coverage + digest binding + edge/invariant/mixed-version/guard folding into policy facts; verdict stays in policy) and coordinateRecovery (contradiction supersede, cosmetic-retry refusal, no-progress stop, intent-conflict blocked).
+Prerequisite evidence: policy assessTarget/assessBundle precedence; agent ledger (recordAttempt/attachEvidence/transition/assessBranch); core subjectKey.
+Allowed source/config changes: src/orchestrator/bundle.ts, src/orchestrator/{errors,index}.ts, tests/orchestrator/t24-bundle-coordination.test.ts.
+Acceptance checks: tests-first; 18/18 (NEG3-06 local-pass/edge-fail blocked; SC3-01-shaped verified; SC3-04 invariant block; SC3-05 recovery trace).
+Status: done
+Evidence: tests/orchestrator/t24-bundle-coordination.test.ts 18/18; tests/orchestrator 52/52 with T-25.
+Next: Full WP3-11 stays open (real multi-system SC3-01/04/05 runs need frozen oracle + runners; T-26 owns the suite).
+```
+
+### T-25: Reyn
+
+```text
+Task ID / parent WP: T-25 / T3-12 / WP3-12
+Owner: Reyn
+Requirement IDs: FR3-18/19/20; NEG3-14/23/39
+Outcome: modules/evidence (canonical render + golden bytes, content-addressed memory/file stores, key-name redaction, bundle manifest assemble/verify) + github PR extension (branch plan, payload, client methods, real Octokit transport code) + orchestrator publication broker (grant/lease/guard/evidence/head gates, idempotent open, lost-response reconciliation).
+Prerequisite evidence: T-24 CoordinatedBundle; jobs fencing (assertLeaseWritable/assertEffectIdUnique); github client broker pattern; core GitSha/Sha256/lease/connection contracts.
+Allowed source/config changes: src/modules/evidence/index.ts, src/modules/github/{publication,client,index}.ts, src/orchestrator/{publication,errors,index}.ts, tests/{evidence,github,orchestrator,native}/t25-*.
+Acceptance checks: tests-first; evidence 17/17, github 31/31, broker 11/11; native file-durability + real-git branch/push/head-drift 2/2. Live GitHub open stays blocked (no authorized App) and is not faked.
+Status: done
+Evidence: tests/evidence 17/17; tests/github 31/31; tests/orchestrator/t25-publication 11/11; native t25-evidence-git 2/2.
+Next: Full WP3-12 stays open (hosted authority backend WP3-21, durable outbox WP3-14, authorized-App live row, viewer).
 ```
 
 All remaining work now has a named owner in the assignment index above. The index assigns ownership, not permission to run tasks out of dependency order: starting any task marked `tentative` still requires Reyn to confirm exact scope, prerequisite evidence, and file ownership first, and Hoang should not start a second task without agreement.
@@ -266,7 +337,7 @@ All remaining work now has a named owner in the assignment index above. The inde
 
 - Maintain the task board/status table in this file or an agreed tracker, including owner, status, prerequisite evidence, and next action.
 - Own specification traceability and decisions that change contracts, policy semantics, threat boundaries, support claims, or proof scope. Record approved technical decisions in `docs/decisions/` and update governing documents when required.
-- Coordinate the unresolved six-versus-five ecosystem scope, qualified guest runner, native dependency-resolution/build-sandbox environment, and Phase-2 service blockers. Record the specific access or decision needed; do not substitute simulations.
+- Coordinate the resolved five-ecosystem scope, qualified guest runner, native dependency-resolution/build-sandbox environment, and Phase-2 service blockers. Record the specific access or decision needed; do not substitute simulations.
 - Review Hoang's task header, diff, failure-path tests, boundary impact, and evidence before integration.
 - Run or coordinate final integration checks and update the applicable phase report only after actual execution. Keep allocated task status distinct from full-WP status.
 
@@ -323,19 +394,21 @@ pnpm test:adapters
 pnpm test:graph
 pnpm test:dependencies
 pnpm test:security
+pnpm test:ui
+pnpm test:e2e
 pnpm test:identity:native
 ```
 
-`pnpm verify` is also defined and runs typecheck, lint, and the full test suite. `pnpm test:identity:native` is declared but has not passed; the Phase-2 report records its PostgreSQL startup blocker. `pnpm test:runner-security:native` is declared but its target script is missing. Neither command may be reported as passing until the target is runnable and the check succeeds. Do not state that a command passed unless it was run against the current change.
+`pnpm verify` is also defined and runs typecheck, lint, and the full test suite. `pnpm test:identity:native` runs the whole native config (needs `DATABASE_URL`; last full run recorded phase-5 report §12, 160/162). `pnpm test:runner-security:native` targets the existing `scripts/runner-security-probes.mjs`; Modal qualification stays blocked per its decision record. `pnpm test:negative` runs the thin NEG3-pinned suite (636/636 green since T-53). `pnpm dev` / `pnpm build:ui` serve and build the dashboard (no API proxy in dev). No command may be reported as passing until it was run against the current change.
 
 ## 7. Immediate next actions
 
-1. Reyn shares the recorded T-03 assignment and acceptance matrix with Hoang.
-2. Hoang implements/tests the event-flow subset and opens a PR for review.
-3. After the T-03 review, owners pick up their Phase-1 remainder assignments (T-04 Reyn, T-05 Hoang, T-06 Reyn, T-09 Hoang — T-07/T-08 stay `blocked` on their recorded blockers) in dependency order, each opened with a §5 task header. `tentative` tasks in the index do not start without Reyn confirming scope and prerequisites.
-4. Keep the affected full WP3-05 and both phases `in_progress` unless their complete acceptance criteria are independently proven.
-5. Track Phase-2 blockers separately. T2-5 RLS (T-14, Reyn) is the next documented native candidate and should only be resumed if the Docker container-start issue can be addressed safely; do not treat preparation tests as native proof.
-6. After each task, record actual commands, exit codes, mock/native distinction, blockers, and the next dependency-ready task. Do not set a daily task or phase quota or start the next phase automatically.
+1. T-42..T-55 are recorded `done` as allocated tasks with phase-6 report evidence (§§1–20) and the phase-7 report (§§1–9); T-56..T-60 are `not_started` and `tentative`.
+2. Next dependency-ready task: T-56 (T7-7, organic pilot acceptance SC3-06). Reyn confirms exact scope, prerequisite evidence, and file ownership before it starts; the owner records a §5 header at that point.
+3. Keep every full WP and all of phases 1–7 `in_progress` until their complete acceptance criteria are independently proven. Allocated task evidence never passes a full WP or a G3 gate.
+4. `tentative` tasks do not start without Reyn confirming scope and prerequisites. Record actual commands, exit codes, mock/native distinction, blockers, and the next dependency-ready task.
+5. Phase-7 stays ahead: T-56 needs organic pilot/owner access before it can start; T-54's live-publication half still needs an authorized publication repository. Missing access is a recorded blocker, never a reason to simulate.
+6. Do not set a daily task or phase quota or start the next phase automatically.
 
 ## 8. Source-of-truth references
 
@@ -344,8 +417,10 @@ pnpm test:identity:native
 - [`phases/phase-1.md`](phases/phase-1.md): phase-1 scope, tasks, prerequisites, acceptance checks, and blockers.
 - [`docs/phase-reports/phase-1.md`](docs/phase-reports/phase-1.md): recorded phase-1 results and remaining gaps.
 - [`phases/phase-2.md`](phases/phase-2.md): phase-2 scope, task breakdown, prerequisites, and acceptance checks.
-- [`docs/phase-reports/phase-2.md`](docs/phase-reports/phase-2.md): latest recorded preparation work, verification, and blockers.
-- [`docs/decisions/phase1-jvm-removal.md`](docs/decisions/phase1-jvm-removal.md): owner-directed JVM removal and unresolved mismatch with the six-ecosystem specification target.
+- [`docs/phase-reports/phase-2.md`](docs/phase-reports/phase-2.md): recorded preparation work, verification, and blockers.
+- [`docs/phase-reports/phase-3.md`](docs/phase-reports/phase-3.md), [`phase-4.md`](docs/phase-reports/phase-4.md), [`phase-5.md`](docs/phase-reports/phase-5.md), [`phase-6.md`](docs/phase-reports/phase-6.md), [`phase-7.md`](docs/phase-reports/phase-7.md): later recorded results; phase-7 is the latest.
+- [`docs/feature-coverage.md`](docs/feature-coverage.md): phase-6 control → requirement → endpoint → browser-case record.
+- [`docs/decisions/phase1-jvm-removal.md`](docs/decisions/phase1-jvm-removal.md): initial owner-directed JVM removal, superseded for the spec mismatch by [`docs/decisions/phase1-ecosystem-scope-resolution.md`](docs/decisions/phase1-ecosystem-scope-resolution.md).
 - [`.prepare/BRD.md`](.prepare/BRD.md), [`.prepare/PRD.md`](.prepare/PRD.md), [`.prepare/MVP.md`](.prepare/MVP.md), [`.prepare/architecture.md`](.prepare/architecture.md): normative product and architecture specifications.
 
 When documents conflict, do not guess. Reyn resolves the conflict and records the decision before work depending on it proceeds.

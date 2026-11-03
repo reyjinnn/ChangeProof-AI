@@ -2,6 +2,10 @@ import { createHmac, timingSafeEqual } from 'node:crypto';
 
 import { ChangeProofError, type RepositoryConnection } from '../../core/index.js';
 
+export * from './broker.js';
+export * from './client.js';
+export * from './publication.js';
+
 /**
  * GitHub App webhook verification and installation grants (WP3-22, FR3-30).
  *

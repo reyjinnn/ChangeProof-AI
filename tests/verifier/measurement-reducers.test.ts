@@ -67,6 +67,16 @@ describe('the reducer never lets lost data read as improvement (NEG3-18)', () =>
     expect(assessment.measurementValidity).toBe('inconclusive');
   });
 
+  it('is inconclusive with an uncertainty note when windows carry no observations', () => {
+    const assessment = reduceMatchedWindows(
+      input({ windows: [{ windowId: 'w-1', observations: [] }] }),
+    );
+
+    expect(assessment.result).toBe('inconclusive');
+    expect(assessment.measurementValidity).toBe('inconclusive');
+    expect(assessment.uncertainty).toContain('no observations');
+  });
+
   it('fails closed on non-finite observations instead of reducing around them', () => {
     expect(() =>
       reduceMatchedWindows(

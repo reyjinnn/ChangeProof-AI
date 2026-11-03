@@ -1,0 +1,23 @@
+{
+  "schemaVersion": "1",
+  "profileId": "local-linux",
+  "platform": "linux-x64",
+  "nodePin": "26.12.1",
+  "pnpmPin": "12.5.1",
+  "postgresPin": "16",
+  "migrationFiles": [
+    "V1__identity_tenancy.sql",
+    "V2__identity_services.sql",
+    "V3__jobs.sql",
+    "V4__usage.sql",
+    "V5__email_identity.sql",
+    "V6__lifecycle.sql",
+    "V7__engagement.sql",
+    "V8__teamwork.sql",
+    "V9__distribution.sql",
+    "V10__enterprise.sql"
+  ],
+  "maxConcurrentRuns": 4,
+  "diskGb": 20,
+  "qualificationMethod": "t31-native-cycle-1"
+}

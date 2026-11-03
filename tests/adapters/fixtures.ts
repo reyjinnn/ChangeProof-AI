@@ -30,7 +30,17 @@ export function createFixture(files: Readonly<Record<string, string>>): Fixture 
       writeFileSync(file, content, 'utf8');
     },
     cleanup(): void {
-      rmSync(root, { recursive: true, force: true });
+      // A just-exited native validator can hold the directory briefly on
+      // Windows; retry rather than failing a passing test on cleanup.
+      for (let attempt = 0; attempt < 5; attempt++) {
+        try {
+          rmSync(root, { recursive: true, force: true });
+          return;
+        } catch (error) {
+          if (attempt === 4) throw error;
+          Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 250 * (attempt + 1));
+        }
+      }
     },
   };
 

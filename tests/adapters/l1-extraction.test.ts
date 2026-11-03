@@ -1,6 +1,8 @@
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeAll, describe, expect, it } from 'vitest';
 
+import type { CapabilityKey } from '../../src/core/index.js';
 import { AdapterRegistry } from '../../src/modules/adapters/index.js';
+import { runNative } from '../../src/modules/adapters/native/process.js';
 import { TYPESCRIPT_ADAPTER } from '../../src/modules/adapters/typescript/index.js';
 import { PYTHON_ADAPTER } from '../../src/modules/adapters/python/index.js';
 import { PHP_ADAPTER } from '../../src/modules/adapters/php/index.js';
@@ -20,6 +22,24 @@ afterEach(() => {
   for (const fixture of fixtures.splice(0)) fixture.cleanup();
 });
 
+// T-51 env-only fix: the dev-machine interpreter drifted from the hardcoded
+// 3.10.0 pin (observed 3.12.7), and the adapter correctly fails closed on a
+// mismatch. Probe the observed interpreter like python-l1.test.ts does, so
+// these tests exercise extraction rather than the mismatch path (which
+// python-l1.test.ts covers). Qualification on the 3.10.0 acceptance pin
+// itself remains unproven here and needs a pinned python-linux runner.
+let observedPythonVersion = '';
+beforeAll(async () => {
+  const probe = await runNative('python', ['-c', 'import sys; print(".".join(map(str, sys.version_info[:3])))'], {
+    cwd: process.cwd(),
+    timeoutMs: 10_000,
+    maxOutputBytes: 1024,
+  });
+  expect(probe.exitCode, probe.stderr).toBe(0);
+  observedPythonVersion = probe.stdout.trim();
+  expect(observedPythonVersion).toMatch(/^\d+\.\d+\.\d+$/);
+});
+
 const registry = new AdapterRegistry([
   ...TYPESCRIPT_ADAPTER.records,
   ...PYTHON_ADAPTER.records,
@@ -27,6 +47,9 @@ const registry = new AdapterRegistry([
 ]);
 
 describe('TypeScript L1 extraction (Node 26.12.1)', () => {
+  // T-07 scope: next >=15 <16 / frontend / api-contract / [] / node-linux,
+  // using the registered adapter revision. The fixture declares Next.js 15.1.0;
+  // these are compiler/parser checks, not Next.js runtime qualification.
   it('extracts a positive API call with provenance', async () => {
     const fixture = createFixture(TYPESCRIPT_CONSUMER);
     fixtures.push(fixture);
@@ -40,6 +63,18 @@ describe('TypeScript L1 extraction (Node 26.12.1)', () => {
 
     expect(result.graph.nodes.some((node) => node.kind === 'endpoint')).toBe(true);
     expect(result.graph.edges.some((edge) => edge.resolution === 'proven' && edge.evidence !== undefined)).toBe(true);
+    expect(result.status).toBe('ok');
+    expect(result.toolchainIdentity).toBe('typescript@5.9.3');
+    expect(result.graph.edges.find((edge) => edge.to === 'symbol:src/api/client#fetchOrder')).toMatchObject({
+      from: 'component:src/orders/checkout.ts',
+      resolution: 'proven',
+      evidence: {
+        locator: 'src/orders/checkout.ts:1',
+        snapshot: result.graph.snapshot,
+        method: 'typescript-compiler-import-resolution',
+      },
+      runtimeObserved: false,
+    });
   });
 
   it('keeps dynamic member access visible as unresolved (NEG3-02)', async () => {
@@ -55,10 +90,88 @@ describe('TypeScript L1 extraction (Node 26.12.1)', () => {
 
     expect(result.graph.edges.some((edge) => edge.resolution === 'unresolved')).toBe(true);
     expect(result.unknowns.length).toBeGreaterThan(0);
+    const unresolved = result.graph.edges.find((edge) => edge.resolution === 'unresolved');
+    expect(unresolved).toMatchObject({
+      from: 'component:src/orders/dynamic.ts',
+      to: 'symbol:src/api/client#*',
+      unresolvedReason: 'namespace import: individual members are not statically known',
+      runtimeObserved: false,
+    });
+    // The graph contract forbids resolved evidence on unresolved edges. The
+    // reference's source locator and snapshot remain on its node and unknowns.
+    expect(unresolved?.evidence).toBeUndefined();
+    expect(result.graph.nodes.find((node) => node.id === unresolved?.from)).toMatchObject({
+      locator: 'src/orders/dynamic.ts',
+      snapshot: result.graph.snapshot,
+    });
+    expect(result.unknowns).toContain(
+      'Unresolved import "*" from "../api/client.js" referenced at src/orders/dynamic.ts:1',
+    );
+  });
+
+  const unsupportedScopes: readonly { label: string; key: Partial<CapabilityKey> }[] = [
+    { label: 'Next.js version range', key: { versionRange: '>=16.0.0 <17.0.0' } },
+    { label: 'feature-restriction profile', key: { featureRestrictions: ['unregistered-feature-profile'] } },
+  ];
+
+  it.each(unsupportedScopes)('refuses an unregistered $label at extraction (NEG3-09)', async ({ key }) => {
+    const fixture = createFixture(TYPESCRIPT_CONSUMER);
+    fixtures.push(fixture);
+    const registered = registry.require(TYPESCRIPT_ADAPTER.key);
+    const result = await TYPESCRIPT_ADAPTER.extract({
+      root: fixture.root,
+      files: Object.keys(TYPESCRIPT_CONSUMER),
+      version: '26.12.1',
+      capability: { ...registered, key: { ...registered.key, ...key } },
+    });
+
+    expect(result.status).toBe('unsupported');
+    expect(result.graph.edges).toEqual([]);
+    expect(result.unsupportedSurfaces.length).toBeGreaterThan(0);
+    expect(result.unknowns).toEqual(result.unsupportedSurfaces);
+    expect(result.toolchainIdentity).toBe('typescript@5.9.3');
+  });
+
+  it('retains an import outside the snapshot as an explained unresolved relationship (NEG3-02)', async () => {
+    const fixture = createFixture({
+      'package.json': TYPESCRIPT_CONSUMER['package.json'],
+      'src/orders/missing.ts': "import { fetchOrder } from '../api/missing-client.js';\nexport const load = fetchOrder;\n",
+    });
+    fixtures.push(fixture);
+    const result = await TYPESCRIPT_ADAPTER.extract({
+      root: fixture.root,
+      files: Object.keys(fixture.files),
+      version: '26.12.1',
+      capability: registry.require(TYPESCRIPT_ADAPTER.key),
+    });
+
+    expect(result.status).toBe('ok');
+    expect(result.graph.edges).toHaveLength(1);
+    const unresolved = result.graph.edges[0];
+    expect(unresolved).toMatchObject({
+      from: 'component:src/orders/missing.ts',
+      to: 'symbol:src/api/missing-client#fetchOrder',
+      resolution: 'unresolved',
+      unresolvedReason: expect.stringContaining('could not be resolved'),
+      runtimeObserved: false,
+    });
+    expect(unresolved?.evidence).toBeUndefined();
+    expect(result.graph.nodes.find((node) => node.id === unresolved?.from)).toMatchObject({
+      locator: 'src/orders/missing.ts',
+      snapshot: result.graph.snapshot,
+    });
+    expect(result.graph.nodes.find((node) => node.id === unresolved?.to)).toMatchObject({
+      kind: 'symbol',
+      locator: 'src/api/missing-client',
+      snapshot: result.graph.snapshot,
+    });
+    expect(result.unknowns).toContain(
+      'Unresolved import "fetchOrder" from "../api/missing-client.js" referenced at src/orders/missing.ts:1',
+    );
   });
 });
 
-describe('Python L1 extraction (Python 3.10.0)', () => {
+describe('Python L1 extraction (observed interpreter)', () => {
   it('extracts a positive FastAPI route and model', async () => {
     const fixture = createFixture(PYTHON_SERVICE);
     fixtures.push(fixture);
@@ -66,7 +179,7 @@ describe('Python L1 extraction (Python 3.10.0)', () => {
     const result = await PYTHON_ADAPTER.extract({
       root: fixture.root,
       files: Object.keys(PYTHON_SERVICE),
-      version: '3.10.0',
+      version: observedPythonVersion,
       capability: registry.require(PYTHON_ADAPTER.key),
     });
 
@@ -90,7 +203,7 @@ describe('Python L1 extraction (Python 3.10.0)', () => {
     const result = await PYTHON_ADAPTER.extract({
       root: fixture.root,
       files: ['requirements.txt', 'app/main.py'],
-      version: '3.10.0',
+      version: observedPythonVersion,
       capability: registry.require(PYTHON_ADAPTER.key),
     });
 

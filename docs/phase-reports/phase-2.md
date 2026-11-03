@@ -2,9 +2,11 @@
 
 **Date:** 30 October 2026 (turn 2 — same day)
 **Application root:** this repository (`ChangeProof-AI/`), branch `development`
-**Phase status:** `in_progress` — preparation for T2-1..T2-9 implemented with
-proof (pure/fixture); full work packages remain `in_progress`/`blocked`,
-native RLS proof is environment-blocked, no G3 gate passed.
+**Phase status:** `in_progress` — T2-1..T2-9 pushed to their runnable limits
+(turn 6): + durable jobs store 17/17 native, atomic usage store 12/12
+native, email/session flows 14/14 + real SMTP delivery 3/3. Full WPs stay
+`in_progress`/`blocked` on predecessors, owner decisions, and live access
+(see §10–§11); no G3 gate passed.
 **Plan revision:** 2 (24 October 2026).
 
 ## 1. Entry audit (preserved from kickoff, evidence not summary)
@@ -28,12 +30,12 @@ no GitHub App authorization, no email delivery infrastructure. Docker server
 
 | Task | Requires (full WP) | State | Reason |
 |---|---|---|---|
-| T2-1 observability (WP3-15) | 02, 05 | preparation `done` | predecessors `in_progress`; `modules/observability` uses only proven contract inputs |
-| T2-2 campaign (WP3-16) | 04, 15 | preparation `done` | predecessors `in_progress`; `modules/verifier/campaign.ts` uses only proven contract inputs |
-| T2-3 reducers (WP3-17) | 01, 16 | preparation `done` | predecessors `in_progress`; `modules/verifier/reducers.ts` uses only proven contract inputs |
-| T2-4 fixtures/oracle (WP3-06) | 04, 05, 16, 17 | preparation `done` / full `blocked` | `modules/fixtures` freeze-and-verify proven pure; real app+DB+broker proof blocked (no frozen oracle, no real app) |
-| T2-5 identity/RLS (WP3-21) | 02 | preparation `done` / native `blocked` | `modules/identity` grant/session/challenge checks + `infra/postgres/V1__identity_tenancy.sql` + `tests/native/identity-rls.test.ts` ready; `pg 8.23.1` added; container start did not complete in this environment (see §7) |
-| T2-6 GitHub (WP3-22) | 21 | preparation `done` / live `blocked` | `modules/github` HMAC verify + dedup + revocation gating proven pure; no `octokit`, no authorized installation |
+| T2-1 observability (WP3-15) | 02, 05 | connector port + file ingestion + normalize loop proven (turn 5) | live backend connectors blocked (catalog + authorized access); predecessors `in_progress` |
+| T2-2 campaign (WP3-16) | 04, 15 | bounded real executor + trials proven (turn 5) | barriers/network-faults/budget/qualified-guest + frozen flagship params pending |
+| T2-3 reducers (WP3-17) | 01, 16 | real-observation reducers + sandbox threshold slice frozen (DEC3-P3-01) | qualified SLOs/profile + candidate arm (WP3-07) pending |
+| T2-4 fixtures/oracle (WP3-06) | 04, 05, 16, 17 | rig + dry runs + intent proposal + ceremony tool (turn 5) / full `blocked` | real app+DB+broker+browser proven; frozen acceptance awaits owner approval + freeze (human acts) |
+| T2-5 identity/RLS (WP3-21) | 02 | preparation `done` / native proof `done` (turn 4) | `modules/identity` checks + `infra/postgres/V1__identity_tenancy.sql` + `tests/native/identity-rls.test.ts` green 6/6 on disposable `postgres:16-alpine` (see §9); full WP3-21 stays `in_progress` (hosted identity services pending) |
+| T2-6 GitHub (WP3-22) | 21 | octokit client + secret broker + wiring, 22 pure tests (turn 5) / live `blocked` | `octokit 5.0.5` integrated; live install/snapshot/CI proof needs an authorized App |
 | T2-7 jobs (WP3-23) | 04, 21, 22 | preparation `done` / durable `blocked` | `modules/jobs` fencing/epoch/CAS/cancel/retry/dedup core proven pure; durable dispatcher + hosted store pending |
 | T2-8 usage (WP3-24) | 21, 23 | preparation `done` / billing `blocked` | `modules/usage` cap/double-debit/monotonic/entitlement core proven pure; atomic store + pricing/vendor decisions pending |
 | T2-9 email (WP3-28) | 21 | preparation `done` / delivery `blocked` | challenge mint/verify/single-use + return-target guard proven pure; authorized delivery infra pending |
@@ -183,14 +185,13 @@ one `docker run` + `pnpm test:identity:native` away), real DB/broker service tes
 native campaign on a real application, live GitHub/email integration — each recorded
 per-WP, none substituted with mocks.
 
-**Next dependency-ready task:** run the native RLS proof interactively
-(`docker run -d --name changeproof-pg-t25b -e POSTGRES_PASSWORD=probe-only-local
--p 127.0.0.1:55432:5432 postgres:16-alpine`, then
-`DATABASE_URL=postgresql://postgres:probe-only-local@127.0.0.1:55432/postgres
-pnpm test:identity:native`) and remove the container afterwards; then obtain the
-remaining hosted decisions (GitHub App authorization, usage pricing/vendors, email
-delivery, pilot repos) to unblock T2-6..T2-9 live acceptance and G3-08/G3-10.
-Do not start phase-3 automatically.
+**Next dependency-ready task (updated turn 5):** engineering to the runnable
+limit is done (§10) — remaining items are owner/external acts, not code:
+(1) approve the SC3-01 intent + run the freeze ceremony (T-13 one signature
+away); (2) authorize a GitHub App + installation for live WP3-22 proof;
+(3) freeze SLO/calibration numbers (proposal in fixtures/sc3-baseline/
+CALIBRATION-PROPOSAL.md); (4) usage pricing/vendors + email delivery + pilot
+repos for T2-7..T2-9/G3-08/G3-10. Do not start phase-3 automatically.
 
 ## 7. Execution record — turn 2 (T2-4..T2-9 preparation + T2-5 native attempt)
 
@@ -277,3 +278,423 @@ with explicit undefined guards), 1 `no-redundant-type-constituents` in the
 challenge-test helper (narrowed to `Partial<MintChallengeInput>`).
 Final gates: `pnpm typecheck` 0, `pnpm lint` 0 (50 modules / 113 deps),
 `pnpm test` 0 (290/25).
+
+## 8. Execution record — turn 3 (T-10..T-15 full-acceptance attempt, 1 Nov 2026)
+
+Team assignments executed: T-10 (WP3-15), T-11 (WP3-16), T-12 (WP3-17),
+T-13 (WP3-06), T-14 (WP3-21), T-15 (WP3-22). Mode: audit-first, smallest
+diff (ponytail full). No source-semantics change; 3 acceptance tests added,
+each pinning a previously untested branch of documented behavior.
+
+### 8.1 Acceptance audits (T-10/T-11/T-12)
+
+| Task | Acceptance rows checked | Finding |
+|---|---|---|
+| T-10 observability (FR3-25/28) | clock-skew, sampling-gap, stale-deploy, redacted-keys, timestamp-only, clean→probe, legacy unknown/pending-freeze | `redacted-keys` branch had no test → 1 test added |
+| T-11 campaign (FR3-26, NEG3-15/17) | incomplete/never-started/complete, over-plan throw, stuck-fault, plan-hash drift, malformed throw, 5 allowlist negatives | `injector-recorded exclusion → experiment_invalid` was claimed in §3 but had no test → 1 test added |
+| T-12 reducers (FR3-27, NEG3-18) | loss/timeouts→invalid, empty→inconclusive, NaN throw, pinned digest, pooled-median, pooled-vs-average, determinism, config digest, rawRefs | non-empty windows with zero observations (unstated edge) had no test → 1 test added, also pins the `uncertainty` note |
+
+Full WP3-15/16/17 stay `in_progress`: pure rows are now fully pinned, but
+full acceptance needs WP3-02/04/05 completion + native proof (unchanged).
+
+### 8.2 Frozen oracle scope (T-13, WP3-06 — still `blocked`)
+
+`freezeOracle`/`assertOracleUnchanged` re-verified (6 tests green, NEG3-03);
+`planGuestRun` confirmed in code to mount the oracle read-only outside the
+candidate workspace. Real-runtime proof still needs, concretely: (1) a pinned
+real target app with SC3-01 old-valid baseline + new-attributed-failure,
+(2) a disposable real PostgreSQL + broker inside a qualified guest,
+(3) a trusted author + approved intent + frozen digest. None exists today.
+
+### 8.3 Native RLS attempt (T-14, WP3-21 — still `blocked`, cause now precise)
+
+This turn tried to make the runner available instead of re-recording the old
+blocker: Docker daemon was down, so Docker Desktop was started once
+(`Start-Process ... Docker Desktop.exe`, issued OK; `com.docker.backend`
+alive). The daemon now answers `Error response from daemon: Docker Desktop
+is unable to start`, and `wsl --status` / `wsl --list` hang without output —
+the WSL2 backend is wedged (worse than turn 2, when read-only calls worked).
+No `psql` on PATH; `embedded-postgres` ships no local binaries (runtime
+download would be needed). No host-level repair was attempted (out of scope
+without explicit authorization). Next safe action (host owner): repair the
+WSL2 backend (`wsl --shutdown`, reopen Docker Desktop, or repair the
+install), then run the §6 `docker run` + `pnpm test:identity:native` and
+remove the probe container. The migration and 6-check native test are
+unchanged and ready.
+
+### 8.4 GitHub pure re-verified (T-15, WP3-22 — live still `blocked`)
+
+14 pure tests green (HMAC verify, tamper/empty-secret/header negatives, dedup,
+revocation gating, freshness window). Live proof still needs, concretely: an
+authorized GitHub App + installation, `octokit` integration, and a real
+delivery/snapshot/CI-attestation target. No dependency was added without
+credentials (deliberate).
+
+### 8.5 Verification (this turn, actual commands + exit codes)
+
+- `pnpm typecheck` → 0 (strict, after final edit)
+- `pnpm lint` → 0 (ESLint strictTypeChecked + depcruise, 50 modules / 118 deps)
+- `pnpm test` → 0 (**367 tests / 28 files**; was 364/28 at turn open, +3 new)
+- Focused: observability+campaign+reducers 33/33; fixtures+github+identity 45/45
+- `pnpm test:identity:native` → not run (environment-blocked, see §8.3)
+
+Changed files this turn (3, tests only): `tests/observability/
+telemetry-quality.test.ts`, `tests/verifier/campaign-accounting.test.ts`,
+`tests/verifier/measurement-reducers.test.ts` (+ this report). No contract,
+policy, threshold, or schema change; no version bump needed. No full WP and
+no G3 gate passed. Phase status stays `in_progress`.
+
+## 9. Execution record — turn 4 (T-10..T-15 execution, 31 Oct 2026 UTC)
+
+```text
+Task IDs / parent WPs: T-10 / WP3-15, T-11 / WP3-16, T-12 / WP3-17,
+  T-13 / WP3-06, T-14 / WP3-21, T-15 / WP3-22
+Requirement IDs: FR3-25/26/27/28/29/30; FR3-15/16; NEG3-03/15/16/17/18/21/22/23/38/39
+User-visible outcome: every runnable proof executed — native RLS green 6/6 on
+  real PostgreSQL; pure rows re-verified 53/53; remaining native/live rows
+  recorded as concrete blockers, full WPs honestly unchanged.
+Prerequisite evidence: turn-3 §8 (3 pinning tests, uncommitted); WP3-01/02/04/05
+  task-level evidence only; daemon recovered (docker ps answers, images cached).
+Allowed source/config changes: test/config wiring required by failing runs only
+  (native vitest config + RLS assertion). No policy/oracle/threshold/contract change.
+Input snapshots + intended intervention: in-repo fixtures + one disposable
+  postgres:16-alpine container (created, used, removed same turn); no customer
+  repo, no frozen product oracle, no external service, no paid API.
+Acceptance checks: focused pure suites + first live `pnpm test:identity:native`;
+  typecheck + lint/boundaries + full suite green before and after.
+Protected oracle / proof scope: freeze/verify helpers + mount boundary only;
+  no protected product oracle created, touched, or claimed.
+Actual commands + exit codes: §9.5 list.
+Status: T-14 allocated task `done` (native proof); T-10/11/12 pure `done`,
+  full WP3-15/16/17 `in_progress`; T-13/T-15 live `blocked` (see §9.2/§9.3).
+```
+
+### 9.1 T-10/T-11/T-12 pure re-verified (33/33), no new gaps
+
+- T-10 observability 9/9 (incl. turn-3 redacted-keys pin); T-11 campaign 13/13
+  (incl. injector-exclusion → `experiment_invalid`); T-12 reducers 11/11 (incl.
+  empty-observations → `inconclusive` + uncertainty note).
+- Full WP3-15/16/17 stay `in_progress`: native rows need WP3-02/04/05
+  completion + frozen MVP §16 calibration numbers (Amax/Qmax/SLO/n) + a real
+  target app in a qualified guest. Nothing here was weakened to pass.
+
+### 9.2 T-13 still `blocked` — freeze core + mount boundary confirmed, zero diff
+
+- `tests/fixtures/oracle-freeze.test.ts` 6/6 (NEG3-03); mount boundary already
+  pinned by `tests/security/runner.test.ts` (oracle RO + outside workspace,
+  inside-workspace run refused) — 39/39 with the identity suite. The candidate
+  pinning test from planning was unnecessary; no code written.
+- Real proof still needs: (1) pinned real target app with SC3-01 old-valid +
+  new-attributed-failure, (2) disposable real PostgreSQL + broker in a qualified
+  guest, (3) trusted author + approved intent + frozen digest. Owner decision.
+
+### 9.3 T-14 native RLS `done` — two real bugs found and fixed (first native proof)
+
+Environment: daemon healthy (`docker ps` exit 0, empty); `postgres:16-alpine`
+cached. `docker run -d --name changeproof-pg-t14 ... -p 127.0.0.1:55432:5432`
+→ `d8aa546a...` exit 0; `pg_isready` accepting connections; container
+`rm -f` afterwards, `docker ps` empty. No foreign container touched.
+
+Bug 1 — the script could never run: `vitest run tests/native/...` matches
+nothing because `vitest.config.ts` excludes `tests/native/**`, and CLI
+`--exclude` merges with (not replaces) the config list. Fix: new
+`vitest.native.config.ts` (same settings, native include) + one-line
+`package.json` script change. Default `pnpm test` still excludes native.
+
+Bug 2 — wrong test assumption, not a leak: after `RESET`, PostgreSQL 16
+reports a custom GUC as `''`, not NULL (probed directly:
+`is_null = f`). The pool-reset test asserted `toBeNull()` and failed 1/6.
+Fix: assert null-or-empty (previous tenant must not survive) AND zero rows
+on the reset checkout — the actual fail-closed property. Now 6/6 green:
+per-tenant projects/memberships/grants, absent-setting zero rows, pool reset,
+parallel-tenant isolation, NOBYPASSRLS + no-DDL.
+
+Security notes (code-security applied; `semgrep` binary still absent —
+missing check as before): `''` matches no row (`tenant_id = ''` is false for
+all real ids), so RESET is fail-closed. Forward constraints for the hosted
+service (not this phase): tenant-id creation MUST reject empty ids, and
+production pool checkout MUST bind the tenant via `set_config` parameters,
+never string interpolation.
+
+### 9.4 T-15 live still `blocked` — pure re-verified 14/14
+
+HMAC verify + tamper/empty-secret/header negatives, dedup, revocation gating,
+freshness window — all green. Live needs: authorized GitHub App + installation
+on approved repos, broker-held webhook secret, `octokit` integration (still
+deliberately unadded), durable dedup store, CI-attestation target.
+
+### 9.5 Verification (this turn, actual commands + exit codes)
+
+- `pnpm typecheck` → 0 (before and after changes)
+- `pnpm lint` → 0 (50 modules / 118 deps, zero violations; before and after)
+- `pnpm test` → 0 (367/28; native still excluded)
+- Focused pure: observability+campaign+reducers+fixtures+github → 53/53
+- Runner-boundary + identity: `tests/security/runner.test.ts tests/identity` → 39/39
+- `DATABASE_URL=… pnpm test:identity:native` → 0 (6/6 on real PostgreSQL 16)
+- `semgrep` → missing (binary absent; skill applied manually)
+
+Changed files this turn: `vitest.native.config.ts` (new, 18 lines),
+`package.json` (1 script line), `tests/native/identity-rls.test.ts` (+6/-1,
+assertion + hardening), `docs/phase-reports/phase-2.md`, `task-brief.md`.
+No contract, policy, threshold, or schema change; no version bump needed.
+No full WP and no G3 gate passed. Phase status stays `in_progress`.
+
+## 10. Execution record — turn 5 (T-10..T-15 to the runnable limit, 31 Oct 2026 UTC)
+
+```text
+Task IDs / parent WPs: T-10 / WP3-15, T-11 / WP3-16, T-12 / WP3-17,
+  T-13 / WP3-06, T-14 / WP3-21, T-15 / WP3-22
+Requirement IDs: FR3-25/26/27/28/29/30/35/38; FR3-15/16; NEG3-03/15/16/17/18/
+  21/22/23/30/38/39; NFR3-04/07
+User-visible outcome: every runnable row executed with real proof — native
+  identity services, fixture baselines + browser, real reducers, real
+  campaigns, GitHub client code, file ingestion loop. What remains is owner
+  acts and live access, named per WP below — no gap is worked around.
+Prerequisite evidence: turn-4 §9 (native RLS 6/6, pure 53/53); recovered
+  Docker daemon; cached postgres:16-alpine + redis:7-alpine images.
+Allowed source/config changes: WP3-15/16/17/06/21/22 implementation + tests +
+  fixture rig + migrations V1/V2 + deps (redis, octokit, playwright-core).
+  No policy/oracle/threshold/contract-semantic change to existing schemas.
+Input snapshots + intended intervention: in-repo fixtures + disposable
+  postgres:16-alpine + redis:7-alpine containers (created, used, removed same
+  turn) + system Chrome; no customer repo, no frozen product oracle, no paid
+  API, no external mutation.
+Acceptance checks: unit 386/33 + native 33/5 green; typecheck + lint/boundaries
+  clean; new deps resolve; containers removed afterwards.
+Protected oracle / proof scope: freeze/verify helpers unchanged; dry-run
+  receipts are explicitly unfrozen; the owner ceremony freezes the oracle.
+Actual commands + exit codes: §10.7 list.
+Status: T-14 allocated task stays `done`; T-10/11/12/13/15 pushed to their
+  runnable limits (`in_progress`/`blocked` with owner-only remainders, §10.1-10.6).
+```
+
+### 10.1 T-14/WP3-21 — identity services complete + native 24/24
+
+- `infra/postgres/V2__identity_services.sql`: sessions, invitations
+  (hash-only tokens), tenant tombstones (deletion fence), lifecycle_records
+  (RLS), SECURITY DEFINER pre-auth functions (exact-match only, no table dumps).
+- `src/modules/identity/store.ts`: tenant/session/invite/role/remove/delete/
+  retention flows — bound parameters only, injected time, SET LOCAL tenant
+  (auto-reset), last-owner + stale-grant + fence enforcement. Guards factored
+  to `guards.ts` (no import cycle). New versioned Session/Invitation contracts
+  + conformance rows; orchestrator `composeIdentityStore` + wiring test.
+- `tests/native/identity-services.test.ts`: 18/18 on real PostgreSQL
+  (NEG3-21/30/38, secret-serialization regression: raw token never persists).
+  Full WP3-21 stays `in_progress`: implementation + native proof are complete;
+  full acceptance (incl. phase-7) and hosted deployment proof remain.
+- `[DERIVED]` invites and role changes are owner/admin-only (spec is silent on
+  who may invite); tenant-id creation rejects empty ids (T-14 constraint).
+
+### 10.2 T-13/WP3-06 — real rig + dry runs, one signature away (`blocked`)
+
+- `fixtures/sc3-baseline/`: real order service (v1/v2, identical HTTP),
+  pinned-v1 consumer, schema; v2's event-schema change is the single
+  attributed failure (API green, workflow dead-letters).
+- `tests/native/fixture-baseline.test.ts` 3/3: v1 n=3 fulfills ([DERIVED]
+  repeat count), v2 attributed failure with deadletter cause, real system-Chrome
+  order fulfills end to end. Receipts in runs/sc3-baseline/ (gitignored).
+- `INTENT-PROPOSAL.md` (explicitly UNAPPROVED/UNFROZEN) +
+  `scripts/freeze-sc3-baseline.mjs` (owner ceremony tool, mechanics-checked
+  with a probe author). The agent must not author the oracle — the owner
+  approves the intent and runs the freeze. Full WP stays `blocked` on that act.
+
+### 10.3 T-12/WP3-17 — reducers on real data + calibration proposal
+
+- `tests/native/measurement-real.test.ts` 2/2: three real v1 windows assess
+  pass with pinned digest + rawRefs + determinism; a window with a real
+  service blackout assesses `inconclusive`/`invalid` (NEG3-18, never a pass).
+- Measured p50/p90/p99 = 118/121/126ms (n=12, incl. a documented +100ms poll
+  observer effect). At report time, `CALIBRATION-PROPOSAL.md` was unfrozen;
+  owner decision DEC3-P3-01 later froze only the sandbox p50 threshold (2000ms),
+  +20% candidate margin, and baseline n=3. Qualified SLOs/profile and the
+  candidate arm (needs the WP3-07 repair loop for the FR3-27.3 trio) remain open.
+
+### 10.4 T-11/WP3-16 — bounded real executor + campaigns 4/4
+
+- `src/modules/verifier/executor.ts`: argv-only spawn (never a shell), per-trial
+  declared resets with receipts, exact-n + frozen-seed enforcement, allowlisted
+  kill / kill-and-restart faults as an explicit race (no shared mutation),
+  validated TrialReceipts. Trust boundary documented in-code; untrusted code
+  still requires a qualified guest (rule 11 — not claimed here).
+- `tests/native/campaign-real.test.ts` 4/4: clean n=3+warmup →
+  `campaign_complete`; real kill without restart → `experiment_invalid`
+  (NEG3-17); kill-and-restart → applied-and-removed pass; unlisted
+  target/short seeds/timeout fail closed. Missing for full WP: barrier/
+  interleaving control, network-edge faults, budget enforcement, qualified
+  guest, frozen flagship params.
+
+### 10.5 T-15/WP3-22 — client + broker code, live still `blocked`
+
+- Core `SecretBrokerPort` + `createMapSecretBroker` (exact-match, fail closed,
+  never logs values); `createGitHubClient` over `octokit 5.0.5`: exact-commit
+  fetch (active-connection + allowlist + GitHub-provider + full-sha checks,
+  sha-echo verification) and installation-scope reads; provider errors mapped
+  specifically without token leakage. 22/22 pure tests (incl. secret
+  regression) + orchestrator wiring. Live install/snapshot/CI proof needs an
+  authorized GitHub App — the one physical blocker. Non-GitHub providers
+  correctly refused (WP3-32 scope).
+
+### 10.6 T-10/WP3-15 — ingestion loop proven, live backends `blocked`
+
+- Core `TelemetryConnectorPort` + `createFileTelemetryConnector` (allowlisted
+  root, traversal/symlink/absolute refused, size + limit caps, malformed lines
+  counted dropped, query receipts) + `normalizeToEvidence` into validated
+  `IncidentEvidence`. 15/15 unit tests on real temp files, incl. the full
+  loop file → evidence → `causality_unproven`/`needs_discriminating_probe`
+  (never a cause) + wiring. Live backend-profile connectors (FR3-25.5) need
+  catalogued backends + authorized access.
+
+### 10.7 Verification (this turn, actual commands + exit codes)
+
+- `pnpm typecheck` → 0 · `pnpm lint` → 0 (57 modules / 141 deps, zero violations)
+- `pnpm test` → 0 (**386 tests / 33 files**; was 367/28 at turn open, +19)
+- `DATABASE_URL=… REDIS_URL=… pnpm test:identity:native` → 0 (**33 tests /
+  5 files**: RLS 6, services 18, fixture 3, measurement 2, campaign 4)
+- New deps resolve: `redis 6.3.1`, `octokit 5.0.5`, `playwright-core 1.64.1`
+- `docker rm -f changeproof-pg-t21 changeproof-redis-t06` → 0; `docker ps`
+  shows only foreign containers, untouched
+- `semgrep` → missing (binary absent; skill bodies applied manually)
+
+Engineering notes: native files are isolated per database + redis db
+(`tests/native/db.ts`) after combined runs proved file-level cross-talk;
+vitest `singleFork` is kept but did not serialize files in this version, so
+isolation — not scheduling — carries correctness. `pnpm add` needed
+`--ignore-scripts` (pre-existing ignored-builds gate on embedded-postgres).
+No contract, policy, threshold, or existing-schema semantic change; new
+schemas are versioned from birth; no version bump needed. No full WP and no
+G3 gate passed. Phase status stays `in_progress`.
+
+## 11. Execution record — turn 6 (T-16/T-17/T-18 to done, 1 Nov 2026 UTC)
+
+```text
+Task IDs / parent WPs: T-16 / WP3-23, T-17 / WP3-24, T-18 / WP3-28
+Requirement IDs: FR3-32/33/34/38; FR3-15/16 (fence, authority); NEG3-13/22/23/
+  25/26/28/29/30/36; NFR3-04; BR3-18/19/21
+User-visible outcome: runs admit atomically with idempotent replay and run
+  under fenced leases with crash/resume/cancel/drain; usage admits atomically
+  under operator caps with idempotent events and receipt-gated settlement;
+  email register/verify/login/recovery/onboarding works end to end with real
+  SMTP delivery proven to a disposable mail server.
+Prerequisite evidence: turn-5 §10 (native 33/5, pure 386/33); JobLease /
+  UsageLedgerEntry / challenge contracts (proven); identity store + V1/V2
+  (proven); recovered Docker daemon; cached postgres:16-alpine image.
+Allowed source/config changes: infra/postgres/V3+V4+V5, src/modules/jobs/**
+  (fencing split + store), src/modules/usage/** (accounting split + store),
+  src/modules/identity/{email,passwords,smtp}.ts + challenges purpose,
+  src/core/ports (EmailDeliveryPort), src/orchestrator (composeJobs/Usage/
+  EmailIdentity), tests/native/jobs-durable + usage-atomic + email-identity
+  + email-delivery, tests/identity/passwords + challenges purpose,
+  tests/orchestrator/phase2-{jobs,usage,email}-store, this report.
+Input snapshots + intended intervention: in-repo fixtures + disposable
+  postgres:16-alpine + redis:7-alpine + axllent/mailpit:v1.27 containers
+  (created, used, removed same turn); no customer repo, no frozen product
+  oracle, no paid API, no external mutation.
+Acceptance checks: unit 439 + 3 pre-existing Python failures (proven
+  identical on untouched tree, §11.4); native 79/9 green; typecheck +
+  lint/boundaries clean; new deps: none (stdlib + pulled mailpit image).
+Protected oracle / proof scope: no protected product oracle created,
+  touched, or claimed. Delivery proof is real SMTP to disposable Mailpit,
+  asserted via its HTTP API — not a simulated click.
+Actual commands + exit codes: §11.4 list.
+Status: T-16/T-17/T-18 allocated tasks `done` (all runnable rows proven);
+  full WP3-23/24/28 stay `in_progress`/`blocked` on the named remainders.
+```
+
+### 11.1 T-16/WP3-23 — durable dispatcher + hosted store `done`
+
+- `infra/postgres/V3__jobs.sql`: runs (unique idempotency key), jobs (the
+  durable queue), job_leases (epoch + CAS version + guest + immutable
+  candidate digest), outbox (unique effect id), checkpoints (chained to the
+  lease version); RLS + indexes; V1/V2 conventions kept.
+- `src/modules/jobs/{fencing,store}.ts`: pure guards factored to
+  `fencing.ts` (guards.ts precedent, no import cycle); the store admits in
+  one txn with replay + deletion-fence check, claims per-tenant FIFO under
+  a concurrency cap with a fresh guest per claim, heartbeats/checkpoints/
+  effects under fencing + CAS, expires with bounded retry → requeue or
+  fail, cancels with drain + settle, dispatches the outbox with SKIP LOCKED
+  and gates completion on reconciled effects. Resume with different
+  digests is refused (a changed candidate is a new job). One redundant
+  owner comparison was deleted: the fencing epoch is the authority.
+- `tests/native/jobs-durable.test.ts` 17/17 on real PostgreSQL 16
+  (NEG3-22/23/26, fence, FIFO, cap, CAS races, resume identity + fresh
+  guest, exhaustion, cancel drain, outbox reconcile gate, isolation).
+- Full-WP remainders: FR3-32 hostile-code isolation (qualified guest still
+  single-probe); measured fairness/noisy-neighbor campaign (needs a frozen
+  HostedServiceProfile); multi-job runs arrive with WP3-11; cross-tenant
+  fair-share ordering is dispatcher policy for the same campaign.
+
+### 11.2 T-17/WP3-24 — atomic usage store + settlement `done`
+
+- `infra/postgres/V4__usage.sql`: entitlements (one current row per tenant,
+  partial unique index), reservations (locked burns), usage_ledger
+  (append-only: NO update/delete grant, unique effect id).
+- `src/modules/usage/{accounting,store}.ts`: no default cap (admission
+  without an operator entitlement fails closed); concurrent admissions
+  serialize on the locked entitlement row; consumes burn the hold under a
+  reservation lock and never exceed it; every event is idempotent by
+  effect id with collision detection; release/settle free the hold while
+  consumed stays monotonic; settlement requires a server-side receipt ref;
+  rollover opens a new capped period while in-flight reservations keep
+  their balances. `reverse` (post-settlement refund) has no store path:
+  it needs the undecided payment provider's verified refund event.
+- `tests/native/usage-atomic.test.ts` 12/12 (NEG3-13/25/36: racing
+  admissions admit exactly what fits, racing consumes never overspend,
+  replays never double-debit, monotonic pinned via the pure core,
+  rollover preserves, isolation + fence hold).
+- Full-WP remainders: payment provider selection + signed event
+  verification; frozen free-tier/cap numbers; proof-cost forecast (needs
+  calibration, no invented figures); failure/refund policy.
+
+### 11.3 T-18/WP3-28 — email/session flows + real delivery `done`
+
+- `infra/postgres/V5__email_identity.sql`: email_users (hash-only),
+  email_challenges (hash-only, atomic single-use consume, one error for
+  unknown/used/expired/wrong-purpose), email_send_attempts (exact per-key
+  rate limit via advisory xact lock), `list_user_tenants`,
+  `list_user_sessions`, `claim_tenant_with_ticket` (atomic ticket →
+  tenant + owner membership). All REVOKE'd; DEFINER-only like V2.
+- `src/modules/identity/{email,passwords,smtp}.ts` + `claim_organization`
+  challenge purpose: register (duplicate-safe, same shape), resend,
+  verify (+ onboarding ticket), password login with multi-tenant
+  selection and remember-me TTLs, reset with all-session revocation,
+  ticket-based org claim, session listing. Unknown addresses and wrong
+  passwords share response shapes (no oracles). `[DERIVED]` server
+  values: password 10..128 + scrypt 16384/8/1, verify/claim 24h, reset
+  1h, sessions 12h/30d, resend/reset/notice 5/h, login 10/h, register
+  10/h. SMTP is a minimal `node:net` client (reply-checked, dot-stuffed,
+  ASCII-only, header-injection refused) with a documented shortcut to a
+  qualified vendor before production.
+- `tests/native/email-identity.test.ts` 14/14 (NEG3-29/30) with a
+  recording delivery; `tests/native/email-delivery.test.ts` 3/3 against
+  disposable Mailpit v1.27: the message is asserted back via its HTTP API
+  (recipient, subject, token in body) — real protocol delivery.
+- Full-WP remainders: account linking (needs live GitHub, consistent with
+  T-15); production mail vendor + authenticated submission; verification-
+  link assembly (HTTP layer, phase-6). Bug fixed: `lookup_email_user`
+  returned a NULL row instead of zero rows — now `SETOF`.
+
+### 11.4 Verification (this turn, actual commands + exit codes)
+
+- `pnpm typecheck` → 0 · `pnpm lint` → 0 (70 modules / 173 deps, zero
+  violations, incl. depcruise boundaries)
+- `pnpm test` → 1 with **439 passed / 3 failed (442)**: the 3 failures
+  are the pre-existing Python L1 extraction cases, proven identical on
+  the untouched tree via stash check (same 3/47 on the two files
+  without my changes; environment toolchain issue, out of scope, not
+  narrowed, not weakened)
+- `DATABASE_URL=… REDIS_URL=… MAILPIT_*=… pnpm test:identity:native` → 0
+  (**79 tests / 9 files**: prior 33 + jobs 17 + usage 12 + email 14 + 3)
+- `docker rm -f changeproof-pg-t16 changeproof-redis-t16
+  changeproof-mailpit-t18` → 0; foreign containers untouched
+- `semgrep` → missing (binary absent; skill bodies applied manually)
+
+Environment note for future turns: `git stash` + pop rewrote touched
+files to CRLF (`core.autocrlf=true`) and broke multi-line exact-match
+editing until normalized back to LF. Prefer `git diff` over stash for
+pre-existing checks, or re-normalize owned files afterwards.
+
+No contract, policy, threshold, or existing-schema semantic change; new
+schemas are versioned from birth; model contract `1` added (ports only).
+No full WP and no G3 gate passed. T-19/T-20 executed the same turn — see
+the phase-3 report. Next dependency-ready tasks: T-21..T-26 (all
+`tentative`, need WP3-07 predecessors + scope confirmation).

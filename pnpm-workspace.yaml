@@ -1,2 +1,5 @@
 allowBuilds:
-  '@embedded-postgres/windows-x64': set this to true or false
+  '@embedded-postgres/windows-x64': false
+  '@prisma/engines': false
+  esbuild: true
+  prisma: false

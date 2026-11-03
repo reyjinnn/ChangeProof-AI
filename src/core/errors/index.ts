@@ -102,6 +102,15 @@ export class UnsupportedCapabilityError extends ChangeProofError {
   }
 }
 
+/** A deployment gate refused to proceed: the mode is installed but not qualified. */
+export class DeploymentBlockedError extends ChangeProofError {
+  readonly reasonCode = 'deployment_blocked' as const;
+
+  constructor(message: string) {
+    super(`blocked: ${message}`);
+  }
+}
+
 /** A budget or resource profile cannot fund the proof that is required. */
 export class ResourceProfileInsufficientError extends ChangeProofError {
   readonly reasonCode = 'resource_profile_insufficient' as const;

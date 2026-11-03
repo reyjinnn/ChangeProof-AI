@@ -55,6 +55,8 @@ export function freezeOracle(input: FreezeOracleInput): FrozenOracle {
   };
 }
 
+export * from './legacy.js';
+
 /** A stage passes only with the frozen digest; drift invalidates the proof. */
 export function assertOracleUnchanged(frozen: FrozenOracle, actualDigest: string): void {
   if (actualDigest !== frozen.frozenOracleDigest) {

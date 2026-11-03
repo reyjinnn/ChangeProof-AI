@@ -1,0 +1,266 @@
+{
+  "schemaVersion": "1",
+  "contentVersion": "2026-11-02",
+  "routes": [
+    {
+      "path": "/",
+      "title": "ChangeProof AI",
+      "summary": "ChangeProof AI investigates software failures, proposes fixes, and proves each fix against an independent check before it reaches review.",
+      "section": "product",
+      "ctas": [
+        { "label": "See how verification works", "destination": "/verification", "kind": "public" },
+        { "label": "Read a sample report", "destination": "/sample-report", "kind": "public" },
+        { "label": "Open the workspace", "destination": "/app", "kind": "requires-login" }
+      ]
+    },
+    {
+      "path": "/product",
+      "title": "Product",
+      "summary": "One repair loop: describe the failure, approve the plan, and receive a fix with the evidence that proves it.",
+      "section": "product",
+      "ctas": [
+        { "label": "See what evidence looks like", "destination": "/evidence-overview", "kind": "public" },
+        { "label": "Check the roadmap", "destination": "/roadmap", "kind": "public" }
+      ]
+    },
+    {
+      "path": "/pricing",
+      "title": "Pricing",
+      "summary": "The service starts free while limits are calibrated. Paid plans are undecided and will be announced here.",
+      "section": "product",
+      "ctas": [{ "label": "Read the guides", "destination": "/guides", "kind": "public" }]
+    },
+    {
+      "path": "/guides",
+      "title": "Guides",
+      "summary": "Step by step instructions for connecting a repository, describing a failure, and reading the resulting evidence.",
+      "section": "docs",
+      "ctas": [
+        { "label": "Try the bug fix template", "destination": "/templates", "kind": "public" },
+        { "label": "Start a project", "destination": "/app/projects/new", "kind": "requires-login" }
+      ]
+    },
+    {
+      "path": "/changelog",
+      "title": "Changelog",
+      "summary": "Design notes describe what is planned. Release notes will appear here once a version ships.",
+      "section": "docs",
+      "ctas": [{ "label": "Check the roadmap", "destination": "/roadmap", "kind": "public" }]
+    },
+    {
+      "path": "/roadmap",
+      "title": "Roadmap",
+      "summary": "Every item below is part of the planned release. Nothing here is deferred, and nothing is marked done without proof.",
+      "section": "product",
+      "ctas": [{ "label": "Read the changelog", "destination": "/changelog", "kind": "public" }]
+    },
+    {
+      "path": "/templates",
+      "title": "Templates",
+      "summary": "Starting points for common runs. Templates explain their inputs here and apply only after login.",
+      "section": "docs",
+      "ctas": [{ "label": "Start a project", "destination": "/app/projects/new", "kind": "requires-login" }]
+    },
+    {
+      "path": "/tutorials",
+      "title": "Tutorials",
+      "summary": "Worked examples that walk through a failure, a fix, and the evidence that closes the case.",
+      "section": "docs",
+      "ctas": [{ "label": "Read a sample report", "destination": "/sample-report", "kind": "public" }]
+    },
+    {
+      "path": "/sample-report",
+      "title": "Sample report",
+      "summary": "A synthetic report that shows the evidence layout. It is not a real customer result.",
+      "section": "docs",
+      "ctas": [{ "label": "Learn how evidence is stored", "destination": "/evidence-overview", "kind": "public" }]
+    },
+    {
+      "path": "/help",
+      "title": "Help and FAQ",
+      "summary": "Answers to common questions about the service, privacy, and limits.",
+      "section": "docs",
+      "ctas": [{ "label": "Read the guides", "destination": "/guides", "kind": "public" }]
+    },
+    {
+      "path": "/privacy-policy",
+      "title": "Privacy policy",
+      "summary": "How customer code and data are handled, retained, and deleted.",
+      "section": "legal",
+      "ctas": [{ "label": "Read the terms", "destination": "/terms", "kind": "public" }]
+    },
+    {
+      "path": "/integrations",
+      "title": "Integrations",
+      "summary": "Repository and identity providers the service connects to, and what each connection is allowed to do.",
+      "section": "product",
+      "ctas": [{ "label": "Read the guides", "destination": "/guides", "kind": "public" }]
+    },
+    {
+      "path": "/impact-overview",
+      "title": "Impact overview",
+      "summary": "How one change is traced across services, databases, and events before anything is fixed.",
+      "section": "product",
+      "ctas": [{ "label": "See how verification works", "destination": "/verification", "kind": "public" }]
+    },
+    {
+      "path": "/verification",
+      "title": "Verification",
+      "summary": "Fixes are checked by an independent verifier that the repair loop cannot influence.",
+      "section": "product",
+      "ctas": [{ "label": "See what evidence looks like", "destination": "/evidence-overview", "kind": "public" }]
+    },
+    {
+      "path": "/evidence-overview",
+      "title": "Evidence overview",
+      "summary": "Every claim in a report points at stored evidence. Missing evidence stays visible as a gap, never as a pass.",
+      "section": "product",
+      "ctas": [{ "label": "Read a sample report", "destination": "/sample-report", "kind": "public" }]
+    },
+    {
+      "path": "/collaboration",
+      "title": "Collaboration",
+      "summary": "Teams review evidence together. Comments and approvals never change a verdict on their own.",
+      "section": "product",
+      "ctas": [{ "label": "Open the workspace", "destination": "/app", "kind": "requires-login" }]
+    },
+    {
+      "path": "/terms",
+      "title": "Terms of service",
+      "summary": "The rules for using the hosted service and the self-hosted release.",
+      "section": "legal",
+      "ctas": [{ "label": "Read the privacy policy", "destination": "/privacy-policy", "kind": "public" }]
+    }
+  ],
+  "faqs": [
+    {
+      "id": "what-is-changeproof",
+      "question": "What does ChangeProof AI do?",
+      "answer": "It investigates a reported software failure, proposes a fix, and proves the fix against an independent check. You receive the fix together with the evidence, and you decide whether to merge it.",
+      "topics": ["basics"],
+      "updatedAt": "2026-11-02"
+    },
+    {
+      "id": "need-api-keys",
+      "question": "Do I need to install anything or bring API keys?",
+      "answer": "No. You work in the browser and connect a repository through the GitHub App. The hosted service runs the model, the builds, and the checks.",
+      "topics": ["basics", "onboarding"],
+      "updatedAt": "2026-11-02"
+    },
+    {
+      "id": "how-evidence-works",
+      "question": "What does the evidence prove?",
+      "answer": "Each report links the failure, the exact change, and the checks that ran against it. When evidence is missing, the report names the gap and the next safe step instead of claiming success.",
+      "topics": ["basics", "evidence"],
+      "updatedAt": "2026-11-02"
+    },
+    {
+      "id": "supported-stacks",
+      "question": "Which languages and frameworks are supported?",
+      "answer": "Support is qualified per stack, framework, version, and change type, and the roadmap lists the current status of each. A stack is marked supported only after its proof runs pass.",
+      "topics": ["basics", "compatibility"],
+      "updatedAt": "2026-11-02"
+    },
+    {
+      "id": "code-privacy",
+      "question": "What happens to my code and data?",
+      "answer": "Customer code runs in isolated execution environments, evidence stays private to your organization, and you choose retention and deletion. The privacy policy states the exact handling before onboarding.",
+      "topics": ["privacy"],
+      "updatedAt": "2026-11-02"
+    },
+    {
+      "id": "pricing-status",
+      "question": "What does the service cost?",
+      "answer": "The service starts free while usage limits are calibrated. Paid plans and prices are undecided and will be announced on the pricing page with their source version.",
+      "topics": ["pricing"],
+      "updatedAt": "2026-11-02"
+    },
+    {
+      "id": "self-hosting",
+      "question": "Can I run ChangeProof AI myself?",
+      "answer": "A self-hosted release with install, upgrade, and restore tooling is part of the planned release. The roadmap tracks its qualification status.",
+      "topics": ["deployment"],
+      "updatedAt": "2026-11-02"
+    },
+    {
+      "id": "merge-deploy",
+      "question": "Does the service merge or deploy my code?",
+      "answer": "No. It prepares an evidence-backed pull request for your review. Merging and deploying stay with you and your existing pipeline.",
+      "topics": ["basics", "safety"],
+      "updatedAt": "2026-11-02"
+    }
+  ],
+  "templates": [
+    {
+      "id": "bugfix-run",
+      "title": "Bug fix run",
+      "description": "Inputs, invariants, and budget for repairing one reported failure with evidence.",
+      "requiresLogin": true,
+      "fields": [
+        { "name": "intent", "label": "What should change", "help": "One sentence the fix must preserve." },
+        { "name": "failure", "label": "Observed failure", "help": "What breaks today, with steps to reproduce." },
+        { "name": "invariants", "label": "Business invariants", "help": "Rules the fix must not break, for example totals and tenant boundaries." },
+        { "name": "budget", "label": "Proof budget", "help": "Maximum spend for the full check campaign, including reruns." }
+      ]
+    },
+    {
+      "id": "migration-run",
+      "title": "Migration run",
+      "description": "Inputs, invariants, and budget for changing a database schema or a dependency with active traffic.",
+      "requiresLogin": true,
+      "fields": [
+        { "name": "intent", "label": "What should change", "help": "The target schema or version, stated exactly." },
+        { "name": "traffic", "label": "Active traffic", "help": "Which readers and writers stay live during the change." },
+        { "name": "invariants", "label": "Data invariants", "help": "Counts, sums, and tenant mappings that must reconcile afterwards." },
+        { "name": "budget", "label": "Proof budget", "help": "Maximum spend for the full check campaign, including reruns." }
+      ]
+    }
+  ],
+  "samples": [
+    {
+      "id": "sample-order-recovery",
+      "title": "Sample: order recovery report",
+      "summary": "A synthetic report showing the evidence layout for a recovered checkout workflow.",
+      "provenance": {
+        "datasetId": "static-sample",
+        "datasetVersion": "1",
+        "capturedAt": "2026-11-02",
+        "synthetic": true,
+        "source": "static-sample-dataset",
+        "label": "SYNTHETIC SAMPLE, not a real customer result"
+      }
+    }
+  ],
+  "changelog": [
+    {
+      "date": "2026-10-24",
+      "kind": "design",
+      "title": "Plan revision 2",
+      "body": "The specification package was consolidated into one complete release plan with work packages, gates, and negative cases."
+    },
+    {
+      "date": "2026-11-02",
+      "kind": "design",
+      "title": "Public site draft",
+      "body": "First public content draft: routes, guides, templates, and one synthetic sample report. No version has shipped yet."
+    }
+  ],
+  "roadmap": [
+    { "id": "public-site", "title": "Public website and guides", "status": "in-qualification" },
+    { "id": "run-lifecycle", "title": "Browser run lifecycle with evidence", "status": "planned" },
+    { "id": "evidence-prs", "title": "Evidence-backed pull requests", "status": "planned" },
+    { "id": "stack-support", "title": "Qualified language and framework support", "status": "planned" },
+    { "id": "self-host", "title": "Self-hosted release", "status": "planned" }
+  ],
+  "pricing": {
+    "pricingVersion": "free-only-draft-0",
+    "currency": "USD",
+    "tiers": [
+      {
+        "id": "free",
+        "name": "Free",
+        "notes": "Free during development. Usage caps are not frozen yet, and paid plans are undecided."
+      }
+    ]
+  }
+}

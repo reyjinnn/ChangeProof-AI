@@ -31,6 +31,46 @@ export class StageNotAllowedError extends ChangeProofError {
   }
 }
 
+/**
+ * Bundle coordination input was malformed or would silently weaken proof.
+ * The orchestrator assembles policy facts; it never repairs them.
+ */
+export class BundleCoordinationError extends ChangeProofError {
+  constructor(detail: string) {
+    super(`Bundle coordination refused: ${detail}`);
+  }
+}
+
+/**
+ * Publication was withheld: the bundle is not verified, its evidence is
+ * inaccessible or mismatched, the head moved, or the provider does not match.
+ * Withholding is explicit and names the blocker; it never degrades to a
+ * silent skip or a weaker claim.
+ */
+export class PublicationWithheldError extends ChangeProofError {
+  constructor(detail: string) {
+    super(`Publication withheld: ${detail}`);
+  }
+}
+
+/**
+ * The open call failed and the reconciliation lookup failed too, so the
+ * broker cannot tell whether a pull request exists. Both failures are named;
+ * retrying the same idempotency key stays safe.
+ */
+export class PublicationReconciliationError extends ChangeProofError {
+  readonly openFailure: string;
+  readonly lookupFailure: string;
+
+  constructor(openFailure: string, lookupFailure: string) {
+    super(
+      `Publication reconciliation failed: open failed (${openFailure}) and the follow-up lookup failed (${lookupFailure}).`,
+    );
+    this.openFailure = openFailure;
+    this.lookupFailure = lookupFailure;
+  }
+}
+
 /** The run was cancelled or its lease was lost; further effects are refused. */
 export class RunNotAuthorisedError extends ChangeProofError {
   readonly reason: string;

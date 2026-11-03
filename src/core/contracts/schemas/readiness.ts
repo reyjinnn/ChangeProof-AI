@@ -1,7 +1,8 @@
 import { z } from 'zod';
 
-import { Sha256Schema } from '../primitives.js';
+import { NonEmptyStringSchema, Sha256Schema } from '../primitives.js';
 import { EvidenceClassSchema } from './graph.js';
+import { OriginSchema } from '../vocabulary.js';
 
 /**
  * Readiness, reuse, forecast and evaluation contracts (PRD §20).
@@ -207,6 +208,166 @@ export const EvaluationArmSchema = z
   })
   .describe('A pre-registered evaluation arm, frozen before any outcome is observed');
 export type EvaluationArm = z.infer<typeof EvaluationArmSchema>;
+
+export const EvalPackSchema = z.enum([
+  'functionality',
+  'statistical',
+  'refusal',
+  'security',
+  'regression',
+  'ablation',
+]);
+export type EvalPack = z.infer<typeof EvalPackSchema>;
+
+export const EvalDatasetSchema = z.enum(['dev', 'holdout']);
+export type EvalDataset = z.infer<typeof EvalDatasetSchema>;
+
+export const EvalCaseSchema = z
+  .strictObject({
+    schemaVersion: z.literal('1'),
+    caseId: NonEmptyStringSchema,
+    dataset: EvalDatasetSchema,
+    pack: EvalPackSchema,
+    suite: NonEmptyStringSchema,
+    origin: OriginSchema,
+    intermittent: z.boolean(),
+    campaign: z
+      .strictObject({ n: z.number().int().gt(0), schedule: NonEmptyStringSchema })
+      .optional(),
+    predictors: z.array(NonEmptyStringSchema).default([]),
+    /** Digest of the case input bytes; content lives in the case store, never here. */
+    inputDigest: Sha256Schema,
+    /** Oracle identity only — oracle content never enters a case record. */
+    oracleRef: NonEmptyStringSchema,
+    referenceDigest: Sha256Schema.optional(),
+    fixability: z.enum(['fixable', 'unfixable', 'unknown']),
+  })
+  .superRefine((c, ctx) => {
+    if (c.intermittent && c.campaign === undefined) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['campaign'],
+        message: 'Intermittent cases need a pre-registered campaign (n, schedule); one green result is not proof.',
+      });
+    }
+  })
+  .describe('One frozen evaluation case; content-addressed, oracle by reference');
+export type EvalCase = z.infer<typeof EvalCaseSchema>;
+
+/** What a proposer may see: dev cases without oracle or reference bindings. */
+export const ProposerCaseSchema = z
+  .strictObject({
+    schemaVersion: z.literal('1'),
+    caseId: NonEmptyStringSchema,
+    pack: EvalPackSchema,
+    suite: NonEmptyStringSchema,
+    intermittent: z.boolean(),
+    inputDigest: Sha256Schema,
+  })
+  .describe('Proposer-visible case projection; holdout never projects');
+export type ProposerCase = z.infer<typeof ProposerCaseSchema>;
+
+export const EvalAbortPolicySchema = z
+  .strictObject({
+    maxConsecutiveInfraFailures: z.number().int().gt(0),
+    maxCostOverrunRatio: z.number().gt(0),
+  })
+  .describe('Frozen stop rules; an aborted arm compares as aborted, never as data');
+export type EvalAbortPolicy = z.infer<typeof EvalAbortPolicySchema>;
+
+export const ReleaseCriterionSchema = z
+  .strictObject({
+    id: NonEmptyStringSchema,
+    kind: z.enum(['min_resolved_rate', 'max_regressions', 'suite_present']),
+    suite: NonEmptyStringSchema.optional(),
+    value: z.number().nonnegative(),
+  })
+  .describe('One release gate; owner-supplied thresholds, evaluated without averaging dimensions');
+export type ReleaseCriterion = z.infer<typeof ReleaseCriterionSchema>;
+
+export const EvalManifestSchema = z
+  .strictObject({
+    schemaVersion: z.literal('1'),
+    manifestId: NonEmptyStringSchema,
+    createdAt: z.iso.datetime({ offset: true }),
+    datasetDigest: Sha256Schema,
+    cases: z.array(EvalCaseSchema).min(1),
+    arms: z.array(EvaluationArmSchema).min(1),
+    abortPolicy: EvalAbortPolicySchema,
+    releaseCriteria: z.array(ReleaseCriterionSchema),
+    /** Digest over the canonical manifest bytes excluding this field. */
+    digest: Sha256Schema,
+  })
+  .describe('Frozen evaluation package: cases, arms, stop rules, and release gates');
+export type EvalManifest = z.infer<typeof EvalManifestSchema>;
+
+export const CaseOutcomeSchema = z.enum(['resolved', 'unresolved', 'failed', 'incomplete', 'refused']);
+export type CaseOutcome = z.infer<typeof CaseOutcomeSchema>;
+
+export const EvalCaseResultSchema = z
+  .strictObject({
+    caseId: NonEmptyStringSchema,
+    outcome: CaseOutcomeSchema,
+    costUnits: z.number().nonnegative(),
+    excludedCost: z
+      .strictObject({ units: z.number().nonnegative(), reason: NonEmptyStringSchema })
+      .optional(),
+    regressed: z.boolean(),
+    trialsCompleted: z.number().int().nonnegative(),
+    trialsRequired: z.number().int().gt(0),
+  })
+  .describe('One case outcome with attributed cost; exclusions stay visible with reasons');
+export type EvalCaseResult = z.infer<typeof EvalCaseResultSchema>;
+
+export const EvalArmResultSchema = z
+  .strictObject({
+    schemaVersion: z.literal('1'),
+    manifestDigest: Sha256Schema,
+    armId: NonEmptyStringSchema,
+    caseResults: z.array(EvalCaseResultSchema),
+    aborted: z.boolean(),
+    abortReason: NonEmptyStringSchema.optional(),
+    startedAt: z.iso.datetime({ offset: true }),
+    finishedAt: z.iso.datetime({ offset: true }),
+  })
+  .describe('One arm execution record; aborted arms are explicit, never silent');
+export type EvalArmResult = z.infer<typeof EvalArmResultSchema>;
+
+export const EvalArmSummarySchema = z
+  .strictObject({
+    armId: NonEmptyStringSchema,
+    resolved: z.number().int().nonnegative(),
+    unresolved: z.number().int().nonnegative(),
+    failed: z.number().int().nonnegative(),
+    incomplete: z.number().int().nonnegative(),
+    refused: z.number().int().nonnegative(),
+    regressions: z.number().int().nonnegative(),
+    denominator: z.number().int().nonnegative(),
+    /** Null when the denominator is zero — a rate over nothing is not zero, it is absent. */
+    resolvedRate: z.number().min(0).max(1).nullable(),
+    grossCost: z.number().nonnegative(),
+    netCost: z.number().nonnegative(),
+    excluded: z.array(
+      z.strictObject({
+        caseId: NonEmptyStringSchema,
+        units: z.number().nonnegative(),
+        reason: NonEmptyStringSchema,
+      }),
+    ),
+  })
+  .describe('Per-arm counts with denominators; omitted failures stay impossible');
+export type EvalArmSummary = z.infer<typeof EvalArmSummarySchema>;
+
+export const EvalComparisonSchema = z
+  .strictObject({
+    schemaVersion: z.literal('1'),
+    manifestDigest: Sha256Schema,
+    comparable: z.boolean(),
+    incomparabilityReasons: z.array(NonEmptyStringSchema),
+    arms: z.array(EvalArmSummarySchema),
+  })
+  .describe('Compared arms with explicit comparability; aggregates only, never case content');
+export type EvalComparison = z.infer<typeof EvalComparisonSchema>;
 
 export const EnvironmentProfileRevisionSchema = z
   .strictObject({

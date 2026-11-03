@@ -303,3 +303,151 @@ export class DependencyBroker {
     }
   }
 }
+
+export class UpgradeConflictError extends ChangeProofError {
+  readonly packageName: string;
+  readonly contenders: readonly { component: string; version: string }[];
+
+  constructor(packageName: string, contenders: readonly { component: string; version: string }[]) {
+    super(
+      `Package "${packageName}" is required at incompatible versions: ` +
+        contenders.map((entry) => `${entry.component}@${entry.version}`).join(', ') +
+        '. Resolve the conflict before upgrading.',
+    );
+    this.name = 'UpgradeConflictError';
+    this.packageName = packageName;
+    this.contenders = contenders;
+  }
+}
+
+export class ManifestLockfileMismatchError extends ChangeProofError {
+  readonly problems: readonly string[];
+
+  constructor(problems: readonly string[]) {
+    super(
+      'Manifest and lockfile do not match: ' +
+        problems.join('; ') +
+        '. Re-resolve through the broker instead of editing either side by hand.',
+    );
+    this.name = 'ManifestLockfileMismatchError';
+    this.problems = problems;
+  }
+}
+
+export const UpgradeComponentSchema = z.strictObject({
+  name: z.string().min(1),
+  requirements: z.array(ResolutionRequestSchema).min(1).max(256),
+});
+export type UpgradeComponent = z.input<typeof UpgradeComponentSchema>;
+
+export const PlanUpgradeRequestSchema = z.strictObject({
+  schemaVersion: z.literal('1'),
+  components: z.array(UpgradeComponentSchema).min(1).max(32),
+  currentLockfile: LockfileSchema.optional(),
+});
+export type PlanUpgradeRequest = z.input<typeof PlanUpgradeRequestSchema>;
+
+export interface UpgradeDiff {
+  readonly added: readonly string[];
+  readonly removed: readonly string[];
+  readonly changed: readonly { packageName: string; from: string; to: string }[];
+}
+
+export interface UpgradePlan {
+  readonly lockfile: Lockfile;
+  readonly diff: UpgradeDiff;
+  readonly resolved: readonly ResolvedDependency[];
+}
+
+/**
+ * Plan a coordinated dependency upgrade across interacting components.
+ *
+ * Every requirement resolves through the trusted broker, so allowlist,
+ * exact-pin, and install-script refusals are inherited. Two components
+ * requiring different exact versions of one package is an explicit
+ * incompatibility, never a silent pick.
+ */
+export function planUpgrade(broker: DependencyBroker, request: PlanUpgradeRequest): UpgradePlan {
+  const parsed = PlanUpgradeRequestSchema.parse(request);
+  const resolved: { component: string; dependency: ResolvedDependency }[] = [];
+  for (const component of parsed.components) {
+    for (const requirement of component.requirements) {
+      resolved.push({ component: component.name, dependency: broker.resolve(requirement) });
+    }
+  }
+  const byPackage = new Map<string, { component: string; version: string }[]>();
+  for (const entry of resolved) {
+    const list = byPackage.get(entry.dependency.packageName) ?? [];
+    list.push({ component: entry.component, version: entry.dependency.version });
+    byPackage.set(entry.dependency.packageName, list);
+  }
+  for (const [packageName, contenders] of byPackage) {
+    const versions = [...new Set(contenders.map((entry) => entry.version))].sort();
+    if (versions.length > 1) {
+      throw new UpgradeConflictError(packageName, contenders);
+    }
+  }
+  const lockfile = broker.writeLockfile(resolved.map((entry) => entry.dependency));
+  const diff: UpgradeDiff = diffLockfiles(parsed.currentLockfile, lockfile);
+  return { lockfile, diff, resolved: resolved.map((entry) => entry.dependency) };
+}
+
+function lockfileVersions(lockfile: Lockfile | undefined): Map<string, string> {
+  const versions = new Map<string, string>();
+  if (lockfile === undefined) return versions;
+  for (const key of Object.keys(lockfile.packages)) {
+    const at = key.lastIndexOf('@');
+    if (at > 0) versions.set(key.slice(0, at), key.slice(at + 1));
+  }
+  return versions;
+}
+
+function diffLockfiles(before: Lockfile | undefined, after: Lockfile): UpgradeDiff {
+  const beforeVersions = lockfileVersions(before);
+  const afterVersions = lockfileVersions(after);
+  const added: string[] = [];
+  const removed: string[] = [];
+  const changed: { packageName: string; from: string; to: string }[] = [];
+  for (const [packageName, version] of afterVersions) {
+    const previous = beforeVersions.get(packageName);
+    if (previous === undefined) added.push(`${packageName}@${version}`);
+    else if (previous !== version) changed.push({ packageName, from: previous, to: version });
+  }
+  for (const [packageName, version] of beforeVersions) {
+    if (!afterVersions.has(packageName)) removed.push(`${packageName}@${version}`);
+  }
+  added.sort();
+  removed.sort();
+  changed.sort((left, right) => left.packageName.localeCompare(right.packageName));
+  return { added, removed, changed };
+}
+
+/**
+ * Assert that a manifest's dependencies are exactly the broker's lockfile.
+ * Ranges, missing pins, and moved versions are stale/invalid states
+ * (NEG3-07): the manifest must be re-resolved, not hand-edited.
+ */
+export function assertManifestLockfileMatch(
+  manifest: { dependencies?: Record<string, string> },
+  lockfile: Lockfile,
+): void {
+  const parsed = LockfileSchema.parse(lockfile);
+  const problems: string[] = [];
+  for (const [name, version] of Object.entries(manifest.dependencies ?? {})) {
+    const key = `${name}@${version}`;
+    const entry = parsed.packages[key];
+    if (entry === undefined) {
+      const pinned = Object.keys(parsed.packages).find((candidate) => candidate.startsWith(`${name}@`));
+      problems.push(
+        pinned === undefined
+          ? `"${name}" is not pinned in the lockfile`
+          : `"${name}" manifest pins ${version} but the lockfile pins ${pinned.slice(name.length + 1)}`,
+      );
+    } else if (entry.integrity.trim().length === 0) {
+      problems.push(`"${key}" has no integrity digest`);
+    }
+  }
+  if (problems.length > 0) {
+    throw new ManifestLockfileMismatchError(problems);
+  }
+}

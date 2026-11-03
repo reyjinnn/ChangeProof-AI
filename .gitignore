@@ -7,6 +7,11 @@ node_modules/
 # Disposable run artifacts (never authoritative state)
 runs/
 
+# Disposable file-evidence checkouts for local/E2E server runs
+# (CP_EVIDENCE_DIR). Tests mint theirs under the OS temp dir.
+evidence-local/
+evidence-tmp/
+
 # Local environment — never commit credentials
 .env
 .env.*
@@ -33,13 +38,43 @@ coverage/
 *.log
 npm-debug.log*
 pnpm-debug.log*
+pnpm-error.log
 /tmp/
 /temp/
 *.tmp
 *.bak
 *.swp
 *.swo
+*.orig
+*.rej
 
 # Windows
 Desktop.ini
 $RECYCLE.BIN/
+
+# Project-local Python venv (Modal probe helper lives here; never commit it)
+.venv/
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.mypy_cache/
+
+# Key material — never commit private keys or certificates
+*.pem
+*.key
+*.p12
+*.pfx
+*.jks
+id_rsa*
+id_ed25519*
+id_ecdsa*
+credentials.json
+*credentials*.json
+secrets/
+.secrets/
+
+# Browser / E2E report output
+test-results/
+playwright-report/
+playwright/.cache/

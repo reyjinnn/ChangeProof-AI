@@ -32,7 +32,21 @@ export * from './contracts/schemas/budget.js';
 export * from './contracts/schemas/campaign.js';
 export * from './contracts/schemas/engine.js';
 export * from './contracts/schemas/hosted.js';
+export * from './contracts/schemas/identity-services.js';
 export * from './contracts/schemas/readiness.js';
+export * from './contracts/schemas/adapter.js';
+export * from './contracts/schemas/publicsite.js';
+export * from './contracts/schemas/runlifecycle.js';
+export * from './contracts/schemas/engagement.js';
+export * from './contracts/schemas/support.js';
+export * from './contracts/schemas/collaboration.js';
+export * from './contracts/schemas/distribution.js';
+export * from './contracts/schemas/regions.js';
+export * from './contracts/schemas/soak.js';
+export * from './contracts/schemas/legacy.js';
+export * from './contracts/schemas/modelcheck.js';
+export * from './contracts/schemas/transfer.js';
+export * from './contracts/schemas/http.js';
 
 // Ports (contract surface for cross-module collaboration, wired by orchestrator)
 export * from './ports/index.js';

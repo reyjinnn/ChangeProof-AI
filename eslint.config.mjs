@@ -11,7 +11,7 @@ import tseslint from 'typescript-eslint';
  */
 export default tseslint.config(
   {
-    ignores: ['dist/**', 'node_modules/**', 'runs/**', 'fixtures/**', 'coverage/**'],
+    ignores: ['dist/**', 'apps/**/dist/**', 'node_modules/**', 'runs/**', 'fixtures/**', 'coverage/**', '.venv/**'],
   },
   js.configs.recommended,
   {
@@ -19,11 +19,33 @@ export default tseslint.config(
     languageOptions: {
       globals: {
         process: 'readonly',
+        console: 'readonly',
+        setTimeout: 'readonly',
+        clearTimeout: 'readonly',
+        URL: 'readonly',
       },
     },
   },
   {
-    files: ['src/**/*.ts', 'tests/**/*.ts'],
+    // E2E runner runs on node; `document`/`window` appear only inside
+    // page.evaluate callbacks that execute in the browser.
+    files: ['tests/e2e/**/*.mjs'],
+    languageOptions: {
+      globals: {
+        process: 'readonly',
+        console: 'readonly',
+        setTimeout: 'readonly',
+        clearTimeout: 'readonly',
+        URL: 'readonly',
+        fetch: 'readonly',
+        Buffer: 'readonly',
+        document: 'readonly',
+        window: 'readonly',
+      },
+    },
+  },
+  {
+    files: ['src/**/*.ts', 'tests/**/*.ts', 'apps/**/*.ts'],
     extends: [
       ...tseslint.configs.strictTypeChecked,
       ...tseslint.configs.stylisticTypeChecked,
@@ -96,13 +118,43 @@ export default tseslint.config(
     },
   },
   {
-    files: ['tests/**/*.ts'],
+    files: ['tests/**/*.ts', 'apps/**/*.test.ts'],
     rules: {
       // Tests deliberately construct malformed input to prove the schema rejects it.
       '@typescript-eslint/no-unsafe-assignment': 'off',
       '@typescript-eslint/no-unsafe-argument': 'off',
       '@typescript-eslint/no-explicit-any': 'off',
       'no-restricted-imports': 'off',
+    },
+  },
+  {
+    files: ['apps/**/*.ts'],
+    languageOptions: {
+      globals: {
+        window: 'readonly',
+        document: 'readonly',
+        localStorage: 'readonly',
+        fetch: 'readonly',
+        location: 'readonly',
+        history: 'readonly',
+        navigator: 'readonly',
+        matchMedia: 'readonly',
+        requestAnimationFrame: 'readonly',
+        HTMLElement: 'readonly',
+        HTMLInputElement: 'readonly',
+        HTMLButtonElement: 'readonly',
+        HTMLAnchorElement: 'readonly',
+        Element: 'readonly',
+        KeyboardEvent: 'readonly',
+        MouseEvent: 'readonly',
+        Event: 'readonly',
+        Response: 'readonly',
+        RequestInit: 'readonly',
+      },
+    },
+    rules: {
+      // Unexpected client failures surface in the UI; console keeps the trace.
+      'no-console': 'off',
     },
   },
   {

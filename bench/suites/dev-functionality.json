@@ -1,0 +1,27 @@
+[
+  {
+    "caseId": "dev-func-1",
+    "dataset": "dev",
+    "pack": "functionality",
+    "suite": "core",
+    "origin": "controlled_change",
+    "intermittent": false,
+    "predictors": ["single-file", "typescript"],
+    "inputText": "DEV-ONLY: restore the /total endpoint to exact integer math. Fixture prompt, not a frozen eval case.",
+    "oracleRef": "dev-oracle-func-1",
+    "fixability": "fixable"
+  },
+  {
+    "caseId": "dev-func-flaky-1",
+    "dataset": "dev",
+    "pack": "functionality",
+    "suite": "concurrency",
+    "origin": "controlled_change",
+    "intermittent": true,
+    "campaign": { "n": 5, "schedule": "hourly" },
+    "predictors": ["concurrency", "flaky"],
+    "inputText": "DEV-ONLY: settle the ledger race under concurrent writers. Fixture prompt, not a frozen eval case.",
+    "oracleRef": "dev-oracle-flaky-1",
+    "fixability": "unknown"
+  }
+]
