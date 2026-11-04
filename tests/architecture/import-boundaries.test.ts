@@ -168,7 +168,9 @@ describe('ESLint import restriction negatives', () => {
     const messages = results.flatMap((result) => result.messages);
     expect(messages.some((message) => message.ruleId === 'no-restricted-imports')).toBe(true);
     expect(messages.some((message) => message.fatal === true)).toBe(false);
-  }, 15_000);
+    // Type-aware ESLint cold start under parallel workers exceeds the old
+    // 15s budget on loaded machines (6s+ solo); the assertions are unchanged.
+  }, 60_000);
 
   it('leaves the relative form to dependency-cruiser, which resolves the target', async () => {
     // Split responsibility, recorded so a gap is never assumed covered: ESLint
@@ -217,5 +219,6 @@ describe('ESLint import restriction negatives', () => {
     const cruiseResult = cruise(join(base, 'src/modules/detector/index.ts'));
     expect(cruiseResult.status).not.toBe(0);
     expect(cruiseResult.output).toMatch(/no-deep-module-imports/);
-  });
+    // Same wall-clock budget as the sibling ESLint negative above.
+  }, 60_000);
 });

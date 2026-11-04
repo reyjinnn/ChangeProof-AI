@@ -115,6 +115,7 @@ beforeAll(async () => {
   await admin.query(migration('V2__identity_services.sql'));
   await admin.query(migration('V5__email_identity.sql'));
   await admin.query(migration('V10__enterprise.sql'));
+  await admin.query(migration('V12__workspace.sql'));
   const { composePublicSite } = await import('../../src/orchestrator/index.js');
   handle = createHttpServer({
     publicSite: composePublicSite(),
@@ -300,6 +301,38 @@ test('member role change and removal work over the API', async () => {
   expect(promoted.status).toBe(200);
   const removed = await call('DELETE', `/api/orgs/acme-roles/members/${memberId}`, undefined, ownerCookie);
   expect(removed.status).toBe(200);
+});
+
+test('team members list the tenant roster; operators refused, tenants fenced', async () => {
+  const ownerEmail = uniqueEmail();
+  await registerVerifyClaim(ownerEmail, 'correct-horse-42', 'acme-team');
+  const ownerCookie = cookieOf(await login(ownerEmail, 'correct-horse-42'));
+  const invited = await call('POST', '/api/orgs/acme-team/invitations', { role: 'member' }, ownerCookie);
+  expect(invited.status).toBe(201);
+  const token = (invited.body as { data: { token: string } }).data.token;
+  const memberEmail = uniqueEmail();
+  await registerVerifyClaim(memberEmail, 'correct-horse-42', 'acme-team-home');
+  const memberHomeCookie = cookieOf(await login(memberEmail, 'correct-horse-42'));
+  const accepted = await call('POST', '/api/invitations/accept', { token }, memberHomeCookie);
+  expect(accepted.status).toBe(200);
+  const memberCookie = cookieOf(await login(memberEmail, 'correct-horse-42', { tenantId: 'acme-team' }));
+  const listed = await call('GET', '/api/team/members', undefined, ownerCookie);
+  expect(listed.status).toBe(200);
+  const members = (listed.body as { data: { userId: string; role: string; detail: string }[] }).data;
+  expect(members.map((member) => member.role).sort()).toEqual(['member', 'owner']);
+  expect(members.every((member) => member.userId.length > 0 && member.detail.length > 0)).toBe(true);
+  const memberListed = await call('GET', '/api/team/members', undefined, memberCookie);
+  expect(memberListed.status).toBe(200);
+  const strangerEmail = uniqueEmail();
+  await registerVerifyClaim(strangerEmail, 'correct-horse-42', 'acme-stranger');
+  const strangerCookie = cookieOf(await login(strangerEmail, 'correct-horse-42'));
+  const fenced = await call('GET', '/api/team/members', undefined, strangerCookie);
+  expect((fenced.body as { data: unknown[] }).data).toHaveLength(1);
+  await admin.query("UPDATE memberships SET role = 'operator' WHERE tenant_id = 'acme-stranger'");
+  const refused = await call('GET', '/api/team/members', undefined, strangerCookie);
+  expect(refused.status).toBe(403);
+  const guest = await call('GET', '/api/team/members');
+  expect(guest.status).toBe(401);
 });
 
 test('servers without a database refuse account calls explicitly', async () => {

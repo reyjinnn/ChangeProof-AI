@@ -52,6 +52,19 @@ if (infra !== undefined) {
   serverEnv.CP_CHALLENGE_SECRET = randomBytes(48).toString('base64url');
   serverEnv.CP_EVIDENCE_DIR = infra.evidenceDir;
 }
+// Optional GitHub sign-in on the disposable stack: forwarded only when the
+// id and secret are both set in the invoking environment (a partial set
+// stays disabled rather than half-wired). The redirect defaults to this
+// run's own callback; override it only with a URL registered on the App.
+const githubId = process.env.CP_GITHUB_CLIENT_ID ?? '';
+const githubSecret = process.env.CP_GITHUB_CLIENT_SECRET ?? '';
+const githubRedirect =
+  process.env.CP_GITHUB_REDIRECT_URL ?? `http://127.0.0.1:${port}/api/auth/github/callback`;
+if (githubId !== '' && githubSecret !== '') {
+  serverEnv.CP_GITHUB_CLIENT_ID = githubId;
+  serverEnv.CP_GITHUB_CLIENT_SECRET = githubSecret;
+  serverEnv.CP_GITHUB_REDIRECT_URL = githubRedirect;
+}
 const server = spawn(process.execPath, ['dist/http/start.js'], {
   cwd: rootDir,
   env: {

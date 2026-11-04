@@ -211,3 +211,84 @@ test('operators see the console link on the support page', async () => {
   await settle(outlet, 'Backlog growing');
   expect(outlet.querySelector('a[href="#/operator"]')).not.toBeNull();
 });
+
+test('support shows guide cards and FAQs beside the ticket table', async () => {
+  stubFetch(supportStubs());
+  const outlet = boot();
+  await renderRoute(outlet, '#/support');
+  await settle(outlet, 'Checkout 500s');
+  expect(outlet.querySelectorAll('.grid3 .card').length).toBe(3);
+  expect(outlet.querySelector('a[href="#/service-status"]')).not.toBeNull();
+  expect(outlet.querySelectorAll('details.accordion').length).toBe(4);
+  expect(outlet.textContent).toContain('Do I need a model API key?');
+});
+
+test('contact drawer files through the tickets endpoint', async () => {
+  stubFetch({
+    ...supportStubs(),
+    '/api/support/tickets': { status: 201, json: { ...TICKET_OPEN, ticketId: 'ticket-9' } },
+  });
+  const outlet = boot();
+  await renderRoute(outlet, '#/support');
+  await settle(outlet, 'Checkout 500s');
+  const contact = [...outlet.querySelectorAll('button')].find((b) => b.textContent === 'Create support request');
+  if (contact === undefined) throw new Error('Missing contact button.');
+  contact.click();
+  const form = required(document.querySelector<HTMLFormElement>('#supportForm'), 'support drawer form');
+  required(document.querySelector<HTMLInputElement>('#support-summary'), 'drawer summary').value = 'Checkout 500s';
+  required(document.querySelector<HTMLTextAreaElement>('#support-context'), 'drawer context').value = 'Pay step fails.';
+  form.dispatchEvent(new SubmitEvent('submit', { bubbles: true, cancelable: true }));
+  await settle(document.body, 'ticket-9');
+  expect(posted.map((entry) => entry.url)).toContain('/api/support/tickets');
+});
+
+test('service status shows components and the incident timeline', async () => {
+  stubFetch({
+    '/api/auth/session': { status: 200, json: OWNER_SESSION },
+    '/api/health': { status: 200, json: { status: 'ok', contentVersion: '3' } },
+    '/api/support/incidents?limit=20': { status: 200, json: { items: [INCIDENT], cursor: '' } },
+  });
+  const outlet = boot();
+  await renderRoute(outlet, '#/service-status');
+  await settle(outlet, 'Backlog growing');
+  expect(outlet.textContent).toContain('Content manifest v3');
+  expect(outlet.querySelector('.notice')).not.toBeNull();
+  expect(outlet.querySelectorAll('ol.timeline li').length).toBe(1);
+});
+
+test('guests see a login card on service status, never incidents', async () => {
+  const fetchSpy = vi.fn(() =>
+    Promise.resolve(new Response(JSON.stringify({ ok: true, data: { authenticated: false } }), { status: 200 })),
+  );
+  globalThis.fetch = fetchSpy;
+  const outlet = boot();
+  await renderRoute(outlet, '#/service-status');
+  await settle(outlet, 'Service status needs a login');
+  expect(fetchSpy).toHaveBeenCalledTimes(1);
+});
+
+test('ui states shows six sample cards without fetching', async () => {
+  const fetchSpy = vi.fn(() => {
+    throw new Error('UI state samples must not fetch.');
+  });
+  globalThis.fetch = fetchSpy;
+  const outlet = boot();
+  await renderRoute(outlet, '#/ui-states');
+  expect(outlet.querySelectorAll('.empty-state').length).toBe(6);
+  expect(outlet.textContent).toContain('Quota exhausted');
+  expect(outlet.textContent).toContain('Proof inconclusive');
+  expect(fetchSpy).not.toHaveBeenCalled();
+});
+
+test('evaluations reports structure without measured figures', async () => {
+  const fetchSpy = vi.fn(() => {
+    throw new Error('Evaluation preview must not fetch.');
+  });
+  globalThis.fetch = fetchSpy;
+  const outlet = boot();
+  await renderRoute(outlet, '#/evaluations');
+  expect(outlet.textContent).toContain('Arm comparison');
+  expect(outlet.textContent).toContain('Not measured');
+  expect(outlet.textContent).toContain('Qualification gates');
+  expect(fetchSpy).not.toHaveBeenCalled();
+});

@@ -13,6 +13,7 @@ import {
   ThreadAudienceSchema,
   TicketCategorySchema,
   TicketStatusSchema,
+  type CapabilityRecord,
 } from '../core/index.js';
 import type { LifecycleSessionPort } from '../core/ports/index.js';
 import type { CollaborationComposition, SupportComposition } from '../orchestrator/index.js';
@@ -35,6 +36,7 @@ export interface TeamworkDeps {
   readonly session: LifecycleSessionPort;
   readonly support: SupportComposition;
   readonly collaboration: CollaborationComposition;
+  readonly capabilities: { listRecords(): readonly CapabilityRecord[] };
 }
 
 const PageQuery = z.strictObject({
@@ -140,6 +142,21 @@ export async function handleTeamworkApi(
     return { sessionId: ctx.sessionId, nowIso };
   };
 
+  if (method === 'GET' && pathname === '/api/support/capabilities') {
+    await actingContext(deps.session, request, nowIso);
+    sendOk(response, {
+      capabilities: deps.capabilities.listRecords().map((record) => ({
+        ecosystem: record.key.ecosystem,
+        framework: record.key.framework,
+        version: record.key.versionRange,
+        feature: record.key.componentKind,
+        changeType: record.key.changeCategory,
+        targetLevel: record.targetLevel,
+        provenLevel: record.provenLevel,
+      })),
+    });
+    return;
+  }
   if (method === 'POST' && pathname === '/api/support/tickets') {
     const body = parseBody(TicketBody, rawBody);
     const ticket = await orMapped(

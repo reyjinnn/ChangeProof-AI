@@ -93,7 +93,47 @@ test('visible focus ring exists on every theme', () => {
 test('responsive breakpoints collapse the sidebar', () => {
   expect(css).toMatch(/@media\s*\(max-width:\s*1200px\)/);
   expect(css).toMatch(/@media\s*\(max-width:\s*760px\)/);
-  expect(css).toMatch(/body\.sidebar-collapsed \.sidebar\s*\{\s*display:\s*none/);
+  // Mockup contract: body.is-collapsed narrows the rail (icon rail on
+  // desktop, off-canvas drawer below 760px), resolved via --side-w.
+  expect(css).toMatch(/\.is-collapsed\s*\{\s*--side-w:\s*78px/);
+  expect(css).toMatch(/\.modern-design\.is-collapsed \.sidebar/);
+});
+
+test('mockup state classes and component hooks are present', () => {
+  for (const selector of [
+    'body.modern-design',
+    'body.modern-design.public-website',
+    'body.modern-design.auth-page',
+    '.signin-overlay',
+    '.cp-select-trigger',
+    '.cp-select-menu',
+    '.cp-select-option',
+    '.cp-file-picker',
+    '.notification-stack',
+    '.account-popover',
+    '.workspace-live-summary',
+    '.proof-story-stage',
+    '.cp-workflow-folder',
+    '.price-card',
+    '.graph-board',
+    '.graph-node',
+    '.trials',
+    '.trial',
+    '.campaign-stat',
+    '.diff-line',
+    '.codebox',
+    '.meter',
+    '.timeline',
+    '.stepmark',
+    '.hero-orbit',
+    '.route-tabs',
+    '.command-modal',
+  ]) {
+    expect(css, selector).toContain(selector);
+  }
+  expect(css).toMatch(/html\[data-theme="dark"\]/);
+  expect(css).toMatch(/--card-fill/);
+  expect(css).toMatch(/--card-accent/);
 });
 
 test('fonts are self-hosted variable WOFF2 with a swap fallback', () => {

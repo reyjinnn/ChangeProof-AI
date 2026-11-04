@@ -103,7 +103,7 @@ function eventsPayload() {
   };
 }
 
-function libraryStubs() {
+function libraryStubs(): Record<string, StubHit> {
   return {
     '/api/auth/session': { status: 200, json: SESSION },
     '/api/runs/run-1': { status: 200, json: RUN },
@@ -164,6 +164,16 @@ test('publication panel is honest about the missing authorized App', async () =>
   await renderRoute(outlet, '#/evidence?run=run-1');
   await settle(outlet, 'no authorized GitHub App');
   expect(outlet.textContent).toContain('no authorized GitHub App');
+});
+
+test('publication panel stays empty when only sign-in is configured', async () => {
+  const stubs = libraryStubs();
+  stubs['/api/auth/providers'] = { status: 200, json: { email: true, github: true, githubApp: false } };
+  stubFetch(stubs);
+  const outlet = boot();
+  await renderRoute(outlet, '#/evidence?run=run-1');
+  await settle(outlet, 'no authorized GitHub App');
+  expect(outlet.textContent).toContain('no pull requests to show');
 });
 
 test('evidence export snapshot carries run, artifacts, and provenance', () => {
@@ -277,4 +287,81 @@ test('expired session on evidence routes redirects to session-expired', async ()
   await renderRoute(outlet, '#/evidence?run=run-1');
   await settle(outlet, 'Session expired');
   expect(window.location.hash).toBe('#/session-expired');
+});
+
+test('library renders tabs, artifacts table, manifest, and honest asides', async () => {
+  stubFetch(libraryStubs());
+  const outlet = boot();
+  await renderRoute(outlet, '#/evidence?run=run-1');
+  await settle(outlet, DIGEST_A.slice(0, 12));
+  const tabLinks = [...outlet.querySelectorAll('.route-tabs a')];
+  expect(tabLinks).toHaveLength(7);
+  expect(outlet.querySelector('a[href="#/review?run=run-1"]')).not.toBeNull();
+  expect(outlet.querySelector('.route-tabs a[aria-current="page"]')?.textContent).toContain('Evidence');
+  expect(outlet.querySelector('.run-context')).not.toBeNull();
+  expect(outlet.textContent).toContain('Reproduction manifest');
+  expect(outlet.querySelector('pre.codebox')?.textContent).toContain('changeproof-evidence-export');
+  expect(outlet.textContent).toContain('Retention');
+  expect(outlet.textContent).toContain('Identity bound to the run');
+  expect(outlet.querySelector('a[href="#/threads?run=run-1"]')).not.toBeNull();
+  expect(outlet.querySelector('button[data-copy-digest]')).not.toBeNull();
+});
+
+test('evidence library lists runs with evidence links', async () => {
+  stubFetch({
+    '/api/auth/session': { status: 200, json: SESSION },
+    '/api/search': {
+      status: 200,
+      json: {
+        schemaVersion: '1',
+        hits: [
+          {
+            kind: 'run',
+            id: 'run-1',
+            projectId: 'project-1',
+            title: 'run-1',
+            snippet: 'queued',
+            createdAt: '2026-11-02T00:00:00.000Z',
+          },
+        ],
+        totalCount: 1,
+        cursor: 1,
+      },
+    },
+  });
+  const outlet = boot();
+  await renderRoute(outlet, '#/evidence-library');
+  await settle(outlet, 'Evidence library');
+  expect(outlet.querySelector('a[href="#/evidence?run=run-1"]')).not.toBeNull();
+  expect(outlet.textContent).toContain('Private');
+  expect(outlet.textContent).toContain('Traceable review');
+});
+
+test('evidence library needs a login and fails closed on denial', async () => {
+  const fetchSpy = vi.fn(() =>
+    Promise.resolve(new Response(JSON.stringify({ ok: true, data: { authenticated: false } }), { status: 200 })),
+  );
+  globalThis.fetch = fetchSpy;
+  const outlet = boot();
+  await renderRoute(outlet, '#/evidence-library');
+  await settle(outlet, 'Evidence library needs a login');
+  expect(fetchSpy).toHaveBeenCalledTimes(1);
+  stubFetch({
+    '/api/auth/session': { status: 200, json: SESSION },
+    '/api/search': { status: 403, json: { ok: false, error: { code: 'forbidden', message: 'No.' } } },
+  });
+  const outlet2 = boot();
+  await renderRoute(outlet2, '#/evidence-library');
+  await settle(outlet2, 'Access denied');
+});
+
+test('evidence library empty state guides to filing', async () => {
+  stubFetch({
+    '/api/auth/session': { status: 200, json: SESSION },
+    '/api/search': { status: 200, json: { schemaVersion: '1', hits: [], totalCount: 0, cursor: 0 } },
+  });
+  const outlet = boot();
+  await renderRoute(outlet, '#/evidence-library');
+  await settle(outlet, 'No runs yet');
+  expect(outlet.querySelector('a[href="#/new-run"]')).not.toBeNull();
 });

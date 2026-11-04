@@ -53,6 +53,11 @@ async function settle(outlet: HTMLElement, text: string): Promise<void> {
   }
 }
 
+function required<T>(value: T | null | undefined): T {
+  if (value === null || value === undefined) throw new Error('expected element to exist');
+  return value;
+}
+
 test('guests see a login card, never settings', async () => {
   stubFetch({ '/api/auth/session': { status: 200, json: { authenticated: false } } });
   const outlet = boot();
@@ -124,4 +129,189 @@ test('deletion demands a matching confirmation, no request otherwise', async () 
   form?.dispatchEvent(new SubmitEvent('submit', { bubbles: true, cancelable: true }));
   await settle(outlet, 'does not match');
   expect(seen.some((url) => url === '/api/orgs/acme')).toBe(false);
+});
+
+test('settings shows workspace tabs, a profile form, and a theme switch', async () => {
+  stubFetch({
+    '/api/auth/session': { status: 200, json: SESSION },
+    '/api/auth/sessions': { status: 200, json: [] },
+  });
+  const outlet = boot();
+  await renderRoute(outlet, '#/settings');
+  await settle(outlet, 'Workspace profile');
+  const tabLabels = [...outlet.querySelectorAll('.route-tabs a')].map((a) => a.textContent);
+  expect(tabLabels).toEqual(['Organization', 'Account & sessions', 'Data & privacy', 'Audit log']);
+  expect(outlet.querySelector('#settingsForm')).not.toBeNull();
+  const dark = outlet.querySelector<HTMLInputElement>('.cp-theme-settings input[value="dark"]');
+  if (dark === null) throw new Error('Missing dark theme radio.');
+  dark.checked = true;
+  dark.dispatchEvent(new Event('change', { bubbles: true }));
+  expect(document.documentElement.dataset['theme']).toBe('dark');
+  document.documentElement.dataset['theme'] = 'light';
+});
+
+test('settings profile save refuses to fake a write', async () => {
+  stubFetch({
+    '/api/auth/session': { status: 200, json: SESSION },
+    '/api/auth/sessions': { status: 200, json: [] },
+  });
+  const outlet = boot();
+  await renderRoute(outlet, '#/settings');
+  await settle(outlet, 'Workspace profile');
+  const form = outlet.querySelector('#settingsForm');
+  if (form === null) throw new Error('Missing #settingsForm.');
+  form.dispatchEvent(new SubmitEvent('submit', { bubbles: true, cancelable: true }));
+  await settle(outlet, 'no organization-profile endpoint');
+  expect(seen.some((url) => url !== '/api/auth/session' && url !== '/api/auth/sessions')).toBe(false);
+});
+
+test('account shows the profile, sessions, and GitHub status', async () => {
+  stubFetch({
+    '/api/auth/session': { status: 200, json: SESSION },
+    '/api/auth/sessions': { status: 200, json: SESSIONS },
+    '/api/auth/github/status': { status: 200, json: { configured: false, linked: false, links: [] } },
+  });
+  const outlet = boot();
+  await renderRoute(outlet, '#/account');
+  await settle(outlet, 'This session');
+  expect(outlet.textContent).toContain('u-1');
+  expect(outlet.textContent).toContain('acme');
+  expect(outlet.textContent).toContain('owner');
+  expect(outlet.textContent).toContain('GitHub status');
+  expect(outlet.textContent).toContain('not configured for this service');
+  expect(outlet.querySelector('a[href="#/repositories"]')).not.toBeNull();
+  expect(outlet.querySelector('.route-tabs a.active')?.textContent).toBe('Account & sessions');
+});
+
+test('account offers the link button when no GitHub account is linked', async () => {
+  stubFetch({
+    '/api/auth/session': { status: 200, json: SESSION },
+    '/api/auth/sessions': { status: 200, json: SESSIONS },
+    '/api/auth/github/status': { status: 200, json: { configured: true, linked: false, links: [] } },
+  });
+  const outlet = boot();
+  await renderRoute(outlet, '#/account');
+  await settle(outlet, 'Link GitHub account');
+  const button = required(
+    [...outlet.querySelectorAll('button')].find((entry) => entry.textContent === 'Link GitHub account'),
+  );
+  const assign = vi.spyOn(window.location, 'assign').mockImplementation(() => undefined);
+  button.click();
+  expect(assign).toHaveBeenCalledWith('/api/auth/github/start?mode=link');
+});
+
+test('account names the connected login and confirms a fresh link', async () => {
+  stubFetch({
+    '/api/auth/session': { status: 200, json: SESSION },
+    '/api/auth/sessions': { status: 200, json: SESSIONS },
+    '/api/auth/github/status': { status: 200, json: { configured: true, linked: true, links: [{ login: 'octocat' }] } },
+  });
+  const outlet = boot();
+  await renderRoute(outlet, '#/account?githubLinked=1');
+  await settle(outlet, 'Connected as octocat');
+  expect(outlet.textContent).toContain('GitHub account linked');
+});
+
+test('account maps a link-mode callback failure to copy', async () => {
+  stubFetch({
+    '/api/auth/session': { status: 200, json: SESSION },
+    '/api/auth/sessions': { status: 200, json: SESSIONS },
+    '/api/auth/github/status': { status: 200, json: { configured: true, linked: false, links: [] } },
+  });
+  const outlet = boot();
+  await renderRoute(outlet, '#/account?githubError=github_taken');
+  await settle(outlet, 'already linked to a different user');
+  expect(outlet.textContent).toContain('already linked to a different user');
+});
+
+test('team invites through the real endpoint and reports when members cannot load', async () => {
+  stubFetch({
+    '/api/auth/session': { status: 200, json: SESSION },
+    '/api/orgs/acme/invitations': { status: 201, json: { invitationId: 'inv-1', token: 'tok-abc' } },
+  });
+  const outlet = boot();
+  await renderRoute(outlet, '#/team');
+  await settle(outlet, 'Invite someone');
+  expect(outlet.querySelector('#memberTable')?.textContent).toContain('could not be loaded');
+  expect(outlet.textContent).toContain('Role summary');
+  expect(outlet.textContent).toContain('Administrator');
+  const form = outlet.querySelector('#inviteForm');
+  if (form === null) throw new Error('Missing #inviteForm.');
+  form.dispatchEvent(new SubmitEvent('submit', { bubbles: true, cancelable: true }));
+  await settle(outlet, 'tok-abc');
+  expect(outlet.textContent).toContain('#/invite?token=tok-abc');
+});
+
+test('team lists members when the endpoint answers', async () => {
+  stubFetch({
+    '/api/auth/session': { status: 200, json: SESSION },
+    '/api/team/members': { status: 200, json: { items: [{ userId: 'u-9', role: 'member', email: 'u-9@example.test' }] } },
+  });
+  const outlet = boot();
+  await renderRoute(outlet, '#/team');
+  await settle(outlet, 'u-9');
+  expect(outlet.querySelector('#memberTable')?.textContent).toContain('member');
+});
+
+test('team stays empty when no members are listed', async () => {
+  stubFetch({
+    '/api/auth/session': { status: 200, json: SESSION },
+    '/api/team/members': { status: 200, json: { items: [] } },
+  });
+  const outlet = boot();
+  await renderRoute(outlet, '#/team');
+  await settle(outlet, 'No members found');
+  expect(outlet.querySelector('#memberTable')?.textContent).toContain('invitation form below');
+});
+
+test('guests see a login card on team, never members', async () => {
+  stubFetch({ '/api/auth/session': { status: 200, json: { authenticated: false } } });
+  const outlet = boot();
+  await renderRoute(outlet, '#/team');
+  await settle(outlet, 'Team needs a login');
+  expect(seen.some((url) => url === '/api/team/members')).toBe(false);
+});
+
+test('privacy shows the lifecycle table and honest export', async () => {
+  stubFetch({ '/api/auth/session': { status: 200, json: SESSION } });
+  const outlet = boot();
+  await renderRoute(outlet, '#/privacy');
+  await settle(outlet, 'Data lifecycle');
+  expect(outlet.textContent).toContain('Sessions');
+  expect(outlet.textContent).toContain('Invitations');
+  expect(outlet.textContent).toContain('Delete organization');
+  const exportButton = [...outlet.querySelectorAll('button')].find((b) => b.textContent === 'Request export');
+  if (exportButton === undefined) throw new Error('Missing export button.');
+  exportButton.click();
+  await settle(outlet, 'no self-service export endpoint');
+});
+
+test('audit stays empty when nothing is recorded and export refuses to fake a file', async () => {
+  stubFetch({ '/api/auth/session': { status: 200, json: SESSION } });
+  const outlet = boot();
+  await renderRoute(outlet, '#/audit');
+  await settle(outlet, 'No activity entries');
+  expect(outlet.querySelector('#auditTable')).not.toBeNull();
+  expect(outlet.querySelector('#auditSearch')).not.toBeNull();
+  expect(outlet.querySelector('.table-tools')).not.toBeNull();
+  const exportButton = [...outlet.querySelectorAll('button')].find((b) => b.textContent === 'Export audit');
+  if (exportButton === undefined) throw new Error('Missing export button.');
+  exportButton.click();
+  await settle(outlet, 'nothing to download');
+});
+
+test('audit lists entries when the endpoint answers', async () => {
+  stubFetch({
+    '/api/auth/session': { status: 200, json: SESSION },
+    '/api/audit/entries?limit=50': {
+      status: 200,
+      json: {
+        items: [{ time: '10:48:02', actor: 'Reyjin', event: 'run.accepted', scope: 'RUN-0144', receipt: 'reserved 45 cr' }],
+      },
+    },
+  });
+  const outlet = boot();
+  await renderRoute(outlet, '#/audit');
+  await settle(outlet, 'run.accepted');
+  expect(outlet.textContent).toContain('Showing 1 of 1 entries.');
 });

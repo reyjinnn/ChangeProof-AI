@@ -1,18 +1,28 @@
-/* Shared UI components (T-42). Server and user content is untrusted:
- * render it with textContent (never innerHTML with variables), and keep
- * every interactive control keyboard-reachable with a visible label. */
+/* Shared UI components. Server and user content is untrusted: render it
+ * with textContent (never innerHTML with variables), and keep every
+ * interactive control keyboard-reachable with a visible label. DOM shapes
+ * follow .template-ui/mockup.html (badge/head/card/padcard/row/table/tabs,
+ * drawer/modal/toast roots, .cp-select combobox, .cp-file-picker). */
 
+import { ICON_PATHS, type IconName } from './icons.js';
+
+export type { IconName };
 export type BadgeTone = 'ok' | 'warn' | 'bad' | 'info';
 
 export function esc(value: string): string {
-  return value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
 }
 
 /** Tiny element builder; children pass through textContent-safe paths. */
 export function h<K extends keyof HTMLElementTagNameMap>(
   tag: K,
   attrs: Record<string, string> = {},
-  children: readonly (HTMLElement | Text | string)[] = [],
+  children: readonly (HTMLElement | SVGElement | Text | string)[] = [],
 ): HTMLElementTagNameMap[K] {
   const node = document.createElement(tag);
   for (const [name, value] of Object.entries(attrs)) {
@@ -35,211 +45,67 @@ export function svgEl(tag: string, attrs: Record<string, string> = {}, children:
   return el;
 }
 
-export type IconName =
-  | 'status'
-  | 'runs'
-  | 'new-run'
-  | 'evidence'
-  | 'inbox'
-  | 'support'
-  | 'threads'
-  | 'operator'
-  | 'billing'
-  | 'enterprise'
-  | 'settings'
-  | 'public'
-  | 'templates'
-  | 'samples'
-  | 'faq'
-  | 'pricing'
-  | 'roadmap'
-  | 'changelog'
-  | 'search'
-  | 'theme'
-  | 'sidebar'
-  | 'shield'
-  | 'spark'
-  | 'check'
-  | 'alert';
-
-export function iconSvg(name: IconName, className = 'nav-icon'): SVGElement {
-  const base = {
-    viewBox: '0 0 24 24',
-    fill: 'none',
-    stroke: 'currentColor',
-    'stroke-width': '1.85',
-    'stroke-linecap': 'round',
-    'stroke-linejoin': 'round',
-    'aria-hidden': 'true',
-    class: className,
-  };
-  switch (name) {
-    case 'status':
-      return svgEl('svg', base, [
-        svgEl('rect', { x: '3', y: '3', width: '7', height: '7', rx: '1.5' }),
-        svgEl('rect', { x: '14', y: '3', width: '7', height: '7', rx: '1.5' }),
-        svgEl('rect', { x: '14', y: '14', width: '7', height: '7', rx: '1.5' }),
-        svgEl('rect', { x: '3', y: '14', width: '7', height: '7', rx: '1.5' }),
-      ]);
-    case 'runs':
-      return svgEl('svg', base, [
-        svgEl('polygon', { points: '5 3 19 12 5 21 5 3' }),
-      ]);
-    case 'new-run':
-      return svgEl('svg', base, [
-        svgEl('circle', { cx: '12', cy: '12', r: '9' }),
-        svgEl('line', { x1: '12', y1: '8', x2: '12', y2: '16' }),
-        svgEl('line', { x1: '8', y1: '12', x2: '16', y2: '12' }),
-      ]);
-    case 'evidence':
-      return svgEl('svg', base, [
-        svgEl('path', { d: 'M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z' }),
-        svgEl('path', { d: 'M9 12l2 2 4-4' }),
-      ]);
-    case 'inbox':
-      return svgEl('svg', base, [
-        svgEl('path', { d: 'M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z' }),
-        svgEl('polyline', { points: '22,6 12,13 2,6' }),
-      ]);
-    case 'support':
-      return svgEl('svg', base, [
-        svgEl('circle', { cx: '12', cy: '12', r: '10' }),
-        svgEl('path', { d: 'M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3' }),
-        svgEl('line', { x1: '12', y1: '17', x2: '12.01', y2: '17' }),
-      ]);
-    case 'threads':
-      return svgEl('svg', base, [
-        svgEl('path', { d: 'M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z' }),
-      ]);
-    case 'operator':
-      return svgEl('svg', base, [
-        svgEl('polyline', { points: '4 17 10 11 4 5' }),
-        svgEl('line', { x1: '12', y1: '19', x2: '20', y2: '19' }),
-      ]);
-    case 'billing':
-      return svgEl('svg', base, [
-        svgEl('rect', { x: '2', y: '5', width: '20', height: '14', rx: '2' }),
-        svgEl('line', { x1: '2', y1: '10', x2: '22', y2: '10' }),
-      ]);
-    case 'enterprise':
-      return svgEl('svg', base, [
-        svgEl('rect', { x: '3', y: '11', width: '18', height: '11', rx: '2' }),
-        svgEl('path', { d: 'M7 11V7a5 5 0 0 1 10 0v4' }),
-      ]);
-    case 'settings':
-      return svgEl('svg', base, [
-        svgEl('circle', { cx: '12', cy: '12', r: '3' }),
-        svgEl('path', { d: 'M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9c.26.6.77 1.05 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z' }),
-      ]);
-    case 'templates':
-      return svgEl('svg', base, [
-        svgEl('rect', { x: '3', y: '3', width: '18', height: '18', rx: '2' }),
-        svgEl('line', { x1: '3', y1: '9', x2: '21', y2: '9' }),
-        svgEl('line', { x1: '9', y1: '21', x2: '9', y2: '9' }),
-      ]);
-    case 'samples':
-      return svgEl('svg', base, [
-        svgEl('path', { d: 'M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z' }),
-        svgEl('polyline', { points: '14 2 14 8 20 8' }),
-        svgEl('line', { x1: '16', y1: '13', x2: '8', y2: '13' }),
-        svgEl('line', { x1: '16', y1: '17', x2: '8', y2: '17' }),
-      ]);
-    case 'faq':
-      return svgEl('svg', base, [
-        svgEl('circle', { cx: '12', cy: '12', r: '9' }),
-        svgEl('path', { d: 'M9.5 9a2.5 2.5 0 0 1 5 0c0 1.5-2.5 2-2.5 3.5' }),
-        svgEl('line', { x1: '12', y1: '16.5', x2: '12.01', y2: '16.5' }),
-      ]);
-    case 'pricing':
-      return svgEl('svg', base, [
-        svgEl('line', { x1: '12', y1: '2', x2: '12', y2: '22' }),
-        svgEl('path', { d: 'M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6' }),
-      ]);
-    case 'roadmap':
-      return svgEl('svg', base, [
-        svgEl('polygon', { points: '3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21' }),
-        svgEl('line', { x1: '9', y1: '3', x2: '9', y2: '18' }),
-        svgEl('line', { x1: '15', y1: '6', x2: '15', y2: '21' }),
-      ]);
-    case 'changelog':
-      return svgEl('svg', base, [
-        svgEl('circle', { cx: '12', cy: '12', r: '9' }),
-        svgEl('polyline', { points: '12 7 12 12 15 15' }),
-      ]);
-    case 'search':
-      return svgEl('svg', base, [
-        svgEl('circle', { cx: '11', cy: '11', r: '7' }),
-        svgEl('line', { x1: '20', y1: '20', x2: '16.2', y2: '16.2' }),
-      ]);
-    case 'theme':
-      return svgEl('svg', base, [
-        svgEl('path', { d: 'M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z' }),
-      ]);
-    case 'sidebar':
-      return svgEl('svg', base, [
-        svgEl('rect', { x: '3', y: '3', width: '18', height: '18', rx: '2' }),
-        svgEl('line', { x1: '9', y1: '3', x2: '9', y2: '21' }),
-      ]);
-    case 'shield':
-      return svgEl('svg', base, [
-        svgEl('path', { d: 'M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z' }),
-      ]);
-    case 'spark':
-      return svgEl('svg', base, [
-        svgEl('polygon', { points: '13 2 3 14 12 14 11 22 21 10 12 10 13 2' }),
-      ]);
-    case 'check':
-      return svgEl('svg', base, [
-        svgEl('polyline', { points: '20 6 9 17 4 12' }),
-      ]);
-    case 'alert':
-      return svgEl('svg', base, [
-        svgEl('path', { d: 'M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z' }),
-        svgEl('line', { x1: '12', y1: '9', x2: '12', y2: '13' }),
-        svgEl('line', { x1: '12', y1: '17', x2: '12.01', y2: '17' }),
-      ]);
-    default:
-      return svgEl('svg', base, [
-        svgEl('circle', { cx: '12', cy: '12', r: '9' }),
-        svgEl('line', { x1: '2', y1: '12', x2: '22', y2: '12' }),
-        svgEl('path', { d: 'M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z' }),
-      ]);
-  }
+/** Mockup `icon(k)`: static trusted artwork from a closed key union. */
+export function iconSvg(name: IconName, className = 'icon'): SVGElement {
+  const svg = document.createElementNS(SVG_NS, 'svg');
+  svg.setAttribute('class', className);
+  svg.setAttribute('viewBox', '0 0 24 24');
+  svg.setAttribute('aria-hidden', 'true');
+  // Static artwork only: ICON_PATHS values ship with the bundle and the
+  // key union is closed, so no dynamic data can reach innerHTML here.
+  svg.innerHTML = ICON_PATHS[name];
+  return svg;
 }
 
-export function brandMarkSvg(): SVGElement {
+/** Mockup `pillIcon`: icon inside a `.stat-icon` tile. */
+export function pillIcon(name: IconName): HTMLElement {
+  const pill = h('span', { class: 'stat-icon', 'aria-hidden': 'true' }, []);
+  pill.appendChild(iconSvg(name));
+  return pill;
+}
+
+/** Product mark inlined from `apps/dashboard/public/assets/changeproof-mark.svg`
+ * (also the favicon): rounded tile + C glyph + dot. Static trusted artwork
+ * with fixed brand colors that hold in both themes; sizes come from CSS.
+ * Decorative: the brand wordmark next to it carries the accessible name. */
+export function changeproofMarkSvg(): SVGElement {
   return svgEl(
     'svg',
-    {
-      viewBox: '0 0 36 36',
-      fill: 'none',
-      class: 'brand-mark',
-      'aria-hidden': 'true',
-      width: '32',
-      height: '32',
-    },
+    { viewBox: '0 0 64 64', fill: 'none', 'aria-hidden': 'true', focusable: 'false' },
     [
-      svgEl('defs', {}, [
-        svgEl('linearGradient', { id: 'cp-brand-grad', x1: '2', y1: '2', x2: '34', y2: '34', gradientUnits: 'userSpaceOnUse' }, [
-          svgEl('stop', { offset: '0', 'stop-color': '#365e96' }),
-          svgEl('stop', { offset: '0.52', 'stop-color': '#3e659a' }),
-          svgEl('stop', { offset: '1', 'stop-color': '#466c9e' }),
-        ]),
-      ]),
-      svgEl('rect', { x: '2', y: '2', width: '32', height: '32', rx: '9', fill: 'url(#cp-brand-grad)' }),
+      svgEl('rect', { x: '0', y: '0', width: '64', height: '64', rx: '16', fill: '#365E96' }),
+      svgEl(
+        'g',
+        {
+          transform: 'translate(8 8) scale(1.5)',
+          fill: 'none',
+          stroke: '#FFFFFF',
+          'stroke-width': '3.4',
+          'stroke-linecap': 'round',
+          'stroke-linejoin': 'round',
+        },
+        [svgEl('path', { d: 'M23 6.5h-7.5C10 6.5 6 10.5 6 16s4 9.5 9.5 9.5H23' })],
+      ),
+      svgEl('rect', { x: '38.3', y: '27.8', width: '8.4', height: '8.4', rx: '1.65', fill: '#FFFFFF' }),
+    ],
+  );
+}
+
+/** The ChangeProof C-mark from the mockup signin/public brand (32px static
+ * artwork, currentColor). Sizes come from CSS (.brandmark, .signin-brand-mark). */
+export function logoMarkSvg(): SVGElement {
+  return svgEl(
+    'svg',
+    { viewBox: '0 0 32 32', fill: 'none', 'aria-hidden': 'true', focusable: 'false' },
+    [
       svgEl('path', {
-        d: 'M18 7L27 11V18.2C27 23.8 23.2 27.9 18 29.5C12.8 27.9 9 23.8 9 18.2V11L18 7Z',
-        stroke: '#ffffff',
-        'stroke-opacity': '0.88',
-        'stroke-width': '1.6',
-      }),
-      svgEl('path', {
-        d: 'M12.5 18.2L16.3 22L23.8 14.3',
-        stroke: '#ffffff',
-        'stroke-width': '2.4',
+        d: 'M23 6.5h-7.5C10 6.5 6 10.5 6 16s4 9.5 9.5 9.5H23',
+        stroke: 'currentColor',
+        'stroke-width': '3.4',
         'stroke-linecap': 'round',
         'stroke-linejoin': 'round',
       }),
+      svgEl('rect', { x: '20.2', y: '13.2', width: '5.6', height: '5.6', rx: '1.1', fill: 'currentColor' }),
     ],
   );
 }
@@ -249,6 +115,11 @@ const TONE_LABEL: Record<BadgeTone, string> = { ok: 'ok', warn: 'attention', bad
 /** Status badge: text label plus tone, never color alone. */
 export function badge(tone: BadgeTone, label: string): HTMLElement {
   return h('span', { class: 'badge', 'data-tone': tone }, [`${TONE_LABEL[tone]}: ${label}`]);
+}
+
+/** Mockup `badge(s, c)`: plain modifier-class badge for static labels. */
+export function staticBadge(label: string, modifier = ''): HTMLElement {
+  return h('span', { class: modifier === '' ? 'badge' : `badge ${modifier}` }, [label]);
 }
 
 export function pageHead(options: {
@@ -267,20 +138,122 @@ export function pageHead(options: {
   }
   const head = h('div', { class: 'pagehead' }, [h('div', {}, leftChildren)]);
   if (options.actions !== undefined && options.actions.length > 0) {
-    head.appendChild(h('div', { class: 'btn-row' }, options.actions));
+    head.appendChild(h('div', { class: 'actions' }, options.actions));
   }
   return head;
 }
 
-export function emptyState(title: string, body: string, action?: HTMLElement): HTMLElement {
-  const art = h('div', { class: 'modern-empty-art', 'aria-hidden': 'true' }, []);
-  art.appendChild(iconSvg('shield', 'empty-icon'));
-  const block = h('section', { class: 'card state-block', 'aria-live': 'polite' }, [
-    art,
-    h('h2', {}, [title]),
-    h('p', { class: 'muted' }, [body]),
+/** Mockup `head(title, sub, actions, crumb)` shape. */
+export function head(title: string, subtitle: string, actions: readonly HTMLElement[] = [], crumb?: string): HTMLElement {
+  const fragment = h('div', {}, []);
+  if (crumb !== undefined) fragment.appendChild(h('div', { class: 'breadcrumb' }, [crumb]));
+  fragment.appendChild(
+    h('header', { class: 'pagehead' }, [
+      h('div', {}, [h('h1', {}, [title]), h('p', {}, [subtitle])]),
+      ...(actions.length > 0 ? [h('div', { class: 'actions' }, actions)] : []),
+    ]),
+  );
+  return fragment;
+}
+
+export function helpText(text: string): HTMLElement {
+  return h('p', { class: 'help' }, [text]);
+}
+
+/** Mockup `card(title, body, sub, extra)`: headed card section. */
+export function card(title: string, body: HTMLElement, sub?: string, extra?: HTMLElement): HTMLElement {
+  const headLeft = h('div', {}, [h('h2', {}, [title])]);
+  if (sub !== undefined) headLeft.appendChild(h('div', { class: 'help' }, [sub]));
+  const headRowChildren: HTMLElement[] = [headLeft];
+  if (extra !== undefined) headRowChildren.push(extra);
+  return h('section', { class: 'card' }, [h('div', { class: 'card-head' }, headRowChildren), body]);
+}
+
+/** Mockup `padcard(title, body)`: padded card section. */
+export function padcard(title: string, body: HTMLElement): HTMLElement {
+  return h('section', { class: 'card pad' }, [h('h2', {}, [title]), body]);
+}
+
+/** Mockup `row(a, b)`: two-column list row. Strings stay text-safe. */
+export function row(left: HTMLElement | string, right: HTMLElement | string): HTMLElement {
+  const toNode = (value: HTMLElement | string): HTMLElement | Text =>
+    typeof value === 'string' ? document.createTextNode(value) : value;
+  return h('div', { class: 'listrow' }, [
+    h('span', {}, [toNode(left)]),
+    h('span', {}, [toNode(right)]),
   ]);
-  if (action !== undefined) block.appendChild(action);
+}
+
+export interface TableOptions {
+  readonly className?: string;
+}
+
+/** Mockup `table(heads, rows, cls)`: wrapped table with scoped headers. */
+export function table(
+  heads: readonly (HTMLElement | string)[],
+  rows: readonly (readonly (HTMLElement | string)[])[],
+  options: TableOptions = {},
+): HTMLElement {
+  const cell = (value: HTMLElement | string, header: boolean): HTMLElement =>
+    header
+      ? h('th', { scope: 'col' }, [typeof value === 'string' ? document.createTextNode(value) : value])
+      : h('td', {}, [typeof value === 'string' ? document.createTextNode(value) : value]);
+  const thead = h('thead', {}, [h('tr', {}, heads.map((value) => cell(value, true)))]);
+  const tbody = h('tbody', {}, rows.map((columns) => h('tr', {}, columns.map((value) => cell(value, false)))));
+  const tableEl = h('table', options.className === undefined ? {} : { class: options.className }, [thead, tbody]);
+  return h('div', { class: 'table-wrap' }, [tableEl]);
+}
+
+export interface TabItem {
+  readonly id: string;
+  readonly label: string;
+  readonly href: string;
+}
+
+/** Mockup `tabs(items, current)`: `.route-tabs` page navigation. */
+export function tabs(items: readonly TabItem[], currentId: string): HTMLElement {
+  const nav = h('nav', { class: 'route-tabs', 'aria-label': 'Page navigation' }, []);
+  for (const item of items) {
+    const active = item.id === currentId;
+    nav.appendChild(
+      h(
+        'a',
+        {
+          href: item.href,
+          class: active ? 'active' : '',
+          ...(active ? { 'aria-current': 'page' } : {}),
+        },
+        [item.label],
+      ),
+    );
+  }
+  return nav;
+}
+
+export function emptyStateArt(): SVGElement {
+  return svgEl('svg', { class: 'modern-empty-art', viewBox: '0 0 64 40', 'aria-hidden': 'true' }, [
+    svgEl('rect', { x: '6', y: '8', width: '52', height: '24', rx: '8' }),
+    svgEl('path', { d: 'M18 20h28M18 15h14M18 25h20' }),
+  ]);
+}
+
+export function ensureEmptyStateArt(root: ParentNode = document): void {
+  root.querySelectorAll('.empty-state').forEach((state) => {
+    if (state.querySelector('.modern-empty-art') !== null) return;
+    state.prepend(emptyStateArt());
+  });
+}
+
+export function emptyState(title: string, body: string, action?: HTMLElement): HTMLElement {
+  const block = h('section', { class: 'card state-block', 'aria-live': 'polite' }, [
+    h('div', { class: 'empty-state' }, [
+      emptyStateArt(),
+      pillIcon('shield'),
+      h('h2', {}, [title]),
+      h('p', {}, [body]),
+      ...(action === undefined ? [] : [action]),
+    ]),
+  ]);
   return block;
 }
 
@@ -303,6 +276,7 @@ export interface FieldOptions {
   readonly type?: string;
   readonly required?: boolean;
   readonly autocomplete?: string;
+  readonly placeholder?: string;
   readonly error?: string;
   readonly hint?: string;
 }
@@ -318,12 +292,13 @@ export function field(options: FieldOptions): { wrap: HTMLElement; input: HTMLIn
     type: options.type ?? 'text',
     ...(options.required === true ? { required: 'required' } : {}),
     ...(options.autocomplete !== undefined ? { autocomplete: options.autocomplete } : {}),
+    ...(options.placeholder !== undefined ? { placeholder: options.placeholder } : {}),
   });
   if (options.hint !== undefined) {
     const hintId = `${options.id}-hint`;
     input.setAttribute('aria-describedby', hintId);
     wrap.appendChild(input);
-    wrap.appendChild(h('p', { class: 'muted', id: hintId }, [options.hint]));
+    wrap.appendChild(h('p', { class: 'field-note', id: hintId }, [options.hint]));
   } else {
     wrap.appendChild(input);
   }
@@ -332,7 +307,7 @@ export function field(options: FieldOptions): { wrap: HTMLElement; input: HTMLIn
     const errorId = `${options.id}-error`;
     const described = input.getAttribute('aria-describedby');
     input.setAttribute('aria-describedby', described === null ? errorId : `${described} ${errorId}`);
-    wrap.appendChild(h('p', { class: 'error-text', id: errorId }, [options.error]));
+    wrap.appendChild(h('p', { class: 'form-error', id: errorId }, [options.error]));
   }
   return { wrap, input };
 }
@@ -342,9 +317,40 @@ export interface ModalHandle {
   close(): void;
 }
 
+function modalContainer(): HTMLElement {
+  return document.getElementById('modalRoot') ?? document.body;
+}
+
+function trapFocus(container: HTMLElement, onEscape: () => void): () => void {
+  function onKey(event: KeyboardEvent): void {
+    if (event.key === 'Escape') {
+      event.stopPropagation();
+      onEscape();
+      return;
+    }
+    if (event.key !== 'Tab') return;
+    const focusable = container.querySelectorAll<HTMLElement>(
+      'a[href], button:not([disabled]), input, select, textarea, [tabindex]:not([tabindex="-1"])',
+    );
+    if (focusable.length === 0) return;
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    if (first === undefined || last === undefined) return;
+    if (event.shiftKey && document.activeElement === first) {
+      event.preventDefault();
+      last.focus();
+    } else if (!event.shiftKey && document.activeElement === last) {
+      event.preventDefault();
+      first.focus();
+    }
+  }
+  document.addEventListener('keydown', onKey, true);
+  return () => { document.removeEventListener('keydown', onKey, true); };
+}
+
 /**
  * Modal dialog: labelled, Escape closes, focus returns to the trigger.
- * Keep one open at a time; the caller owns the content.
+ * Renders into #modalRoot (mockup parity), falling back to body.
  */
 export function modal(trigger: HTMLElement, title: string, content: HTMLElement): ModalHandle {
   const heading = h('h2', { id: 'modal-title' }, [title]);
@@ -358,41 +364,561 @@ export function modal(trigger: HTMLElement, title: string, content: HTMLElement)
     root: backdrop,
     close() {
       backdrop.remove();
-      document.removeEventListener('keydown', onKey, true);
+      release();
       trigger.focus();
     },
   };
-
-  function onKey(event: KeyboardEvent): void {
-    if (event.key === 'Escape') {
-      event.stopPropagation();
-      handle.close();
-    }
-    // Minimal focus trap: wrap Tab around the dialog's focusable controls.
-    if (event.key === 'Tab') {
-      const focusable = dialog.querySelectorAll<HTMLElement>(
-        'a[href], button:not([disabled]), input, select, textarea, [tabindex]:not([tabindex="-1"])',
-      );
-      if (focusable.length === 0) return;
-      const first = focusable[0];
-      const last = focusable[focusable.length - 1];
-      if (first === undefined || last === undefined) return;
-      if (event.shiftKey && document.activeElement === first) {
-        event.preventDefault();
-        last.focus();
-      } else if (!event.shiftKey && document.activeElement === last) {
-        event.preventDefault();
-        first.focus();
-      }
-    }
-  }
+  const release = trapFocus(dialog, () => { handle.close(); });
 
   backdrop.addEventListener('mousedown', (event) => {
     if (event.target === backdrop) handle.close();
   });
-  document.addEventListener('keydown', onKey, true);
-  document.body.appendChild(backdrop);
+  modalContainer().appendChild(backdrop);
   const firstInput = dialog.querySelector<HTMLElement>('input, select, textarea, button');
   if (firstInput !== null) firstInput.focus();
   return handle;
+}
+
+export interface DrawerHandle {
+  readonly root: HTMLElement;
+  close(): void;
+}
+
+function drawerContainer(): HTMLElement {
+  let root = document.getElementById('drawerRoot');
+  if (root === null) {
+    root = h('div', { id: 'drawerRoot' }, []);
+    document.body.appendChild(root);
+  }
+  return root;
+}
+
+/**
+ * Mockup `drawer(title, body, footer)`: right-side panel in #drawerRoot.
+ * Escape and backdrop press close it; focus returns to the trigger.
+ */
+export function drawer(trigger: HTMLElement, title: string, body: HTMLElement, footer?: HTMLElement): DrawerHandle {
+  closeDrawer();
+  const closeButton = h('button', { class: 'icon-btn', type: 'button', 'aria-label': 'Close panel' }, []);
+  closeButton.appendChild(iconSvg('close'));
+  const panel = h(
+    'section',
+    { class: 'drawer', role: 'dialog', 'aria-modal': 'true', 'aria-labelledby': 'drawerTitle', tabindex: '-1' },
+    [
+      h('header', { class: 'drawer-head' }, [h('h2', { id: 'drawerTitle' }, [title]), closeButton]),
+      h('div', { class: 'drawer-body' }, [body]),
+      ...(footer === undefined ? [] : [h('footer', { class: 'drawer-foot' }, [footer])]),
+    ],
+  );
+  const backdrop = h('div', { class: 'drawer-backdrop', 'data-drawer-backdrop': '' }, [panel]);
+  const handle: DrawerHandle = {
+    root: backdrop,
+    close() {
+      backdrop.remove();
+      release();
+      document.body.style.overflow = '';
+      if (trigger.isConnected) trigger.focus();
+    },
+  };
+  const release = trapFocus(panel, () => { handle.close(); });
+  closeButton.addEventListener('click', () => { handle.close(); });
+  backdrop.addEventListener('mousedown', (event) => {
+    if (event.target === backdrop) handle.close();
+  });
+  drawerContainer().appendChild(backdrop);
+  document.body.style.overflow = 'hidden';
+  panel.focus();
+  enhanceCustomSelects(panel, false);
+  enhanceFilePickers(panel);
+  return handle;
+}
+
+/** Close any open drawer without touching focus (route changes). */
+export function closeDrawer(): void {
+  document.getElementById('drawerRoot')?.replaceChildren();
+  document.body.style.overflow = '';
+}
+
+export type ToastTone = 'info' | 'success' | 'error';
+
+let toastTimer: ReturnType<typeof setTimeout> | null = null;
+
+/**
+ * Mockup `toast(message)`: status toast in the persistent #toast live
+ * region (created by the shell, so announcements are never silent).
+ */
+export function toast(message: string, tone: ToastTone = 'info'): void {
+  const region = document.getElementById('toast');
+  if (region === null) return;
+  if (toastTimer !== null) clearTimeout(toastTimer);
+  region.className = `toast show ${tone}`;
+  const symbol = h('span', { class: 'toast-symbol', 'aria-hidden': 'true' }, []);
+  symbol.appendChild(iconSvg(tone === 'success' ? 'check' : tone === 'error' ? 'alert' : 'info'));
+  const dismiss = h('button', { class: 'toast-dismiss', type: 'button', 'aria-label': 'Dismiss notification' }, ['×']);
+  dismiss.addEventListener('click', () => { region.classList.remove('show'); });
+  region.replaceChildren(
+    symbol,
+    h('span', { class: 'toast-copy' }, [h('span', { class: 'toast-title' }, ['ChangeProof AI']), message]),
+    dismiss,
+  );
+  toastTimer = setTimeout(() => { region.classList.remove('show'); }, 5500);
+}
+
+/* Accessible combobox enhancement (mockup 1603-1737). The native select
+ * stays the form's source of truth; the trigger only presents it. All
+ * user-visible strings are English (FR3-40). */
+
+interface CustomSelectState {
+  readonly select: HTMLSelectElement;
+  readonly trigger: HTMLButtonElement;
+  readonly id: string;
+  readonly label: string;
+  readonly rich: boolean;
+  active: number;
+  /** Signature of the last trigger render; skips redundant rebuilds. */
+  rendered: string;
+}
+
+const enhancedSelects = new WeakMap<HTMLSelectElement, CustomSelectState>();
+let customSelectCount = 0;
+let openSelect: CustomSelectState | null = null;
+let selectTypeahead = '';
+let selectTypeaheadTimer: ReturnType<typeof setTimeout> | null = null;
+let selectWired = false;
+
+const CHANGE_OPTION_META: ReadonlyMap<string, { icon: IconName; description: string }> = new Map([
+  ['contract', { icon: 'git', description: 'Endpoint, schema, or API contract changes.' }],
+  ['dependency', { icon: 'projects', description: 'Library, framework, or runtime upgrades.' }],
+  ['migration', { icon: 'usage', description: 'Schema changes and data migrations.' }],
+  ['incident', { icon: 'runs', description: 'Investigate errors from the running system.' }],
+  ['coordinated', { icon: 'graph', description: 'Coordinated changes across repositories.' }],
+  ['legacy', { icon: 'book', description: 'Understand system behavior before repair.' }],
+]);
+
+function selectOptionContent(select: HTMLSelectElement, option: HTMLOptionElement | null): HTMLElement {
+  const meta = select.id === 'changeTemplate' && option !== null ? CHANGE_OPTION_META.get(option.value) : undefined;
+  const copy = h('span', { class: 'cp-select-copy' }, [
+    h('span', { class: 'cp-select-name' }, [option?.textContent ?? 'Select an option']),
+  ]);
+  if (meta !== undefined) copy.appendChild(h('span', { class: 'cp-select-description' }, [meta.description]));
+  const fragment = h('span', { style: 'display:contents' }, []);
+  if (meta !== undefined) {
+    const glyph = h('span', { class: 'cp-select-glyph', 'aria-hidden': 'true' }, []);
+    glyph.appendChild(iconSvg(meta.icon));
+    fragment.appendChild(glyph);
+  }
+  fragment.appendChild(copy);
+  return fragment;
+}
+
+function selectSignature(select: HTMLSelectElement): string {
+  const options = [...select.options].map((option) => `${option.value}=${option.textContent}`).join(',');
+  return `${String(select.selectedIndex)}|${select.disabled ? '1' : '0'}|${options}`;
+}
+
+function syncCustomSelect(select: HTMLSelectElement): void {
+  const state = enhancedSelects.get(select);
+  if (state === undefined) return;
+  // Idempotent by signature: the shell re-runs enhancement on every
+  // outlet mutation, and an unconditional rebuild would refire the
+  // observer forever on any page with an inline select. The option list
+  // refresh is safe unconditionally: the portal lives outside the
+  // observed outlet.
+  const signature = selectSignature(select);
+  if (signature !== state.rendered) {
+    state.rendered = signature;
+    const option = select.selectedOptions[0] ?? select.options[0] ?? null;
+    state.trigger.replaceChildren(
+      selectOptionContent(select, option),
+      iconSvg('chevron-down', 'icon cp-select-chevron'),
+    );
+    state.trigger.disabled = select.disabled;
+    state.trigger.setAttribute('aria-label', `${state.label}: ${option?.textContent ?? 'Select an option'}`);
+  }
+  if (openSelect?.select === select) renderSelectOptions();
+}
+
+function labelTextFor(control: HTMLElement): string {
+  const label = control.closest('label');
+  if (label !== null) {
+    const text = [...label.childNodes]
+      .filter((node): node is Text => node.nodeType === Node.TEXT_NODE)
+      .map((node) => node.textContent)
+      .join(' ')
+      .trim();
+    if (text !== '') return text;
+  }
+  const fallback = control instanceof HTMLSelectElement ? control.name : '';
+  return control.getAttribute('aria-label') ?? (fallback === '' ? 'Options' : fallback);
+}
+
+export function enhanceCustomSelects(root: ParentNode = document, refreshExisting = true): void {
+  wireSelectGlobal();
+  for (const select of root.querySelectorAll('select:not([multiple])')) {
+    if (!(select instanceof HTMLSelectElement)) continue;
+    if (enhancedSelects.has(select)) {
+      if (refreshExisting) syncCustomSelect(select);
+      continue;
+    }
+    const label = labelTextFor(select);
+    const id = `cp-select-${(customSelectCount += 1)}`;
+    const wrap = h('span', { class: 'cp-select' }, []);
+    const trigger = h(
+      'button',
+      {
+        type: 'button',
+        class: `cp-select-trigger${select.id === 'changeTemplate' ? ' is-rich' : ''}`,
+        id,
+        role: 'combobox',
+        'aria-haspopup': 'listbox',
+        'aria-expanded': 'false',
+        'aria-controls': `${id}-list`,
+        'aria-autocomplete': 'none',
+      },
+      [],
+    );
+    if (!(trigger instanceof HTMLButtonElement)) continue;
+    const selectParent = select.parentNode;
+    if (selectParent === null) continue;
+    selectParent.replaceChild(wrap, select);
+    wrap.append(select, trigger);
+    select.classList.add('cp-select-native');
+    select.tabIndex = -1;
+    select.setAttribute('aria-hidden', 'true');
+    const state: CustomSelectState = {
+      select,
+      trigger,
+      id,
+      label,
+      rich: select.id === 'changeTemplate',
+      active: 0,
+      rendered: '',
+    };
+    enhancedSelects.set(select, state);
+    syncCustomSelect(select);
+    trigger.addEventListener('click', (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      if (openSelect === state) closeCustomSelect();
+      else openCustomSelect(state);
+    });
+    trigger.addEventListener('keydown', (event) => { handleSelectKey(event, state); });
+    select.addEventListener('change', () => { syncCustomSelect(select); });
+    select.addEventListener('invalid', (event) => {
+      event.preventDefault();
+      trigger.focus();
+      trigger.setAttribute('aria-invalid', 'true');
+      openCustomSelect(state);
+    });
+  }
+}
+
+export function closeCustomSelect(restoreFocus = false): void {
+  if (openSelect === null) return;
+  const previous = openSelect;
+  openSelect = null;
+  previous.trigger.setAttribute('aria-expanded', 'false');
+  previous.trigger.removeAttribute('aria-activedescendant');
+  document.getElementById('customSelectPortal')?.remove();
+  if (selectTypeaheadTimer !== null) clearTimeout(selectTypeaheadTimer);
+  selectTypeahead = '';
+  if (restoreFocus && previous.trigger.isConnected) previous.trigger.focus({ preventScroll: true });
+}
+
+function openCustomSelect(state: CustomSelectState): void {
+  if (state.select.disabled) return;
+  closeCustomSelect();
+  closeFloatingPanels();
+  openSelect = state;
+  state.active = state.select.selectedIndex >= 0 ? state.select.selectedIndex : 0;
+  state.trigger.setAttribute('aria-expanded', 'true');
+  state.trigger.focus({ preventScroll: true });
+  const portal = h('section', { id: 'customSelectPortal', class: 'cp-select-menu', 'aria-label': state.label }, [
+    h('div', { class: 'cp-select-menu-head' }, [
+      h('span', {}, [state.label]),
+      h('span', {}, [`${String(state.select.options.length)} options`]),
+    ]),
+    h('div', { class: 'cp-select-options', role: 'listbox', id: `${state.id}-list`, 'aria-label': state.label }, []),
+    h('div', { class: 'cp-select-menu-foot' }, [
+      h('span', {}, [h('kbd', {}, ['↑']), h('kbd', {}, ['↓']), 'Navigate   ', h('kbd', {}, ['↵']), 'Select']),
+      h('span', {}, [h('kbd', {}, ['Esc']), 'Close']),
+    ]),
+  ]);
+  document.body.append(portal);
+  renderSelectOptions();
+  positionCustomSelect();
+  const list = portal.querySelector('.cp-select-options');
+  if (list === null) return;
+  list.addEventListener('pointermove', (event) => {
+    const option = (event.target as HTMLElement).closest('[data-select-index]');
+    if (option !== null && option.getAttribute('aria-disabled') !== 'true') {
+      setSelectActive(Number(option.getAttribute('data-select-index')), false);
+    }
+  });
+  list.addEventListener('mousedown', (event) => { event.preventDefault(); });
+  list.addEventListener('click', (event) => {
+    const option = (event.target as HTMLElement).closest('[data-select-index]');
+    if (option !== null && option.getAttribute('aria-disabled') !== 'true') {
+      chooseCustomSelect(Number(option.getAttribute('data-select-index')));
+    }
+  });
+  portal.querySelector('.is-focused')?.scrollIntoView({ block: 'nearest' });
+}
+
+function renderSelectOptions(): void {
+  if (openSelect === null) return;
+  const { select, id } = openSelect;
+  const list = document.getElementById(`${id}-list`);
+  if (list === null) return;
+  list.replaceChildren(
+    ...[...select.options].map((option, index) => {
+      const focused = index === (openSelect?.active ?? -1);
+      const selected = index === select.selectedIndex;
+      const node = h(
+        'div',
+        {
+          class: `cp-select-option${select.id === 'changeTemplate' ? ' is-rich' : ''}${focused ? ' is-focused' : ''}`,
+          role: 'option',
+          id: `${id}-option-${String(index)}`,
+          'data-select-index': String(index),
+          'aria-selected': String(selected),
+          'aria-disabled': String(option.disabled),
+        },
+        [selectOptionContent(select, option)],
+      );
+      if (selected) {
+        const check = h('span', { class: 'cp-select-check', 'aria-hidden': 'true' }, []);
+        check.appendChild(iconSvg('check'));
+        node.appendChild(check);
+      } else {
+        node.appendChild(h('span', { class: 'cp-select-spacer', 'aria-hidden': 'true' }, []));
+      }
+      return node;
+    }),
+  );
+  openSelect.trigger.setAttribute('aria-activedescendant', `${id}-option-${String(openSelect.active)}`);
+}
+
+function positionCustomSelect(): void {
+  if (openSelect === null) return;
+  const portal = document.getElementById('customSelectPortal');
+  if (portal === null) return;
+  if (!openSelect.trigger.isConnected) {
+    closeCustomSelect();
+    return;
+  }
+  const rect = openSelect.trigger.getBoundingClientRect();
+  const gap = 8;
+  const edge = 12;
+  if (rect.bottom < 0 || rect.top > window.innerHeight) {
+    closeCustomSelect();
+    return;
+  }
+  const below = window.innerHeight - rect.bottom - gap - edge;
+  const above = rect.top - gap - edge;
+  const ideal = Math.min(openSelect.select.options.length * (openSelect.rich ? 65 : 43) + 77, 490);
+  const flip = below < Math.min(ideal, 240) && above > below;
+  const height = Math.max(70, Math.min(ideal, flip ? above : below));
+  portal.style.width = `${String(Math.min(rect.width, window.innerWidth - edge * 2))}px`;
+  portal.style.maxHeight = `${String(height)}px`;
+  portal.style.left = `${String(Math.max(edge, Math.min(rect.left, window.innerWidth - rect.width - edge)))}px`;
+  portal.dataset['side'] = flip ? 'above' : 'below';
+  portal.style.top = flip
+    ? `${String(Math.max(edge, rect.top - gap - Math.min(portal.scrollHeight, height)))}px`
+    : `${String(rect.bottom + gap)}px`;
+}
+
+function setSelectActive(index: number, scroll = true): void {
+  if (openSelect === null) return;
+  const { select, id } = openSelect;
+  const option = select.options[index];
+  if (option === undefined || option.disabled) return;
+  openSelect.active = index;
+  document
+    .getElementById('customSelectPortal')
+    ?.querySelectorAll('.cp-select-option')
+    .forEach((node, nodeIndex) => node.classList.toggle('is-focused', nodeIndex === index));
+  openSelect.trigger.setAttribute('aria-activedescendant', `${id}-option-${String(index)}`);
+  if (scroll) document.getElementById(`${id}-option-${String(index)}`)?.scrollIntoView({ block: 'nearest' });
+}
+
+function chooseCustomSelect(index: number): void {
+  if (openSelect === null) return;
+  const state = openSelect;
+  if (state.select.options[index]?.disabled !== false) return;
+  state.select.selectedIndex = index;
+  state.trigger.removeAttribute('aria-invalid');
+  closeCustomSelect(true);
+  syncCustomSelect(state.select);
+  state.select.dispatchEvent(new Event('input', { bubbles: true }));
+  state.select.dispatchEvent(new Event('change', { bubbles: true }));
+}
+
+function handleSelectKey(event: KeyboardEvent, state: CustomSelectState): void {
+  const active = openSelect === state;
+  if (event.key === 'Escape' && active) {
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    closeCustomSelect(true);
+    return;
+  }
+  if (event.key === 'Tab') {
+    closeCustomSelect();
+    return;
+  }
+  if (['ArrowDown', 'ArrowUp', 'Home', 'End', 'Enter', ' '].includes(event.key)) {
+    event.preventDefault();
+    event.stopPropagation();
+    if (!active) {
+      openCustomSelect(state);
+      if (event.key === 'Home') setSelectActive(0);
+      if (event.key === 'End') setSelectActive(state.select.options.length - 1);
+      return;
+    }
+    if (event.key === 'Enter' || event.key === ' ') {
+      chooseCustomSelect(state.active);
+      return;
+    }
+    const direction = event.key === 'ArrowUp' ? -1 : 1;
+    let next =
+      event.key === 'Home' ? 0 : event.key === 'End' ? state.select.options.length - 1 : state.active + direction;
+    while (next >= 0 && next < state.select.options.length && state.select.options[next]?.disabled === true) {
+      next += direction;
+    }
+    setSelectActive(next);
+    return;
+  }
+  if (event.key.length === 1 && !event.ctrlKey && !event.metaKey && !event.altKey) {
+    event.preventDefault();
+    if (!active) openCustomSelect(state);
+    if (selectTypeaheadTimer !== null) clearTimeout(selectTypeaheadTimer);
+    selectTypeahead += event.key.toLowerCase();
+    const index = [...state.select.options].findIndex(
+      (option) => !option.disabled && option.textContent.toLowerCase().startsWith(selectTypeahead),
+    );
+    if (index >= 0) setSelectActive(index);
+    selectTypeaheadTimer = setTimeout(() => (selectTypeahead = ''), 700);
+  }
+}
+
+/** Shell-owned floating panels close together with the select portal. */
+function closeFloatingPanels(): void {
+  document.getElementById('notificationRoot')?.replaceChildren();
+  document.getElementById('accountRoot')?.replaceChildren();
+}
+
+function wireSelectGlobal(): void {
+  if (selectWired) return;
+  selectWired = true;
+  document.addEventListener(
+    'pointerdown',
+    (event) => {
+      if (
+        openSelect !== null &&
+        (event.target as HTMLElement).closest('#customSelectPortal') === null &&
+        !openSelect.trigger.contains(event.target as Node)
+      ) {
+        closeCustomSelect();
+      }
+    },
+    true,
+  );
+  document.addEventListener(
+    'keydown',
+    (event) => {
+      if (event.key === 'Escape' && openSelect !== null) {
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        closeCustomSelect(true);
+      }
+    },
+    true,
+  );
+  let frame = 0;
+  document.addEventListener(
+    'scroll',
+    (event) => {
+      if (openSelect === null) return;
+      // Scroll targets any scroller, including the document itself, which
+      // has no closest(): only skips repositioning for scrolls inside the
+      // portal, repositions for every other scroller.
+      const target = event.target;
+      if (target instanceof HTMLElement && target.closest('#customSelectPortal') !== null) return;
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(positionCustomSelect);
+    },
+    true,
+  );
+  window.addEventListener('resize', () => {
+    if (openSelect !== null) positionCustomSelect();
+  });
+}
+
+/* Native file input with a custom presentation (mockup 1740-1767).
+ * File names are untrusted: textContent only, never HTML. */
+
+function formatBytes(bytes: number): string {
+  if (bytes >= 1048576) return `${(bytes / 1048576).toLocaleString('en-US', { maximumFractionDigits: 1 })} MB`;
+  if (bytes >= 1024) return `${(bytes / 1024).toLocaleString('en-US', { maximumFractionDigits: 1 })} KB`;
+  return `${String(bytes)} B`;
+}
+
+function updateFilePicker(input: HTMLInputElement): void {
+  const wrap = input.closest('.cp-file-picker');
+  if (wrap === null) return;
+  const files = [...(input.files ?? [])];
+  const file = files[0];
+  wrap.classList.toggle('has-file', file !== undefined);
+  const title = wrap.querySelector('.cp-file-name');
+  if (title !== null) {
+    title.textContent = file !== undefined ? (files.length > 1 ? `${String(files.length)} files selected` : file.name) : 'No file selected';
+    title.setAttribute('title', file !== undefined ? files.map((entry) => entry.name).join(', ') : '');
+  }
+  const accepted = (input.accept || '')
+    .split(',')
+    .map((token) => token.replace(/^\./, '').toUpperCase())
+    .join(', ');
+  const bytes = files.reduce((total, entry) => total + entry.size, 0);
+  const meta = wrap.querySelector('.cp-file-meta');
+  if (meta !== null) {
+    meta.textContent = file !== undefined ? `${formatBytes(bytes)} · Ready to use` : accepted || 'Choose a file from this device';
+  }
+  const action = wrap.querySelector('.cp-file-action');
+  if (action !== null) {
+    action.replaceChildren(iconSvg('upload'), document.createTextNode(file !== undefined ? 'Replace file' : 'Choose file'));
+  }
+}
+
+export function enhanceFilePickers(root: ParentNode = document): void {
+  for (const input of root.querySelectorAll('input[type="file"]:not(.cp-file-input)')) {
+    if (!(input instanceof HTMLInputElement)) continue;
+    const label = input.closest('label');
+    const accessibleName =
+      (label !== null
+        ? [...label.childNodes]
+            .filter((node): node is Text => node.nodeType === Node.TEXT_NODE)
+            .map((node) => node.textContent)
+            .join(' ')
+            .trim()
+        : '') || 'Choose file';
+    const wrap = h('span', { class: 'cp-file-picker' }, []);
+    const inputParent = input.parentNode;
+    if (inputParent === null) continue;
+    inputParent.replaceChild(wrap, input);
+    wrap.append(input);
+    input.classList.add('cp-file-input');
+    input.setAttribute('aria-label', accessibleName);
+    const iconSlot = h('span', { class: 'cp-file-icon', 'aria-hidden': 'true' }, []);
+    iconSlot.appendChild(iconSvg('upload'));
+    wrap.append(
+      iconSlot,
+      h('span', { class: 'cp-file-copy', 'aria-hidden': 'true' }, [
+        h('span', { class: 'cp-file-name' }, []),
+        h('span', { class: 'cp-file-meta' }, []),
+      ]),
+      h('span', { class: 'cp-file-action', 'aria-hidden': 'true' }, []),
+    );
+    updateFilePicker(input);
+    input.addEventListener('change', () => { updateFilePicker(input); });
+  }
 }

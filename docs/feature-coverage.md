@@ -35,6 +35,8 @@ E2E case (`tests/e2e/specs`). All green at phase-6 close; see
 | --- | --- | --- | --- | --- | --- |
 | Register / resend / verify | FR3-38 | T-18 email | `/api/auth/register·verify·verify/resend` | N+E(auth): Mailpit token | N: unknown user shares shape (NEG3-30) |
 | Login (+tenant reveal/prefill) | FR3-38, NEG3-29 | T-18 email | `/api/auth/login` + cookie | N+E: session + account slot | N: wrong pw shares message; evil target 400 |
+| GitHub login + register | FR3-29, FR3-38 | OAuth sign-in | `/api/auth/github/start·callback` + cookie | N+H: verified profile → user + link + tenant + session | H+N: forged state/nonce, email-taken no-auto-link, outage fails closed |
+| GitHub account link status | FR3-38 | OAuth sign-in | `/api/auth/github/status`, `start?mode=link` | H+E: status card, link → `#/account?githubLinked=1` | H: link needs session; taken profile refused on account page |
 | Logout | FR3-38 | T-14 identity | `/api/auth/logout` | E: slot returns to login | C: failure still clears locally |
 | Forgot / reset password | FR3-38, NEG3-30 | T-18 email | `/api/auth/password/*` | N+E: reset revokes session | N+E: replay 400 |
 | Create organization | FR3-29 | T-18 email | `/api/orgs` + claim ticket | N+E: tenant claimed | H/C: ticket single-use, in-memory only |
@@ -66,7 +68,7 @@ E2E case (`tests/e2e/specs`). All green at phase-6 close; see
 | Evidence library per run | FR3-18/31/35 | T-28 lifecycle events | `GET /api/runs/:id/events` cursor pages | C+E(evidence): artifact events listed, others filtered | C: missing run param, guest card, 401→expired |
 | Read-only viewer | FR3-18/35, NEG3-33 | T-28 lifecycle+evidence | `GET /api/runs/:id/artifacts/:digest` bytes | C+E: escaped text preview, full digest, server-verified label | C+E: tamper 400 integrity panel, 404 unknown, 403 unshared, oversize/binary download-only |
 | Run-detail evidence links | FR3-18 | T-28 lifecycle | `#/evidence?run=` + `#/evidence/view` | E: header + event links reach library/viewer | C: incomplete/invalid link states, no fetch |
-| Publication panel | FR3-19, NEG3-14 | — (no authorized App) | `GET /api/auth/providers` availability | C+E: honest no-App absence note | C: availability-unknown names the outage |
+| Publication panel | FR3-19, NEG3-14 | — (no authorized App) | `GET /api/auth/providers` `githubApp` flag | C+E: honest no-App absence note | C: sign-in alone keeps it empty; availability-unknown names the outage |
 | Run evidence export (JSON) | FR3-20/35 | — (client snapshot) | Blob from fetched server data | C: kind/runId/artifacts/provenance shape | — (snapshot labeled non-proof, nothing faked) |
 | Outcomes/evaluations note | FR3-21 | — (no backend yet) | honest absence note | C: absence note renders | — (gap recorded, nothing faked) |
 
@@ -106,6 +108,20 @@ E2E case (`tests/e2e/specs`). All green at phase-6 close; see
 | SAML provision/rotate/link/disable | FR3-44, NEG3-38 | T-32 identity | `POST·GET /api/enterprise/saml`, `/rotate·link·disable` | C+N+E: pinned issuer, rotation, member link, disabled | C+N: member provision 403, non-member link 400, garbage cert 400 |
 | SCIM mint/revoke | FR3-44, NEG3-21 | T-32 identity | `POST /api/enterprise/scim/tokens`, `:id/revoke` | C+N+E: token shown once, revoke flips true | C+N+E: foreign/already-revoked → revoked:false, indistinguishable (NEG3-21) |
 
+## T6-UI-backend-gap / WP3-21/24/25/29/30/32 — workspace reads wired real
+
+| Control | Requirement | Backend (task) | Endpoint / receipt | Positive case | Negative case |
+| --- | --- | --- | --- | --- | --- |
+| Overview run lists + stats | FR3-31 | T6 lifecycle | `GET /api/runs` | C+N: cards mirror submitted runs | C: guest card, 401→expired, empty state |
+| Project overview/settings | FR3-29/31 | T6 lifecycle (+V12 description) | `GET·PATCH /api/projects/:id` | C+N: topology, readiness, rename round-trip | C+N: unknown 404 quiet, viewer PATCH 403, empty patch 400 |
+| Capabilities matrix | FR3-24 | T6 adapters registry | `GET /api/support/capabilities` | C+N: 14 tuples, target/proven split | C: guest 401; no merged claims |
+| Environment profiles | FR3-31 | T6 lifecycle (+V12) | `GET·POST /api/environments` | C+N: revision round-trip per tenant | C+N: empty name 400, cross-tenant fence |
+| GitHub connections + revoke | FR3-29 | T6 lifecycle (+V12) | `GET·POST /api/github/connections*` | C+N: honest empty list | C+N: unknown revoke 404 quiet |
+| Telemetry corpus | FR3-31 | T6 lifecycle (+V12) | `GET·POST /api/telemetry/corpus` | C+N: metadata round-trip, gaps `[]` | C+N: bad kind/size 400 |
+| Billing summary + ledger | FR3-34 | T6 usage | `GET /api/billing/summary·ledger` | C+N: used/limit, reserve+consume rows | C: guest 401, limit 400; empty stays empty |
+| Team member table | FR3-29 | T6 identity | `GET /api/team/members` | C+N: roster with grant detail | C+N: operator 403, tenant fence |
+| Audit activity log | FR3-29 | T6 queries | `GET /api/audit/entries?limit=50` | C+N: submitted event + receipt | C: guest 401, limit 400 |
+
 ## Recorded backend-owned gaps (no UI faked for these)
 
 - Repository onboarding API (`repository_grants` has no writer):
@@ -121,8 +137,8 @@ E2E case (`tests/e2e/specs`). All green at phase-6 close; see
   behavior; no fake live stream. WP3-25 remainder.
 - Manifest carries 2 run templates; the UI renders all served
   templates generically. T-27 content gap for the other four.
-- Member/role/invite-list UI needs `listMembers`/
-  `listInvitations`. WP3-21 extension (from T-44).
+- Invitation listing still needs `listInvitations`
+  (`listMembers` landed in T6-UI-backend-gap). WP3-21 extension (from T-44).
 - Evidence has no global enumeration API (`EvidenceStore` is
   put/get/has): the library lists one run's artifact events. WP3-12.
 - PR/CI state has no HTTP read path and no authorized GitHub App:

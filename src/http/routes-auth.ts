@@ -1,16 +1,23 @@
+import { randomBytes } from 'node:crypto';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 
 import { z } from 'zod';
 
-import type { EmailIdentityComposition, IdentityComposition } from '../orchestrator/index.js';
+import { ChangeProofError } from '../core/index.js';
+import type {
+  EmailIdentityComposition,
+  GitHubAuthComposition,
+  IdentityComposition,
+} from '../orchestrator/index.js';
 import {
   actingContext,
+  cookieValue,
   parseBody,
   pathSegment,
   SESSION_COOKIE,
   sessionCookieId,
 } from './context.js';
-import { sendCreated, sendFail, sendOk } from './respond.js';
+import { sendCreated, sendFail, sendOk, sendRedirect } from './respond.js';
 
 /**
  * Auth/organization routes (T-44, WP3-21/22/28).
@@ -19,12 +26,31 @@ import { sendCreated, sendFail, sendOk } from './respond.js';
  * HttpOnly session cookies, server-derived contexts. Adds no grant or
  * verdict behavior; unknown/expired/revoked sessions map to 401 and the
  * deletion fence to 403.
+ *
+ * GitHub OAuth (FR3-29) rides the same table: start/callback are
+ * top-level navigations (302s, no JSON), so outcomes land on hash routes
+ * with a `githubError` code the dashboard maps to copy. The codes below
+ * are the contract with `apps/dashboard/src/pages/auth.ts`.
  */
 
 export interface AuthDeps {
   readonly identity: IdentityComposition;
   readonly email: EmailIdentityComposition;
+  /** Absent without an authorized OAuth App: providers report `github: false`. */
+  readonly github?: GitHubAuthComposition | undefined;
 }
+
+type GitHubErrorCode =
+  | 'github_unavailable'
+  | 'access_denied'
+  | 'state_invalid'
+  | 'provider_error'
+  | 'email_missing'
+  | 'email_taken'
+  | 'choose_tenant'
+  | 'github_taken'
+  | 'tenant_deleted'
+  | 'login_failed';
 
 const SESSION_MAX_AGE = 12 * 3600;
 const REMEMBER_MAX_AGE = 30 * 24 * 3600;
@@ -65,13 +91,41 @@ function clearSessionCookie(response: ServerResponse): void {
   response.setHeader('Set-Cookie', `${SESSION_COOKIE}=; HttpOnly; Path=/; SameSite=Strict; Max-Age=0`);
 }
 
+/**
+ * OAuth nonce cookie: binds the returning browser to the flow that
+ * started it (login-CSRF layer). Lax so the top-level return navigation
+ * carries it; the session cookie stays Strict. Short-lived, single use.
+ */
+const OAUTH_NONCE_COOKIE = 'cp_oauth';
+const OAUTH_NONCE_MAX_AGE = 600;
+
+function setOAuthNonceCookie(response: ServerResponse, nonce: string): void {
+  response.setHeader(
+    'Set-Cookie',
+    `${OAUTH_NONCE_COOKIE}=${encodeURIComponent(nonce)}; HttpOnly; Path=/api/auth/github; SameSite=Lax; Max-Age=${String(OAUTH_NONCE_MAX_AGE)}`,
+  );
+}
+
+function clearOAuthNonceCookie(response: ServerResponse): void {
+  response.setHeader(
+    'Set-Cookie',
+    `${OAUTH_NONCE_COOKIE}=; HttpOnly; Path=/api/auth/github; SameSite=Lax; Max-Age=0`,
+  );
+}
+
+function githubFailure(response: ServerResponse, code: GitHubErrorCode, page: 'login' | 'register' | 'account'): void {
+  clearOAuthNonceCookie(response);
+  sendRedirect(response, `/#/${page}?githubError=${code}`);
+}
+
 export function isAuthPath(pathname: string): boolean {
   return (
     pathname === '/api/auth/providers' ||
     pathname.startsWith('/api/auth/') ||
     pathname === '/api/orgs' ||
     pathname.startsWith('/api/orgs/') ||
-    pathname.startsWith('/api/invitations/')
+    pathname.startsWith('/api/invitations/') ||
+    pathname === '/api/team/members'
   );
 }
 
@@ -91,8 +145,192 @@ export async function handleAuthApi(
   const nowIso = new Date().toISOString();
 
   if (method === 'GET' && pathname === '/api/auth/providers') {
-    // Real capability flags: GitHub stays false until an authorized App exists.
-    sendOk(response, { email: true, github: false });
+    // Real capability flags. `github` is sign-in (true once an authorized
+    // OAuth App is wired); `githubApp` is repository authority, which stays
+    // false until an installation flow exists — login never implies it.
+    sendOk(response, { email: true, github: auth.github !== undefined, githubApp: false });
+    return;
+  }
+  if (method === 'GET' && pathname === '/api/auth/github/start') {
+    if (auth.github === undefined) {
+      sendFail(
+        response,
+        503,
+        'github_unavailable',
+        'GitHub login is not configured for this service; email login still works.',
+      );
+      return;
+    }
+    const mode = url.searchParams.get('mode') ?? 'login';
+    if (mode !== 'login' && mode !== 'link') {
+      sendFail(response, 400, 'bad_request', 'OAuth mode is unknown; use login or link.');
+      return;
+    }
+    const origin = url.searchParams.get('origin') ?? 'login';
+    if (origin !== 'login' && origin !== 'register') {
+      sendFail(response, 400, 'bad_request', 'OAuth origin is unknown; use login or register.');
+      return;
+    }
+    let userId: string | undefined;
+    if (mode === 'link') {
+      // Both-identities rule (FR3-38): the password/session side proves
+      // itself here; the GitHub side proves itself at the callback, and
+      // the signed state binds the two halves.
+      userId = (await actingContext(auth.identity.store, request, nowIso)).userId;
+    }
+    const tenantParam = url.searchParams.get('tenant') ?? '';
+    const tenantId = tenantParam === '' ? undefined : TenantIdSchema.parse(tenantParam);
+    const returnParam = url.searchParams.get('return') ?? '';
+    const returnTarget = returnParam === '' ? undefined : returnParam;
+    const rememberRaw = url.searchParams.get('remember') ?? '';
+    const rememberMe = rememberRaw === '1' || rememberRaw.toLowerCase() === 'true';
+    const nonce = randomBytes(16).toString('hex');
+    try {
+      const flow = await auth.github.startFlow({
+        mode,
+        nonce,
+        ...(userId === undefined ? {} : { userId }),
+        ...(tenantId === undefined ? {} : { tenantId }),
+        ...(returnTarget === undefined ? {} : { returnTarget }),
+        rememberMe,
+        origin,
+        nowMs: Date.parse(nowIso),
+      });
+      setOAuthNonceCookie(response, nonce);
+      sendRedirect(response, flow.authorizeUrl);
+    } catch (error) {
+      if (error instanceof ChangeProofError && error.message.includes('Credential ref')) {
+        sendFail(response, 503, 'github_unavailable', 'GitHub login is temporarily unavailable; email login still works.');
+        return;
+      }
+      throw error;
+    }
+    return;
+  }
+  if (method === 'GET' && pathname === '/api/auth/github/callback') {
+    if (auth.github === undefined) {
+      githubFailure(response, 'github_unavailable', 'login');
+      return;
+    }
+    const denied = url.searchParams.get('error');
+    const rawState = url.searchParams.get('state') ?? '';
+    let verified: Awaited<ReturnType<GitHubAuthComposition['verifyFlow']>>;
+    try {
+      verified = await auth.github.verifyFlow({ state: rawState, nowMs: Date.parse(nowIso) });
+    } catch {
+      githubFailure(response, 'state_invalid', 'login');
+      return;
+    }
+    const failPage = verified.mode === 'link' ? 'account' : verified.origin;
+    const cookieNonce = cookieValue(request, OAUTH_NONCE_COOKIE);
+    if (cookieNonce === undefined || cookieNonce === '' || cookieNonce !== verified.nonce) {
+      githubFailure(response, 'state_invalid', failPage);
+      return;
+    }
+    if (denied !== null) {
+      githubFailure(response, 'access_denied', failPage);
+      return;
+    }
+    const code = url.searchParams.get('code') ?? '';
+    if (code === '') {
+      githubFailure(response, 'state_invalid', failPage);
+      return;
+    }
+    let profile: Awaited<ReturnType<GitHubAuthComposition['fetchProfile']>>;
+    try {
+      profile = await auth.github.fetchProfile(code);
+    } catch (error) {
+      if (error instanceof ChangeProofError && error.message.includes('no verified email')) {
+        githubFailure(response, 'email_missing', failPage);
+        return;
+      }
+      if (error instanceof Error) {
+        process.stderr.write(`github oauth profile fetch failed: ${error.message}\n`);
+      }
+      githubFailure(response, 'provider_error', failPage);
+      return;
+    }
+    try {
+      if (verified.mode === 'link') {
+        if (verified.userId === undefined) {
+          githubFailure(response, 'state_invalid', 'account');
+          return;
+        }
+        await auth.github.store.linkGitHubIdentity({
+          userId: verified.userId,
+          githubId: profile.githubId,
+          login: profile.login,
+          nowIso,
+        });
+        clearOAuthNonceCookie(response);
+        sendRedirect(response, '/#/account?githubLinked=1');
+        return;
+      }
+      const link = await auth.github.store.findLinkByGitHubId(profile.githubId);
+      let userId: string;
+      if (link !== null) {
+        userId = link.userId;
+      } else if ((await auth.github.store.findUserIdByEmail(profile.email)) !== null) {
+        // Both identities are NOT proven (only GitHub), so a matching
+        // email never auto-links: the owner logs in with the password
+        // first, then links from Account.
+        githubFailure(response, 'email_taken', failPage);
+        return;
+      } else {
+        userId = (
+          await auth.github.store.registerGitHubUser({
+            email: profile.email,
+            githubId: profile.githubId,
+            login: profile.login,
+            nowIso,
+          })
+        ).userId;
+      }
+      const session = await auth.github.store.loginWithGitHub({
+        userId,
+        ...(verified.tenantId === undefined ? {} : { tenantId: verified.tenantId }),
+        rememberMe: verified.rememberMe,
+        returnTarget: verified.returnTarget,
+        nowIso,
+      });
+      response.setHeader('Set-Cookie', [
+        `${SESSION_COOKIE}=${encodeURIComponent(session.sessionId)}; HttpOnly; Path=/; SameSite=Strict; Max-Age=${String(verified.rememberMe ? REMEMBER_MAX_AGE : SESSION_MAX_AGE)}`,
+        `${OAUTH_NONCE_COOKIE}=; HttpOnly; Path=/api/auth/github; SameSite=Lax; Max-Age=0`,
+      ]);
+      sendRedirect(response, verified.returnTarget);
+    } catch (error) {
+      if (!(error instanceof ChangeProofError)) throw error;
+      const message = error.message;
+      if (message.includes('Several organizations')) {
+        githubFailure(response, 'choose_tenant', failPage);
+        return;
+      }
+      if (message.includes('deletion fence')) {
+        githubFailure(response, 'tenant_deleted', failPage);
+        return;
+      }
+      if (message.includes('already linked to a different user')) {
+        githubFailure(response, 'github_taken', failPage);
+        return;
+      }
+      if (message.includes('already has a password account')) {
+        githubFailure(response, 'email_taken', failPage);
+        return;
+      }
+      process.stderr.write(`github oauth completion failed: ${message}\n`);
+      githubFailure(response, 'login_failed', failPage);
+      return;
+    }
+    return;
+  }
+  if (method === 'GET' && pathname === '/api/auth/github/status') {
+    const ctx = await actingContext(auth.identity.store, request, nowIso);
+    if (auth.github === undefined) {
+      sendOk(response, { configured: false, linked: false, links: [] });
+      return;
+    }
+    const links = await auth.github.store.listLinksByUser(ctx.userId);
+    sendOk(response, { configured: true, linked: links.length > 0, links: links.map((entry) => ({ login: entry.login })) });
     return;
   }
   if (method === 'POST' && pathname === '/api/auth/register') {
@@ -256,6 +494,19 @@ export async function handleAuthApi(
     const userId = pathSegment(pathname, 5, 'Member');
     await auth.identity.store.removeMember({ actor: ctx, userId });
     sendOk(response, { removed: true });
+    return;
+  }
+  if (method === 'GET' && pathname === '/api/team/members') {
+    const ctx = await actingContext(auth.identity.store, request, nowIso);
+    try {
+      sendOk(response, await auth.identity.store.listMembers(ctx));
+    } catch (error) {
+      if (error instanceof ChangeProofError && error.message.includes('no tenant authority')) {
+        sendFail(response, 403, 'forbidden', error.message);
+        return;
+      }
+      throw error;
+    }
     return;
   }
   if (method === 'DELETE' && pathname.startsWith('/api/orgs/') && pathname.split('/').length === 4) {

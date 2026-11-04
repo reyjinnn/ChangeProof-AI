@@ -1,0 +1,13 @@
+node_modules/
+dist/
+apps/*/dist/
+runs/
+.git/
+.venv/
+evidence-local/
+evidence-tmp/
+.cache/
+coverage/
+*.log
+tmp/
+temp/

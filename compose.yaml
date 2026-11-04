@@ -1,0 +1,50 @@
+# Disposable local stack (dev/try-out only, never production).
+#
+#   docker compose up --build     # open http://127.0.0.1:4179 afterwards
+#   docker compose down           # wipes everything (no volumes: sekali pake)
+#
+# GitHub sign-in reads CP_GITHUB_* from .env. The app port must match the
+# callback registered on the OAuth App (override with APP_PORT only if you
+# registered that port too).
+name: changeproof-local
+
+services:
+  app:
+    build: .
+    ports:
+      - "${APP_PORT:-4179}:4179"
+    env_file:
+      - .env
+    environment:
+      HOST: 0.0.0.0
+      DATABASE_URL: postgresql://app_user:app-probe-only@pg:5432/changeproof
+      CP_SMTP_HOST: mailpit
+      CP_SMTP_PORT: "1025"
+      CP_SMTP_SENDER: dev@changeproof.local
+      CP_MANIFEST: /app/config/publicsite/manifest.json
+      CP_DIST: /app/apps/dashboard/dist
+      CP_EVIDENCE_DIR: /data/evidence
+    depends_on:
+      pg:
+        condition: service_healthy
+      mailpit:
+        condition: service_started
+
+  pg:
+    image: postgres:16
+    environment:
+      # Dev-only disposable default (same pattern as tests/e2e/infra.mjs).
+      POSTGRES_PASSWORD: changeproof-dev-local
+    volumes:
+      - ./infra/postgres:/migrations:ro
+      - ./infra/docker/01-apply.sh:/docker-entrypoint-initdb.d/01-apply.sh:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 2s
+      timeout: 5s
+      retries: 30
+
+  mailpit:
+    image: axllent/mailpit:v1.21.8
+    ports:
+      - "${MAILPIT_PORT:-8025}:8025"

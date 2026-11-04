@@ -10,6 +10,7 @@ import { afterAll, beforeAll, expect, test } from 'vitest';
 import type { EmailDeliveryReceipt, EmailMessage } from '../../src/core/index.js';
 import { createHttpServer, type HttpHandle } from '../../src/http/index.js';
 import {
+  composeAdapterCapabilities,
   composeCollaboration,
   composeDistribution,
   composeEmailIdentity,
@@ -189,6 +190,7 @@ beforeAll(async () => {
     'V9__distribution.sql',
     'V10__enterprise.sql',
     'V11__service_operations.sql',
+    'V12__workspace.sql',
   ]) {
     await admin.query(migration(name));
   }
@@ -230,6 +232,7 @@ beforeAll(async () => {
       session: { deriveContext: (input) => identity.store.deriveContext(input) },
       support: composeSupport(appPool, { identity: identity.store, jobs: jobs.store }),
       collaboration: composeCollaboration(appPool, { identity: identity.store, notifications: notificationsComp.store }),
+      capabilities: composeAdapterCapabilities().registry,
     },
     enterprise: {
       session: { deriveContext: (input) => identity.store.deriveContext(input) },
@@ -466,4 +469,88 @@ test('SCIM tokens mint once and revoke; tenants stay fenced', async () => {
   expect((revoked.body as { data: { revoked: boolean } }).data.revoked).toBe(true);
   const again = await call('POST', `/api/enterprise/scim/tokens/${tokenId}/revoke`, {}, fixture.ownerCookie);
   expect((again.body as { data: { revoked: boolean } }).data.revoked).toBe(false);
+});
+
+test('billing summary and ledger mirror settled usage per tenant', async () => {
+  const fixture = await seedFixture('ledger');
+  await usageComp.store.setEntitlement({
+    tenantId: fixture.tenantId,
+    capAmount: 1000,
+    rateVersion: 'test-rates-1',
+    periodId: 'period-1',
+    nowIso: new Date().toISOString(),
+  });
+  const emptySummary = await call('GET', '/api/billing/summary', undefined, fixture.ownerCookie);
+  expect(emptySummary.body).toEqual({ ok: true, data: { used: 0, limit: 1000 } });
+  const emptyLedger = await call('GET', '/api/billing/ledger?limit=50', undefined, fixture.ownerCookie);
+  expect((emptyLedger.body as { data: { items: unknown[] } }).data.items).toEqual([]);
+  const saved = await call(
+    'POST',
+    '/api/drafts',
+    { projectId: fixture.projectId, body: { intent: 'ledger run', budgetCap: 50 } },
+    fixture.ownerCookie,
+  );
+  expect(saved.status).toBe(201);
+  const draft = (saved.body as { data: { draftId: string; revision: number } }).data;
+  const submitted = await call(
+    'POST',
+    '/api/runs',
+    {
+      projectId: fixture.projectId,
+      repositoryIds: [fixture.repositoryId],
+      sourceRefs: ['git:abc1234'],
+      intentRef: 'intent-ledger',
+      executionMode: 'real_runtime',
+      invariantRefs: ['invariant-ledger'],
+      verificationPlanRef: 'plan-ledger',
+      budgetProfileId: 'budget-ledger',
+      publicationConsent: false,
+      idempotencyKey: idempotencyKey(fixture.tenantId),
+      expectedGrantVersion: fixture.grantVersion,
+      draftId: draft.draftId,
+      draftRevision: draft.revision,
+      requestedBudget: 50,
+    },
+    fixture.ownerCookie,
+  );
+  expect(submitted.status).toBe(201);
+  const runId = (submitted.body as { data: { runId: string; reservationId: string } }).data.runId;
+  const reservationId = (submitted.body as { data: { reservationId: string } }).data.reservationId;
+  // Worker simulation at the store boundary: a consume on the run's own
+  // reservation lands a second ledger entry.
+  await usageComp.store.recordConsume({
+    tenantId: fixture.tenantId,
+    reservationId,
+    effectId: idempotencyKey(`consume-${fixture.tenantId}`),
+    provider: 'test-provider',
+    measuredUnits: 10,
+    unitName: 'credits',
+    nowIso: new Date().toISOString(),
+  });
+  const balances = await call('GET', '/api/billing/balances', undefined, fixture.ownerCookie);
+  const settled = (balances.body as { data: { consumed: number; cap: number } }).data;
+  const summary = await call('GET', '/api/billing/summary', undefined, fixture.ownerCookie);
+  expect(summary.body).toEqual({ ok: true, data: { used: settled.consumed, limit: settled.cap } });
+  expect(settled.consumed).toBeGreaterThan(0);
+  const ledger = await call('GET', '/api/billing/ledger?limit=50', undefined, fixture.ownerCookie);
+  const items = (
+    ledger.body as { data: { items: { entryId: string; kind: string; amount: number; detail: string }[] } }
+  ).data.items;
+  expect(items.map((entry) => entry.kind).sort()).toEqual(['consume', 'reserve']);
+  expect(items.every((entry) => entry.detail === runId)).toBe(true);
+  expect(items.every((entry) => /^[0-9a-f]{64}$/.test(entry.entryId))).toBe(true);
+  const other = await seedFixture('ledger-other');
+  await usageComp.store.setEntitlement({
+    tenantId: other.tenantId,
+    capAmount: 1000,
+    rateVersion: 'test-rates-1',
+    periodId: 'period-1',
+    nowIso: new Date().toISOString(),
+  });
+  const fenced = await call('GET', '/api/billing/ledger?limit=50', undefined, other.ownerCookie);
+  expect((fenced.body as { data: { items: unknown[] } }).data.items).toEqual([]);
+  const bad = await call('GET', '/api/billing/ledger?limit=500', undefined, fixture.ownerCookie);
+  expect(bad.status).toBe(400);
+  const guest = await call('GET', '/api/billing/summary');
+  expect(guest.status).toBe(401);
 });

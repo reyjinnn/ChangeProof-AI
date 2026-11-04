@@ -2,6 +2,7 @@ export * from './bundle.js';
 export * from './configuration.js';
 export * from './distribution.js';
 export * from './errors.js';
+export * from './github-auth.js';
 export * from './providers.js';
 export * from './publication.js';
 
@@ -117,6 +118,23 @@ import {
   type SupportDb,
   type SupportStore,
 } from '../modules/support/index.js';
+import {
+  AdapterRegistry,
+  DOTNET_ADAPTER_RECORD,
+  GO_ADAPTER_RECORD,
+  GO_FIBER_RECORD,
+  PHP_ADAPTER_RECORD,
+  PYTHON_ADAPTER_RECORD,
+  PYTHON_DJANGO_RECORD,
+  PYTHON_PYDANTIC_RECORD,
+  PYTHON_SQLALCHEMY_RECORD,
+  TYPESCRIPT_ADAPTER_RECORD,
+  TYPESCRIPT_EXPRESS_RECORD,
+  TYPESCRIPT_FASTIFY_RECORD,
+  TYPESCRIPT_NESTJS_RECORD,
+  TYPESCRIPT_PRISMA_RECORD,
+  TYPESCRIPT_REACT_RECORD,
+} from '../modules/adapters/index.js';
 
 /**
  * Composition root (.prepare/architecture.md §3).
@@ -491,6 +509,39 @@ export function composeSupport(
       session: { deriveContext: (input) => deps.identity.deriveContext(input) },
       jobs: { requestJobCancel: (input) => deps.jobs.requestCancel(input) },
     }),
+  };
+}
+
+/**
+ * Adapter-capability wiring (WP3-30 capability matrix).
+ *
+ * The composition root builds the registry from the fourteen trusted,
+ * explicitly-versioned adapter records; it adds no support claim of its
+ * own. Target levels are claimed support, proven levels are evidenced
+ * support — the route reports both side by side, never merged.
+ */
+export interface AdapterCapabilitiesComposition {
+  registry: AdapterRegistry;
+}
+
+export function composeAdapterCapabilities(): AdapterCapabilitiesComposition {
+  return {
+    registry: new AdapterRegistry([
+      TYPESCRIPT_ADAPTER_RECORD,
+      TYPESCRIPT_EXPRESS_RECORD,
+      TYPESCRIPT_REACT_RECORD,
+      TYPESCRIPT_NESTJS_RECORD,
+      TYPESCRIPT_FASTIFY_RECORD,
+      TYPESCRIPT_PRISMA_RECORD,
+      PYTHON_ADAPTER_RECORD,
+      PYTHON_DJANGO_RECORD,
+      PYTHON_PYDANTIC_RECORD,
+      PYTHON_SQLALCHEMY_RECORD,
+      GO_ADAPTER_RECORD,
+      GO_FIBER_RECORD,
+      PHP_ADAPTER_RECORD,
+      DOTNET_ADAPTER_RECORD,
+    ]),
   };
 }
 

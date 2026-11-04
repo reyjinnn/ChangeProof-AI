@@ -226,6 +226,7 @@ export interface IdentityStore {
   deleteTenant(input: DeleteTenantInput): Promise<void>;
   recordRetention(input: RecordRetentionInput): Promise<{ recordId: string; purgeProgress: PurgeProgress }>;
   advancePurge(input: AdvancePurgeInput): Promise<void>;
+  listMembers(actor: TenantContext): Promise<readonly { userId: string; role: string; detail: string }[]>;
 }
 
 function assertOwnerOrAdmin(actor: TenantContext, action: string): void {
@@ -587,6 +588,38 @@ export function createIdentityStore(db: IdentityDb): IdentityStore {
         }
         refuse('Purge advance failed.', error);
       }
+    },
+
+    async listMembers(actor: TenantContext): Promise<readonly { userId: string; role: string; detail: string }[]> {
+      assertServerAuthority(actor);
+      if (actor.role === 'operator') {
+        throw new ChangeProofError('Operator accounts carry no tenant authority here (NEG3-34).');
+      }
+      const tenantId = IdSchema.parse(actor.tenantId);
+      return inTenant(tenantId, async (client) => {
+        const statusCol = await client.query(
+          `SELECT 1 AS ok FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'memberships' AND column_name = 'status'`,
+        );
+        const withStatus = statusCol.rows.length > 0;
+        const found = await client.query(
+          withStatus
+            ? 'SELECT user_id, role, grant_version, status FROM memberships WHERE tenant_id = $1 ORDER BY user_id ASC'
+            : 'SELECT user_id, role, grant_version FROM memberships WHERE tenant_id = $1 ORDER BY user_id ASC',
+          [tenantId],
+        );
+        return found.rows.map((row) => {
+          if (withStatus) {
+            const parsed = MembershipRowSchema.parse(row);
+            return {
+              userId: parsed.user_id,
+              role: parsed.role,
+              detail: `grant v${String(parsed.grant_version)} · ${parsed.status}`,
+            };
+          }
+          const parsed = MembershipRowSchema.omit({ status: true }).parse(row);
+          return { userId: parsed.user_id, role: parsed.role, detail: `grant v${String(parsed.grant_version)}` };
+        });
+      });
     },
   };
 }
