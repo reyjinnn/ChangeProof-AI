@@ -94,9 +94,11 @@ export async function renderRoute(outlet: HTMLElement, hash: string): Promise<vo
     '/login', '/register', '/verify-email', '/check-email', '/forgot-password',
     '/reset-password', '/session-expired', '/create-org', '/invite',
   ].includes(path));
+  document.body.classList.toggle('auth-refined', document.body.classList.contains('auth-surface'));
   const workspace = !document.body.classList.contains('public-surface') && !document.body.classList.contains('auth-surface');
   const shell = document.getElementById('shell');
-  for (const name of ['reyn-design', 'modern-design', 'workspace-port']) shell?.classList.toggle(name, workspace);
+  if (shell !== null) shell.dataset['workspacePage'] = workspace ? path : '';
+  for (const name of ['reyn-design', 'modern-design', 'workspace-port', 'workspace-refined']) shell?.classList.toggle(name, workspace);
   outlet.classList.toggle('reyn-content', workspace);
   if (route === undefined) {
     renderNotFound(outlet, path);

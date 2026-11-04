@@ -245,7 +245,52 @@ test('Product retains its four feature areas and dedicated preview', async () =>
   const outlet = boot();
   await renderRoute(outlet, '#/p/product');
   expect(outlet.querySelector('h1')?.textContent).toBe('Clear changes. Confident decisions.');
+  expect(outlet.querySelector('.landing-pilot')).toBeNull();
   for (const title of ['Understand the impact', 'Check the candidate', 'Review the evidence', 'Bring context to your team', 'Evidence at every step.']) expect(outlet.textContent).toContain(title);
+});
+
+test('the Landing pilot keeps its graph explicitly illustrative and its original workflow controls', async () => {
+  const home: PublicRoute = { path: '/', title: 'ChangeProof AI', summary: 'Preview.', section: 'product', ctas: [] };
+  stubFetch({ '/api/site/routes?path=%2F': { status: 200, json: home } });
+  registerPublicPages([home], [], []);
+  const outlet = boot();
+  await renderRoute(outlet, '#/p/');
+  expect(outlet.querySelector('.landing-pilot')).not.toBeNull();
+  expect(outlet.querySelector('[data-pilot-graph]')?.textContent).toContain('Illustrative');
+  expect(outlet.querySelectorAll('[role="tab"]')).toHaveLength(3);
+  expect(outlet.textContent).toContain('An unresolved edge stays visible');
+  expect(outlet.textContent).toContain('Muse and Modal are unavailable');
+});
+
+test('the illustrative verification panel numbers every check and separates incomplete proof from its step', async () => {
+  const home: PublicRoute = { path: '/', title: 'ChangeProof AI', summary: 'Preview.', section: 'product', ctas: [] };
+  stubFetch({ '/api/site/routes?path=%2F': { status: 200, json: home } });
+  registerPublicPages([home], [], []);
+  const outlet = boot();
+  await renderRoute(outlet, '#/p/');
+  const rows = [...outlet.querySelectorAll('.pilot-evidence-row')];
+  expect(rows.map(row => row.querySelector('.pilot-evidence-step')?.textContent)).toEqual(['01', '02', '03']);
+  expect(rows[2]?.querySelector('.pilot-evidence-state')?.textContent).toContain('Incomplete');
+  expect(rows[2]?.getAttribute('data-proof-state')).toBe('incomplete');
+  expect(rows.slice(0, 2).every(row => row.getAttribute('data-proof-state') === 'required')).toBe(true);
+  expect(rows.map(row => row.textContent).join(' ')).not.toMatch(/passed|verified successfully/i);
+  expect(outlet.querySelector('.pilot-evidence-checks')?.tagName).toBe('OL');
+  expect(outlet.textContent).toContain('not live AI repair evidence');
+});
+
+test('Landing exposes the real Workspace Overview route without guessing authentication or replacing existing CTAs', async () => {
+  const home: PublicRoute = { path: '/', title: 'ChangeProof AI', summary: 'Preview.', section: 'product', ctas: [] };
+  stubFetch({ '/api/site/routes?path=%2F': { status: 200, json: home } });
+  registerPublicPages([home], [], []);
+  const outlet = boot();
+  await renderRoute(outlet, '#/p/');
+  const entry = outlet.querySelector<HTMLAnchorElement>('.cp-identity-hero [data-open-workspace]');
+  expect(entry?.textContent).toContain('Open workspace');
+  expect(entry?.getAttribute('href')).toBe('#/');
+  expect(outlet.querySelector('.pilot-public-menu a[href="#/"]')?.textContent).toBe('Open workspace');
+  expect(outlet.querySelector('.cp-identity-hero a[href="#/register"]')).not.toBeNull();
+  expect(outlet.querySelector('.cp-identity-hero a[href="#/p/pricing"]')).not.toBeNull();
+  expect(seen.some(url => url.includes('/api/auth'))).toBe(false);
 });
 
 test('Pricing keeps the original free card, budget explanation and three numbered steps without inventing prices', async () => {
@@ -257,4 +302,52 @@ test('Pricing keeps the original free card, budget explanation and three numbere
   expect(outlet.querySelectorAll('.public-steps li')).toHaveLength(3);
   expect(outlet.textContent).toContain('Your budget stays in your control.');
   expect(outlet.textContent).not.toMatch(/\$\d/);
+});
+
+test('Product polish keeps feature content but labels its explanatory illustration without fabricated run receipts', async () => {
+  stubFetch({ '/api/site/routes?path=%2Fproduct': { status: 200, json: { path: '/product', title: 'Product', summary: 'Product.', section: 'product', ctas: [] } } });
+  registerPublicPages([], [], []);
+  const outlet = boot(); await renderRoute(outlet, '#/p/product');
+  expect(outlet.querySelector('.public-refined')).not.toBeNull();
+  expect(outlet.querySelectorAll('[data-feature-index]')).toHaveLength(4);
+  const features = [...outlet.querySelectorAll('[data-feature-index]')];
+  expect(features.map(feature => feature.querySelector('.feature-number')?.textContent)).toEqual(['01', '02', '03', '04']);
+  expect(features.every(feature => feature.querySelector('h2') !== null && feature.querySelector('p') !== null && feature.querySelector('a') !== null)).toBe(true);
+  expect(outlet.querySelector('[data-product-illustration]')?.textContent).toContain('Illustrative');
+  const sketch = outlet.querySelector('[data-product-illustration]');
+  expect(sketch?.querySelector('.contract-diff-header')?.textContent).toContain('Not executed');
+  expect(sketch?.querySelectorAll('.diff-line-number')).toHaveLength(4);
+  expect(sketch?.querySelector('[data-diff=removed] code')?.textContent).toBe('  id: string;');
+  expect(sketch?.querySelector('[data-diff=added] code')?.textContent).toBe('  id: OrderId;');
+  expect(sketch?.textContent).toContain('Independent checks must establish its result.');
+  expect(sketch?.textContent).not.toMatch(/passed|successfully|execution complete/i);
+  expect(outlet.querySelector('.public-product-preview')?.textContent).not.toMatch(/RUN-0142|00:04|NORTHWIND/);
+});
+
+test('Pricing polish explains reservation flow without manufacturing an account balance', async () => {
+  stubFetch({ '/api/site/routes?path=%2Fpricing': { status: 200, json: PRICING } });
+  registerPublicPages([], [], []); const outlet = boot(); await renderRoute(outlet, '#/p/pricing');
+  expect(outlet.querySelector('[data-budget-concepts]')?.getAttribute('aria-label')).toContain('not an account balance');
+  expect(outlet.querySelectorAll('.public-price-details .public-steps li')).toHaveLength(3);
+  expect(outlet.querySelector('[data-budget-concepts]')?.textContent).not.toMatch(/\$|\d+ credits/);
+});
+
+test('Changelog keeps design notes separate from releases and gives each entry its own date/title/body', async () => {
+  stubFetch({
+    '/api/site/routes?path=%2Fchangelog': { status: 200, json: { path: '/changelog', title: 'Product notes', summary: 'Published notes.', section: 'product', ctas: [] } },
+    '/api/site/changelog': { status: 200, json: { design: [
+      { title: 'Plan revision 2', body: 'A specification note, not a shipped release.', date: '2026-10-24' },
+      { title: 'Public site draft', body: 'An illustrative content draft.', date: '2026-11-02' },
+    ], releases: [] } },
+  });
+  registerPublicPages([], [], []);
+  const outlet = boot(); await renderRoute(outlet, '#/p/changelog');
+  const groups = [...outlet.querySelectorAll('.public-release')];
+  expect(groups.map(group => group.querySelector('h2')?.textContent)).toEqual(['Design notes', 'Releases']);
+  const entries = [...(groups[0]?.querySelectorAll('.release-entry') ?? [])];
+  expect(entries.map(entry => [...entry.children].map(child => child.tagName))).toEqual([['TIME', 'H3', 'P'], ['TIME', 'H3', 'P']]);
+  expect(entries.map(entry => entry.querySelector('time')?.getAttribute('datetime'))).toEqual(['2026-10-24', '2026-11-02']);
+  expect(entries.map(entry => entry.querySelector('h3')?.textContent)).toEqual(['Plan revision 2', 'Public site draft']);
+  expect(groups[1]?.textContent).toContain('Nothing published here yet.');
+  expect(groups[1]?.querySelector('.release-entry')).toBeNull();
 });

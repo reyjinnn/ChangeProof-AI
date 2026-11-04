@@ -7,6 +7,8 @@ import './public-port.css';
 import { h, svgEl, themeToggle } from '../components.js';
 import { startLandingFibers } from './landing-fibers.js';
 import { publicDesigns, type PublicDesignId } from './public-design-templates.js';
+import { applyLandingPilot } from './landing-pilot.js';
+import { refinePublicPage } from './public-refinement.js';
 
 const publicNames = new Set<string>(Object.keys(publicDesigns));
 const workspaceDestinations: Readonly<Record<string, string>> = {
@@ -26,7 +28,7 @@ export function designDestination(hash: string): string {
   return workspace === undefined ? `#/p/${name}` : `#${workspace}`;
 }
 
-export function renderPublicDesign(path: string): HTMLElement | undefined {
+export function renderPublicDesign(path: string, pilotLanding = false): HTMLElement | undefined {
   const name = path === '/' ? 'landing' : path.slice(1);
   if (!publicNames.has(name)) return undefined;
   const design = publicDesigns[name as PublicDesignId];
@@ -133,6 +135,8 @@ export function renderPublicDesign(path: string): HTMLElement | undefined {
   if (name === 'terms' || name === 'privacy-policy') {
     root.querySelector('.public-page-content')?.prepend(h('aside', { class: 'public-note legal-draft', role: 'note' }, ['Design draft — legal terms, retention and service commitments are not finalized. This page is not a new legal agreement.']));
   }
+  if (name === 'landing' && pilotLanding) applyLandingPilot(root);
+  else if (name !== 'landing') refinePublicPage(root, name);
   queueMicrotask(() => {
     if (!root.isConnected) return;
     const canvas = root.querySelector<HTMLCanvasElement>('.cp-ghost-fibers');

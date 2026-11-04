@@ -160,13 +160,16 @@ async function search(
   });
 }
 
-function hitArticle(hit: SearchHit): HTMLElement {
-  const target = hit.kind === 'run' ? `#/run?id=${encodeURIComponent(hit.id)}` : '#/runs/new';
-  return h('article', { class: 'faq-item' }, [
-    h('h3', {}, [h('a', { href: target }, [hit.title])]),
-    h('p', {}, [h('code', { class: 'inline' }, [hit.id]), document.createTextNode(` · ${hit.snippet}`)]),
-    h('p', { class: 'muted' }, [`Created ${hit.createdAt}`]),
-  ]);
+function hitTable(hits: readonly SearchHit[]): HTMLElement {
+  return h('div', { class: 'table-wrap' }, [h('table', { class: 'run-search-table' }, [
+    h('caption', {}, ['Matches from current-grant search']),
+    h('thead', {}, [h('tr', {}, ['Name & context', 'Reference', 'Created'].map(label => h('th', { scope: 'col' }, [label])))]),
+    h('tbody', {}, hits.map(hit => h('tr', {}, [
+      h('th', { scope: 'row' }, [h('a', { href: hit.kind === 'run' ? `#/run?id=${encodeURIComponent(hit.id)}` : '#/runs/new' }, [hit.title]), h('small', {}, [hit.snippet])]),
+      h('td', { 'data-label': 'Reference' }, [h('code', { class: 'inline' }, [hit.id])]),
+      h('td', { 'data-label': 'Created' }, [h('time', { datetime: hit.createdAt }, [hit.createdAt])]),
+    ]))),
+  ])]);
 }
 
 async function renderLists(outlet: HTMLElement): Promise<void> {
@@ -254,13 +257,13 @@ async function renderLists(outlet: HTMLElement): Promise<void> {
           emptyState('No runs yet', 'File your first run to see it here.', h('a', { class: 'button', href: '#/runs/new' }, ['File your first run'])),
         );
       } else {
-        for (const hit of runs.hits) runSection.appendChild(hitArticle(hit));
+        runSection.appendChild(hitTable(runs.hits));
       }
       const projectSection = h('section', { class: 'card' }, [h('h2', {}, ['Projects'])]);
       if (projects.hits.length === 0) {
         projectSection.appendChild(emptyState('No projects yet', 'Create one while filing a run.'));
       } else {
-        for (const hit of projects.hits) projectSection.appendChild(hitArticle(hit));
+        projectSection.appendChild(hitTable(projects.hits));
       }
       lists.replaceChildren(stats, h('div', { class: 'split' }, [runSection, projectSection]));
     } catch (error) {

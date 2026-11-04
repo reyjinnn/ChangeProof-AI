@@ -1,0 +1,157 @@
+﻿/* Landing-only composition. Other public pages and auth backdrops are unchanged. */
+#public-site-page.landing-pilot .modern-container { max-width:1160px; width:calc(100% - 80px); margin-inline:auto; }
+#public-site-page.landing-pilot .public-nav { position:fixed; top:18px; left:50%; transform:translateX(-50%); width:min(860px,calc(100% - 40px)); min-height:64px; margin:0; padding:13px 22px; border:1px solid var(--pilot-line); border-radius:18px; background:color-mix(in srgb,var(--pilot-surface) 86%,transparent); backdrop-filter:blur(18px); box-shadow:0 12px 40px #0000000c; }
+#public-site-page.landing-pilot .public-brand { color:var(--pilot-ink); }
+#public-site-page.landing-pilot .public-links > a:not(.primary) { color:var(--pilot-muted); font-size:12px; }
+#public-site-page.landing-pilot .public-links > a:hover { color:var(--pilot-ink); }
+#public-site-page.landing-pilot .public-nav :is(.primary,.cp-get-started-cta) { color:var(--pilot-button-ink); background:var(--pilot-button); border:0; border-radius:10px; min-height:38px; padding:11px 16px; font-size:12px; }
+#public-site-page.landing-pilot .public-nav .theme-toggle { color:var(--pilot-muted); background:transparent; }
+#public-site-page.landing-pilot .cp-identity-hero { min-height:740px; padding:150px 24px 64px; background:radial-gradient(ellipse at 50% 48%,var(--pilot-accent-soft),transparent 66%),var(--pilot-bg); color:var(--pilot-ink); }
+#public-site-page.landing-pilot .cp-identity-hero h1 { max-width:1000px; margin:30px auto 26px; font:650 clamp(44px,7vw,96px)/1.07 var(--pilot-heading); letter-spacing:-5px; color:var(--pilot-ink); }
+#public-site-page.landing-pilot .cp-identity-hero h1 mark { padding:0 .025em; border-radius:0; background:transparent; color:var(--pilot-accent); box-shadow:none; }
+#public-site-page.landing-pilot .cp-ghost-fibers { opacity:.7; mask-image:linear-gradient(180deg,transparent,#000 20%,#000 75%,transparent); }
+[data-theme=dark] #public-site-page.landing-pilot .cp-ghost-fibers { opacity:.58; }
+#public-site-page.landing-pilot .modern-release { padding:7px 12px 7px 7px; background:var(--pilot-surface); border:1px solid var(--pilot-line); color:var(--pilot-muted); font-size:11px; box-shadow:none; }
+#public-site-page.landing-pilot .modern-release b { background:var(--pilot-accent-soft); color:var(--pilot-accent); border:0; }
+#public-site-page.landing-pilot .modern-hero-sub { color:var(--pilot-muted); font:400 18px/1.7 Inter,sans-serif; margin:0 auto 28px; }
+#public-site-page.landing-pilot .modern-hero-sub strong { color:var(--pilot-ink); font-weight:500; }
+#public-site-page.landing-pilot .modern-cta-pair { gap:12px; }
+#public-site-page.landing-pilot .modern-cta-pair a { min-height:46px; padding:13px 22px; border:1px solid var(--pilot-line); border-radius:10px; font-size:13px; color:var(--pilot-ink); background:var(--pilot-surface); box-shadow:none; transition:transform .16s ease,box-shadow .16s ease; }
+#public-site-page.landing-pilot .modern-cta-pair .primary { color:var(--pilot-button-ink); background:var(--pilot-button); border-color:transparent; }
+#public-site-page.landing-pilot .modern-cta-pair a:hover { transform:translateY(-2px); box-shadow:0 6px 24px #0000001a; }
+#public-site-page.landing-pilot .modern-hero-caption { margin-top:18px; font-size:11px; color:var(--pilot-muted); }
+#public-site-page.landing-pilot .cp-tech-strip { padding:26px 0 40px; background:var(--pilot-bg); border-bottom:1px solid var(--pilot-line); }
+#public-site-page.landing-pilot .cp-tech-strip > p { font-size:10px; letter-spacing:.17em; color:var(--pilot-faint); margin-bottom:25px; }
+#public-site-page.landing-pilot .cp-tech-logo { font-size:12px; color:var(--pilot-muted); }
+#public-site-page.landing-pilot .cp-tech-mark { filter:grayscale(.35); opacity:.85; }
+#public-site-page.landing-pilot .proof-story { padding:100px 0 70px; border-bottom:1px solid var(--pilot-line); background:var(--pilot-bg); }
+#public-site-page.landing-pilot .proof-story-layout { display:grid; grid-template-columns:minmax(0,.72fr) minmax(0,1.3fr); gap:58px; align-items:center; }
+#public-site-page.landing-pilot .proof-story-copy .section-eyebrow { font-size:10px; color:var(--pilot-accent); letter-spacing:.1em; }
+#public-site-page.landing-pilot .proof-story h2, #public-site-page.landing-pilot .cp-capabilities h2 { font:600 44px/1.16 var(--pilot-heading); letter-spacing:-2px; color:var(--pilot-ink); margin:20px 0; }
+#public-site-page.landing-pilot :is(.proof-story,.cp-capabilities) h2 em { color:var(--pilot-accent); font-style:normal; }
+#public-site-page.landing-pilot .proof-story-copy > p { font-size:13px; line-height:1.8; color:var(--pilot-muted); }
+#public-site-page.landing-pilot .proof-story-tabs { margin-top:28px; gap:8px; }
+#public-site-page.landing-pilot .proof-story-tabs button { padding:15px 16px; border:1px solid transparent; border-radius:10px; background:transparent; color:var(--pilot-muted); font-size:13px; box-shadow:none; }
+#public-site-page.landing-pilot .proof-story-tabs button span { color:var(--pilot-faint); font:10px ui-monospace,monospace; }
+#public-site-page.landing-pilot .proof-story-tabs button[aria-selected=true] { color:var(--pilot-ink); background:var(--pilot-accent-soft); border-color:var(--pilot-line); }
+#public-site-page.landing-pilot.modern-design .proof-story-tabs [data-proof-tab][aria-selected=true] span { color:var(--pilot-accent); }
+#public-site-page.landing-pilot .proof-story-copy > small { color:var(--pilot-faint); font-size:10px; line-height:1.8; }
+#public-site-page.landing-pilot .proof-story-stage { min-width:0; min-height:370px; border:1px solid var(--pilot-line); border-radius:16px; background:var(--pilot-surface); box-shadow:0 24px 70px #0000000d; overflow:hidden; }
+#public-site-page.landing-pilot .proof-stage-top { padding:14px 18px; border-bottom:1px solid var(--pilot-line); background:var(--pilot-raised); }
+#public-site-page.landing-pilot .proof-stage-top strong { color:var(--pilot-muted); font:10px ui-monospace,monospace; }
+#public-site-page.landing-pilot .proof-stage-dot { background:var(--pilot-line); }
+#public-site-page.landing-pilot .pilot-example-badge { margin-left:auto; color:var(--pilot-muted); font-size:10px; }
+#public-site-page.landing-pilot .proof-panel { padding:22px; }
+#public-site-page.landing-pilot .proof-panel-heading { margin-bottom:6px; }
+#public-site-page.landing-pilot .proof-panel-heading > span { color:var(--pilot-faint); font-size:10px; }
+#public-site-page.landing-pilot .proof-panel-heading b { padding:5px 9px; font-size:10px; border:1px solid var(--pilot-line); background:transparent; color:var(--pilot-muted); }
+#public-site-page.landing-pilot .pilot-map { padding:18px 0 12px; }
+#public-site-page.landing-pilot .pilot-map figcaption { padding-inline:2px; }
+#public-site-page.landing-pilot .pilot-map .pilot-eyebrow { font-size:9px; }
+#public-site-page.landing-pilot .pilot-map-foot { font-size:9px; }
+#public-site-page.landing-pilot .proof-panel-note { margin:16px 0 0; color:var(--pilot-muted); font-size:11px; line-height:1.75; border-top:1px solid var(--pilot-line); padding-top:16px; }
+#public-site-page.landing-pilot .proof-diff { margin:34px 0; border:1px solid var(--pilot-line); border-radius:10px; background:var(--pilot-bg); padding:18px 0; }
+#public-site-page.landing-pilot .proof-diff > div { padding:12px 20px; font:12px/1.8 ui-monospace,monospace; color:var(--pilot-ink); }
+#public-site-page.landing-pilot .proof-diff > div:first-child { background:#ac394b12; }
+#public-site-page.landing-pilot .proof-diff > div:last-child { background:var(--pilot-accent-soft); }
+#public-site-page.landing-pilot .pilot-evidence-checks { list-style:none; margin:0; padding:0; width:100%; }
+#public-site-page.landing-pilot .pilot-evidence-row { display:grid; grid-template-columns:28px minmax(0,1fr); align-items:center; gap:14px; padding:18px 0; border-bottom:1px solid var(--pilot-line); font-size:13px; }
+#public-site-page.landing-pilot .pilot-evidence-step { display:grid; place-items:center; justify-self:start; width:28px; height:28px; padding:0; margin:0; background:var(--pilot-raised); color:var(--pilot-muted); border:1px solid var(--pilot-line); border-radius:7px; font:500 11px/1 ui-monospace,monospace; }
+#public-site-page.landing-pilot .pilot-evidence-checks :is(.pilot-evidence-body,.pilot-evidence-label) { background:transparent; border:0; padding:0; border-radius:0; box-shadow:none; }
+#public-site-page.landing-pilot .pilot-evidence-body { display:grid; gap:6px; min-width:0; }
+#public-site-page.landing-pilot .pilot-evidence-label { display:flex; align-items:center; flex-wrap:wrap; gap:8px 12px; }
+#public-site-page.landing-pilot .pilot-evidence-label strong { color:var(--pilot-ink); font-weight:500; }
+#public-site-page.landing-pilot .pilot-evidence-body > small { color:var(--pilot-muted); font-size:12px; line-height:1.6; }
+#public-site-page.landing-pilot .pilot-evidence-state { display:inline-flex; align-items:center; gap:6px; padding:4px 7px; border:1px solid color-mix(in srgb,var(--pilot-gap) 55%,var(--pilot-line)); border-radius:6px; background:color-mix(in srgb,var(--pilot-gap) 9%,var(--pilot-surface)); color:var(--pilot-gap); font:500 11px/1.2 Inter,sans-serif; }
+#public-site-page.landing-pilot .pilot-evidence-state > span { display:grid; place-items:center; width:14px; height:14px; border:1px solid currentColor; border-radius:50%; font:600 10px/1 ui-monospace,monospace; }
+#public-site-page.landing-pilot .cp-identity-hero .pilot-workspace-entry { display:inline-flex; align-items:center; gap:10px; min-height:44px; margin:8px auto 0; padding:8px 12px; border-radius:8px; color:var(--pilot-accent); font:600 13px/1.5 Inter,sans-serif; text-underline-offset:4px; text-decoration:underline; }
+#public-site-page.landing-pilot .cp-identity-hero .pilot-workspace-entry:hover { color:var(--pilot-ink); background:var(--pilot-accent-soft); }
+#public-site-page.landing-pilot .port-readiness-note { color:var(--pilot-faint); font-size:11px; margin:42px auto 0; }
+#public-site-page.landing-pilot .cp-capabilities { padding:90px 0 80px; background:var(--pilot-bg); border-bottom:1px solid var(--pilot-line); }
+#public-site-page.landing-pilot .cp-capabilities .section-eyebrow { color:var(--pilot-accent); font-size:11px; }
+#public-site-page.landing-pilot .cp-capabilities-intro { gap:60px; }
+#public-site-page.landing-pilot .cp-capabilities p { color:var(--pilot-muted); font-size:13px; line-height:1.8; }
+#public-site-page.landing-pilot .cp-capabilities-track { color:var(--pilot-faint); border-color:var(--pilot-line); }
+#public-site-page.landing-pilot .cp-workflow-folder { margin-top:60px; }
+#public-site-page.landing-pilot .cp-workflow-areas { margin-top:18px; }
+#public-site-page.landing-pilot .cp-workflow-area { background:var(--pilot-surface); color:var(--pilot-ink); border-color:var(--pilot-line); box-shadow:0 20px 50px #00000012; }
+#public-site-page.landing-pilot .cp-workflow-area :is(h3,strong) { color:var(--pilot-ink); }
+#public-site-page.landing-pilot.modern-design .cp-workflow-sheet[data-cp-area] small { color:#234869; }
+#public-site-page.landing-pilot .cp-workflow-sheet-1 { --pilot-sheet-open:translate(-69%,-43%) rotate(-18deg); }
+#public-site-page.landing-pilot .cp-workflow-sheet-2 { --pilot-sheet-open:translate(-25%,-74%) rotate(-7deg); }
+#public-site-page.landing-pilot .cp-workflow-sheet-3 { --pilot-sheet-open:translate(25%,-74%) rotate(8deg); }
+#public-site-page.landing-pilot .cp-workflow-sheet-4 { --pilot-sheet-open:translate(69%,-43%) rotate(19deg); }
+#public-site-page.landing-pilot .cp-workflow-folder.is-open .cp-workflow-sheet.is-active { opacity:1; pointer-events:auto; transform:var(--pilot-sheet-open); border-color:#275fa3; }
+#public-site-page.landing-pilot .cp-capabilities-foot { color:var(--pilot-faint); }
+#public-site-page.landing-pilot .pricing-section { padding:80px 0; background:var(--pilot-surface); }
+#public-site-page.landing-pilot .pricing-section h2 { font:600 42px/1.25 var(--pilot-heading); letter-spacing:-1.5px; color:var(--pilot-ink); }
+#public-site-page.landing-pilot .pricing-section p { color:var(--pilot-muted); font-size:13px; }
+#public-site-page.landing-pilot .price-card { background:var(--pilot-bg); color:var(--pilot-ink); border:1px solid var(--pilot-line); border-radius:16px; box-shadow:none; padding:32px; }
+#public-site-page.landing-pilot .price-card :is(h3,strong) { color:var(--pilot-ink); }
+#public-site-page.landing-pilot .price-card .primary { background:var(--pilot-button); color:var(--pilot-button-ink); border-radius:10px; }
+#public-site-page.landing-pilot .final-cta { padding:80px 24px; background:radial-gradient(ellipse at 50% 100%,var(--pilot-accent-soft),transparent 80%),var(--pilot-bg); color:var(--pilot-ink); }
+#public-site-page.landing-pilot .final-cta h2 { font:600 clamp(34px,4.6vw,60px)/1.12 var(--pilot-heading); letter-spacing:-2px; }
+#public-site-page.landing-pilot .final-cta p { font-size:11px; color:var(--pilot-muted); }
+#public-site-page.landing-pilot .final-cta button { border-radius:10px; font-size:13px; }
+#public-site-page.landing-pilot .final-cta button:first-child { color:var(--pilot-button-ink); background:var(--pilot-button); border-color:transparent; }
+#public-site-page.landing-pilot .final-cta button:last-child { color:var(--pilot-muted); background:transparent; border-color:var(--pilot-line); }
+#public-site-page.landing-pilot .modern-footer { padding-top:60px; background:var(--pilot-bg); color:var(--pilot-ink); border-top:1px solid var(--pilot-line); }
+#public-site-page.landing-pilot .footer-grid { gap:40px; padding-bottom:40px; }
+#public-site-page.landing-pilot .footer-col :is(h3,strong) { color:var(--pilot-faint); font-size:10px; }
+#public-site-page.landing-pilot .footer-col a { color:var(--pilot-muted); font-size:12px; }
+#public-site-page.landing-pilot .footer-bottom { margin-top:0; border-color:var(--pilot-line); color:var(--pilot-faint); }
+#public-site-page.landing-pilot .footer-wordmark { margin-top:32px; font-size:clamp(42px,12vw,164px); line-height:1.05; color:var(--pilot-line); }
+#public-site-page.landing-pilot .pilot-public-menu { display:none; }
+@media(max-width:1000px) {
+  #public-site-page.landing-pilot .proof-story-layout { gap:30px; grid-template-columns:minmax(0,.8fr) minmax(0,1.2fr); }
+  #public-site-page.landing-pilot .proof-story h2 { font-size:36px; }
+}
+@media(max-width:760px) {
+  #public-site-page.landing-pilot .modern-container { width:calc(100% - 40px); }
+  #public-site-page.landing-pilot .public-nav { top:12px; width:calc(100% - 24px); padding:10px 14px; min-height:56px; border-radius:14px; }
+  #public-site-page.landing-pilot .public-brand { font-size:15px; gap:7px; }
+  #public-site-page.landing-pilot .public-brand .brandmark { width:22px; height:22px; }
+  #public-site-page.landing-pilot .public-links { gap:8px; }
+  #public-site-page.landing-pilot .public-links > a.public-login { display:none; }
+  #public-site-page.landing-pilot .public-nav .cp-get-started-cta { font-size:11px; min-height:36px; padding:10px 11px; }
+  #public-site-page.landing-pilot .public-nav .theme-toggle { width:28px; height:32px; min-height:32px; padding:5px; }
+  #public-site-page.landing-pilot .cp-identity-hero { padding:144px 20px 52px; min-height:650px; }
+  #public-site-page.landing-pilot .cp-identity-hero h1 { font-size:44px; letter-spacing:-2px; line-height:1.1; margin:28px auto 24px; }
+  #public-site-page.landing-pilot .modern-release { font-size:9px; }
+  #public-site-page.landing-pilot .modern-hero-sub { font-size:15px; }
+  #public-site-page.landing-pilot .modern-cta-pair a { font-size:12px; padding:12px 17px; }
+  #public-site-page.landing-pilot .modern-hero-caption { font-size:9px; }
+  #public-site-page.landing-pilot .cp-tech-strip { padding:24px 0 30px; }
+  #public-site-page.landing-pilot .proof-story { padding:60px 0 48px; }
+  #public-site-page.landing-pilot .proof-story-layout { display:flex; flex-direction:column; gap:30px; }
+  #public-site-page.landing-pilot .proof-story-copy { width:100%; }
+  #public-site-page.landing-pilot .proof-story h2 { font-size:36px; }
+  #public-site-page.landing-pilot .proof-story-stage { width:100%; min-height:0; }
+  #public-site-page.landing-pilot .proof-stage-top { padding:12px; gap:4px; }
+  #public-site-page.landing-pilot .proof-stage-top strong { font-size:8px; }
+  #public-site-page.landing-pilot .pilot-example-badge { font-size:8px; }
+  #public-site-page.landing-pilot .proof-panel { padding:18px 12px; }
+  #public-site-page.landing-pilot .cp-capabilities { padding:60px 0; }
+  #public-site-page.landing-pilot .cp-capabilities h2 { font-size:34px; }
+  #public-site-page.landing-pilot .cp-capabilities-intro { display:block; }
+  #public-site-page.landing-pilot .cp-capabilities-track { margin-top:26px; }
+  #public-site-page.landing-pilot .cp-workflow-folder.is-open .cp-workflow-sheet { left:30%; width:40%; height:42%; transform:var(--pilot-sheet-open); }
+  #public-site-page.landing-pilot .cp-workflow-sheet-1 { --pilot-sheet-open:translate(-58%,-15%) rotate(-10deg); }
+  #public-site-page.landing-pilot .cp-workflow-sheet-2 { --pilot-sheet-open:translate(-30%,-105%) rotate(-5deg); }
+  #public-site-page.landing-pilot .cp-workflow-sheet-3 { --pilot-sheet-open:translate(30%,-105%) rotate(5deg); }
+  #public-site-page.landing-pilot .cp-workflow-sheet-4 { --pilot-sheet-open:translate(58%,-15%) rotate(10deg); }
+  #public-site-page.landing-pilot .pricing-section { padding:56px 0; }
+  #public-site-page.landing-pilot .pricing-section h2 { font-size:34px; }
+  #public-site-page.landing-pilot .price-card { padding:26px; }
+  #public-site-page.landing-pilot .final-cta { padding:62px 20px; }
+  #public-site-page.landing-pilot .final-cta h2 { letter-spacing:-1.3px; }
+  #public-site-page.landing-pilot .modern-footer { padding-top:38px; }
+  #public-site-page.landing-pilot .footer-grid { gap:28px; padding-bottom:30px; }
+  #public-site-page.landing-pilot .footer-col a { font-size:11px; }
+  #public-site-page.landing-pilot .footer-wordmark { margin-top:26px; font-size:12vw; }
+  #public-site-page.landing-pilot .pilot-public-menu { display:block; position:relative; }
+  #public-site-page.landing-pilot .pilot-public-menu summary { display:grid; place-items:center; min-height:32px; width:28px; cursor:pointer; color:var(--pilot-muted); list-style:none; }
+  #public-site-page.landing-pilot .pilot-public-menu summary::-webkit-details-marker { display:none; }
+  #public-site-page.landing-pilot .pilot-public-menu nav { position:absolute; right:0; top:calc(100% + 18px); min-width:210px; display:flex; flex-direction:column; padding:10px; background:var(--pilot-surface); border:1px solid var(--pilot-line); border-radius:12px; box-shadow:0 16px 40px #00000024; }
+  #public-site-page.landing-pilot .pilot-public-menu nav a { display:block; padding:12px; color:var(--pilot-ink); font-size:13px; text-decoration:none; }
+}

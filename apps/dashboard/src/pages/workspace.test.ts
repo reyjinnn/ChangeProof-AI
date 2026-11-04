@@ -38,6 +38,11 @@ test('an unavailable graph preserves an explicit backend gap rather than fiction
   expect(outlet.textContent).not.toContain('Northwind');
   expect(outlet.querySelectorAll('button:not([disabled])')).toHaveLength(0);
   expect(outlet.querySelector('a[href="#/runs"]')).not.toBeNull();
+  expect(outlet.querySelector<HTMLElement>('.workspace-unavailable')?.inert).toBe(true);
+  expect(outlet.querySelector('.workspace-unavailable')?.getAttribute('aria-hidden')).toBe('true');
+  expect(outlet.querySelector('.service-blocker[role=status]')?.tagName).toBe('DIV');
+  expect(outlet.querySelector('.unavailable-reference')?.hasAttribute('open')).toBe(false);
+  expect(outlet.querySelector('.unavailable-next a[href="#/runs/new"]')).not.toBeNull();
 });
 
 function deferred<T>(): { promise: Promise<T>; resolve: (value: T) => void; reject: (error: Error) => void } {

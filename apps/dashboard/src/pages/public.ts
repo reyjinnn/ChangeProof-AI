@@ -478,10 +478,10 @@ async function renderChangelogBlock(host: HTMLElement): Promise<void> {
       }
       for (const entry of entries) {
         section.appendChild(
-          h('article', { class: 'faq-item' }, [
+          h('article', { class: 'faq-item release-entry' }, [
+            h('time', { class: 'release-date', datetime: entry.date }, [entry.date]),
             h('h3', {}, [entry.version === undefined ? entry.title : `${entry.title} (${entry.version})`]),
             h('p', {}, [entry.body]),
-            h('p', { class: 'muted' }, [entry.date]),
           ]),
         );
       }
@@ -563,7 +563,7 @@ async function renderPublicPage(outlet: HTMLElement, manifestPath: string): Prom
     outlet,
     () => apiGet<PublicRoute>(`/api/site/routes?path=${encodeURIComponent(manifestPath)}`),
     async (route) => {
-      const design = renderPublicDesign(manifestPath);
+      const design = renderPublicDesign(manifestPath, manifestPath === '/');
       if (design !== undefined) {
         outlet.replaceChildren(design);
         const published = h('section', { class: 'published-content', 'aria-label': 'Published service content' });
@@ -679,7 +679,10 @@ function framePublicDetail(outlet: HTMLElement, path: string, title: string): vo
     const provenance = h('aside', { class: 'public-note sample-provenance', 'aria-label': 'Published sample provenance' });
     for (const child of children) provenance.append(...child.childNodes);
     body.prepend(provenance);
-    root.querySelector('.public-report')?.prepend(h('p', { class: 'sample-design-label' }, ['SYNTHETIC DESIGN EXAMPLE — the diagram illustrates the layout, not live API evidence.']));
+    const label = root.querySelector('.sample-design-label');
+    const disclosure = 'SYNTHETIC DESIGN EXAMPLE — the diagram illustrates the layout, not live API evidence.';
+    if (label !== null) label.textContent = disclosure;
+    else root.querySelector('.public-report')?.prepend(h('p', { class: 'sample-design-label' }, [disclosure]));
   } else body.replaceChildren(...children);
   outlet.replaceChildren(root);
 }

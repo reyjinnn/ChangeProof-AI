@@ -1,72 +1,65 @@
-/* Workspace overview: measured HTTP health is separate from repair readiness. */
+﻿/* Overview facts are real HTTP data; its workflow diagram is explicitly static. */
 import type { HealthData } from '../../../src/core/contracts/schemas/http.js';
-
 import { apiGet, ApiRequestError } from './api.js';
-import { badge, emptyState, errorState, h, pageHead } from './components.js';
+import { badge, emptyState, errorState, h, iconSvg, pageHead } from './components.js';
+import { workflowMap } from './pilot-visuals.js';
 import { currentRouteEpoch, isCurrentRouteEpoch } from './routes.js';
 import type { AccountState } from './session.js';
 
 export async function renderStatus(outlet: HTMLElement): Promise<void> {
   const epoch = currentRouteEpoch();
-  outlet.replaceChildren(emptyState('Checking service status…', 'Contacting the ChangeProof API.'));
+  const view = h('div', { class: 'cp-pilot pilot-overview', 'aria-busy': 'true' }, [emptyState('Checking service status…', 'Contacting the ChangeProof API.')]);
+  outlet.replaceChildren(view);
   try {
     const [health, session] = await Promise.all([
-      apiGet<HealthData>('/api/health'),
-      apiGet<AccountState>('/api/auth/session').catch(() => undefined),
+      apiGet<HealthData>('/api/health'), apiGet<AccountState>('/api/auth/session').catch(() => undefined),
     ]);
     if (!isCurrentRouteEpoch(epoch)) return;
-    const account = session === undefined ? 'Unavailable' : session.authenticated ? 'Active' : 'Guest';
-    const head = pageHead({
-      title: 'Workspace overview',
-      subtitle: 'Start with the change. Keep the evidence in view.',
-    });
+    const authenticated = session?.authenticated === true;
+    const account = session === undefined ? 'Unavailable' : authenticated ? 'Active' : 'Guest';
+    const fact = (label: string, value: string | HTMLElement, note: string): HTMLElement => h('div', {}, [h('dt', {}, [label]), h('dd', {}, [value, h('small', {}, [note])])]);
+    const facts = h('dl', { class: 'overview-facts', 'aria-label': 'Current service facts' }, [
+      fact('API health', badge('ok', health.status), 'Live HTTP response'), fact('Account service', account, 'Server-reported session'),
+      fact('Published content', health.contentVersion, 'Manifest identity'), fact('Repair readiness', 'Not assessed', 'Not an execution result'),
+    ]);
+    const head = pageHead({ title: 'Workspace overview', subtitle: 'Start with the change. Keep the evidence in view.' });
     head.classList.add('overview-head');
-    const stat = (label: string, value: string, note: string): HTMLElement => h('div', { class: 'stat' }, [
-      h('div', { class: 'label' }, [label]), h('div', { class: 'value' }, [value]), h('div', { class: 'sub' }, [note]),
-    ]);
-    const stats = h('div', { class: 'stats overview-stats' }, [
-      stat('API health', health.status.toUpperCase(), 'Live response from this service'),
-      stat('Published content', health.contentVersion, 'Content manifest version'),
-      stat('Account service', account, session === undefined ? 'Sign-in service could not be reached' : 'Current server-reported session'),
-      stat('Repair readiness', 'Not assessed', 'API health is not execution proof'),
-    ]);
-    const welcome = h('section', { class: 'welcome-panel workspace-focus' }, [
-      h('div', { class: 'workspace-focus-copy' }, [
-        h('div', { class: 'mini-label' }, ['WORKSPACE SUMMARY']),
-        h('h2', {}, ['Your next change.', h('br'), 'Evidence in view.']),
-        h('p', {}, ['Explore a synthetic sample or sign in to work with your projects and runs.']),
-        h('div', { class: 'cta-row' }, [
-          h('a', { class: 'button', href: '#/p/sample-report' }, ['Explore a sample report']),
-          h('a', { class: 'button secondary-light', href: '#/runs' }, ['View runs']),
+    const welcome = h('section', { class: 'overview-start', 'aria-labelledby': 'overview-start-title' }, [
+      h('div', { class: 'overview-start-copy' }, [
+        h('span', { class: 'pilot-eyebrow' }, [authenticated ? 'YOUR WORKSPACE' : 'YOUR NEXT STEP']),
+        h('h2', { id: 'overview-start-title' }, ['Your next change.', h('br'), 'Evidence in view.']),
+        h('p', {}, [authenticated ? 'Define what should change, bring the right context, and keep every unknown visible.' : 'Sign in to prepare your change, or explore a clearly labeled sample before you begin.']),
+        h('div', { class: 'overview-start-actions' }, [
+          h('a', { class: 'pilot-primary', href: authenticated ? '#/runs/new' : '#/login', 'data-overview-primary': '' }, [authenticated ? 'Prepare a change' : 'Sign in to your workspace', iconSvg('new-run')]),
+          h('a', { class: 'pilot-secondary', href: '#/p/sample-report' }, ['Explore a sample report']),
         ]),
+        h('p', { class: 'overview-start-note' }, ['You define the intent. Independent evidence determines the outcome.']),
+      ]), workflowMap('overview'),
+    ]);
+    const actions = h('section', { class: 'overview-actions', 'aria-labelledby': 'overview-actions-title' }, [
+      h('div', { class: 'overview-section-title' }, [h('span', { class: 'pilot-eyebrow' }, ['GET YOUR BEARINGS']), h('h2', { id: 'overview-actions-title' }, ['A useful next step.'])]),
+      h('div', { class: 'overview-action-list' }, [
+        ...([
+          ['01', 'Connect project', 'Give the change a home. Repository access is a separate authorization.', '#/projects/new', 'public'],
+          ['02', 'Submit a change', 'Capture intent and scope in a versioned draft before submission.', '#/runs/new', 'new-run'],
+          ['03', 'Explore evidence', 'Review artifacts and their verification boundaries.', '#/evidence', 'evidence'],
+        ] as const).map(([number, title, description, href, icon]) => h('a', { class: 'overview-action-link', href }, [h('span', { class: 'overview-action-number' }, [number]), iconSvg(icon), h('span', {}, [h('strong', {}, [title]), h('small', {}, [description])]), h('span', { class: 'overview-action-arrow', 'aria-hidden': 'true' }, ['↗'])])),
       ]),
-      h('div', { class: 'workspace-live-summary' }, [
-        h('div', { class: 'live-summary-caption' }, ['Service connection']),
-        h('p', {}, ['API ', badge('ok', health.status)]),
-        h('p', {}, [`Account: ${account}`]),
-        h('small', {}, ['Live service facts, not a repair verdict.']),
+    ]);
+    const readiness = h('section', { class: 'overview-readiness', 'aria-labelledby': 'overview-readiness-title' }, [
+      h('div', {}, [h('span', { class: 'pilot-eyebrow' }, ['BEFORE A LIVE REPAIR']), h('h2', { id: 'overview-readiness-title' }, ['Clarity includes the limits.']), h('p', {}, ['No live Muse model or Modal sandbox connection is confirmed by this overview.']), h('a', { href: '#/p/verification' }, ['Read the verification requirements →'])]),
+      h('ul', {}, [
+        ...[['Intent & scope', 'Defined before submission'], ['Repository access', 'Requires current grants'], ['Execution & verification', 'Required; not assessed here']].map(([title, detail]) => h('li', {}, [h('strong', {}, [title ?? '']), h('span', {}, [detail ?? ''])])),
       ]),
+      h('p', { class: 'overview-readiness-note' }, ['Prerequisites, not a readiness assessment. Samples are illustrative. A queued run is not a completed repair.']),
     ]);
-    const actions = h('section', { class: 'card quick-card' }, [
-      h('div', { class: 'mini-label' }, ['MAKE YOUR NEXT MOVE']), h('h2', {}, ['Quick actions']),
-      h('a', { class: 'quick-link', href: '#/runs/new' }, [h('strong', {}, ['Submit a change']), h('span', {}, ['Issue, PR, or change intent'])]),
-      h('a', { class: 'quick-link', href: '#/projects/new' }, [h('strong', {}, ['Connect project']), h('span', {}, ['Repositories and readiness'])]),
-      h('a', { class: 'quick-link', href: '#/evidence' }, [h('strong', {}, ['Explore evidence']), h('span', {}, ['Manifests and verification results'])]),
-    ]);
-    const readiness = h('section', { class: 'card readiness-note' }, [
-      h('h2', {}, ['Before a live repair']),
-      h('p', {}, ['No live Muse model or Modal sandbox connection is confirmed by this overview. Live repair also requires a configured worker, approved intent, and the required verification inputs.']),
-      h('p', { class: 'muted' }, ['Samples are illustrative. A queued run is not a completed repair, and missing execution evidence must remain unverified.']),
-      h('a', { class: 'text-link', href: '#/p/verification' }, ['Read how verification works →']),
-    ]);
-    outlet.replaceChildren(head, h('div', { class: 'overview-grid' }, [welcome, actions]), stats, readiness);
+    view.replaceChildren(head, facts, welcome, actions, readiness);
+    view.setAttribute('aria-busy', 'false');
   } catch (error) {
     if (!isCurrentRouteEpoch(epoch)) return;
     const message = error instanceof ApiRequestError ? error.failure.message : 'An unexpected error occurred.';
-    const state = errorState('Service unreachable', message, {
-      label: 'Retry', onClick: () => void renderStatus(outlet),
-    });
+    const state = errorState('Service unreachable', message, { label: 'Retry', onClick: () => void renderStatus(outlet) });
     state.querySelector('h2')?.replaceWith(h('h1', {}, ['Service unreachable']));
-    outlet.replaceChildren(state);
+    view.replaceChildren(state); view.setAttribute('aria-busy', 'false');
   }
 }

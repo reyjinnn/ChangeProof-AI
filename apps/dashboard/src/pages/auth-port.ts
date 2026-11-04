@@ -7,6 +7,7 @@ export function standaloneAuth(card: HTMLElement): HTMLElement {
   const source = renderPublicDesign('/product');
   const nav = source?.querySelector<HTMLElement>('.public-nav') ?? h('nav');
   const footer = source?.querySelector<HTMLElement>('.modern-footer') ?? h('footer');
+  for (const heading of footer.querySelectorAll('h3')) heading.replaceWith(h('h2', { class: heading.className }, [heading.textContent]));
   const story = h('section', { class: 'fresh-auth-story', 'aria-label': 'One connected workflow' }, [
     h('span', { class: 'mini-label' }, ['CHANGE WITH CONTEXT']),
     h('h2', {}, ['One workspace.', h('br'), 'From impact', h('br'), 'to evidence.']),
