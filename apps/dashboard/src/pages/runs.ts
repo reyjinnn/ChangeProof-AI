@@ -422,9 +422,13 @@ async function renderForm(outlet: HTMLElement, ctx: RouteContext): Promise<void>
     if (lines.length > 0) notes.input.value = lines.join('\n');
   };
   templateSelect.addEventListener('change', applyTemplate);
+  const requestedTemplate = ctx.params.get('template');
+  if (templates.some(template => template.id === requestedTemplate)) { templateSelect.value = requestedTemplate ?? ''; applyTemplate(); }
 
   const project = field({ id: 'run-project', label: 'Project id', required: true, hint: 'Pick a known id or create one.' });
   project.input.setAttribute('list', 'project-options');
+  const requestedProject = ctx.params.get('project');
+  if (projects.hits.some(hit => hit.id === requestedProject)) project.input.value = requestedProject ?? '';
   const projectOptions = h('datalist', { id: 'project-options' }, [
     ...projects.hits.map((hit) => h('option', { value: hit.id }, [hit.title])),
   ]);
@@ -704,6 +708,13 @@ async function renderForm(outlet: HTMLElement, ctx: RouteContext): Promise<void>
     ]),
     submitSection,
   );
+  // Preserve the protected fields/handlers while matching the source's
+  // main form + independent summary composition.
+  const sections = [...outlet.children];
+  const main = h('div', { class: 'run-form-main' });
+  const summary = h('aside', { class: 'card run-form-summary', 'aria-label': 'Submission and proof requirements' }, [h('span', { class: 'mini-label' }, ['BEFORE YOU SUBMIT']), h('h2', {}, ['Scope, consent, and proof.']), h('p', {}, ['Save a versioned draft first. Submission preserves its exact identity and your current grants.']), h('p', {}, ['Muse and Modal are not configured for live repair in this demo. A queued run is not a verified repair.']), h('a', { href: '#/p/verification' }, ['Read the verification requirements'])]);
+  main.append(...sections);
+  outlet.replaceChildren(h('div', { class: 'form-grid run-form-layout' }, [main, summary]));
 
   if (resumeId !== undefined && resumeId !== '') {
     try {

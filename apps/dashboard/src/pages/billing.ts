@@ -4,7 +4,7 @@
  * webhook events — so the page says so instead of faking a table. */
 
 import { apiGet, ApiRequestError } from '../api.js';
-import { emptyState, errorState, h } from '../components.js';
+import { emptyState, errorState, h, pageHead } from '../components.js';
 import { registerRoute } from '../routes.js';
 
 interface BillingSession {
@@ -20,8 +20,8 @@ interface Reservation {
 }
 
 interface Balances {
-  readonly periodId: string;
-  readonly cap: number;
+  readonly periodId: string | null;
+  readonly cap: number | null;
   readonly consumed: number;
   readonly reservedActive: number;
   readonly reservations: readonly Reservation[];
@@ -70,10 +70,20 @@ async function renderBilling(outlet: HTMLElement): Promise<void> {
     return;
   }
 
+  if (balances.periodId === null || balances.cap === null) {
+    outlet.replaceChildren(
+      pageHead({ title: 'Usage & data', subtitle: 'Your current billing period and data controls.' }),
+      emptyState('Usage period not configured', 'This organization has no active usage entitlement. Ask your operator to configure the period and cap before submitting a run.'),
+      h('section', { class: 'card' }, [h('h2', {}, ['Data and privacy']), h('p', {}, ['Account and organization data controls remain available.']), h('a', { href: '#/privacy' }, ['Open privacy & data controls'])]),
+    );
+    return;
+  }
+
+  const cap = balances.cap;
   const rows = balances.reservations.map((reservation) =>
     h('tr', {}, [
       h('td', {}, [reservation.reservationId]),
-      h('td', {}, [h('a', { href: `#/runs/${reservation.runId}` }, [reservation.runId])]),
+      h('td', {}, [h('a', { href: `#/run?id=${encodeURIComponent(reservation.runId)}` }, [reservation.runId])]),
       h('td', {}, [reservation.state]),
       h('td', {}, [String(reservation.reserved)]),
       h('td', {}, [String(reservation.consumed)]),
@@ -104,15 +114,25 @@ async function renderBilling(outlet: HTMLElement): Promise<void> {
     ]),
   ]);
 
-  outlet.replaceChildren(
-    stats,
-    h('section', { class: 'card' }, [
-      h('div', { class: 'eyebrow' }, ['Usage & Reservations']),
-      h('h1', {}, ['Billing']),
+  const percent = (value: number): string => `${Math.min(100, Math.max(0, cap > 0 ? value / cap * 100 : 0))}%`;
+  const entitlement = h('section', { class: 'card usage-entitlement' }, [
+    h('div', { class: 'card-head' }, [h('h2', {}, ['Current period entitlement']), h('span', { class: 'badge' }, [balances.periodId])]),
+    h('div', { class: 'pad' }, [
+      h('p', {}, [h('strong', {}, [String(balances.consumed + balances.reservedActive)]), ` of ${balances.cap} · ${remaining} remaining`]),
+      h('div', { class: 'usage-bar', role: 'img', 'aria-label': `${balances.consumed} used, ${balances.reservedActive} reserved, ${remaining} remaining` }, [
+        h('span', { class: 'settled', style: `width:${percent(balances.consumed)}` }),
+        h('span', { class: 'reserved', style: `width:${percent(balances.reservedActive)}` }),
+      ]),
+      h('div', { class: 'legend' }, [h('span', {}, [`Used (settled) ${balances.consumed}`]), h('span', {}, [`Reserved ${balances.reservedActive}`])]),
+      h('p', { class: 'help' }, ['Usage and reservation status are separate from run status and verification verdicts.']),
+    ]),
+  ]);
+  const reservations = h('section', { class: 'card' }, [
+      h('h2', {}, ['Usage & reservations']),
       h('p', {}, [`Period ${balances.periodId}: cap ${balances.cap}, consumed ${balances.consumed}, reserved ${balances.reservedActive}, remaining ${remaining}.`]),
       balances.reservations.length === 0
         ? h('p', {}, ['No open reservations in this period.'])
-        : h('table', {}, [
+        : h('div', { class: 'table-wrap' }, [h('table', {}, [
             h('thead', {}, [
               h('tr', {}, [
                 h('th', {}, ['Reservation']),
@@ -123,14 +143,23 @@ async function renderBilling(outlet: HTMLElement): Promise<void> {
               ]),
             ]),
             h('tbody', {}, rows),
-          ]),
-    ]),
-    h('section', { class: 'card' }, [
+          ])]),
+    ]);
+  const invoices = h('section', { class: 'card' }, [
       h('div', { class: 'eyebrow' }, ['Provider Settlement']),
       h('h2', {}, ['Invoices']),
       h('p', {}, [
         'There is no invoice listing: the service records provider payment webhooks but exposes no invoice or payment-method endpoint, so charges live with the payment provider.',
       ]),
+    ]);
+  outlet.replaceChildren(
+    pageHead({ title: 'Usage & data', subtitle: 'Your current billing period, reservations, and data controls.' }),
+    entitlement,
+    stats,
+    h('div', { class: 'split' }, [reservations, invoices]),
+    h('div', { class: 'grid2' }, [
+      h('section', { class: 'card' }, [h('h2', {}, ['Data and privacy']), h('p', {}, ['Provider terms, region, and retention must be confirmed by the operator. This preview does not promise a retention period.']), h('a', { href: '#/p/privacy-policy' }, ['Read the draft privacy policy'])]),
+      h('section', { class: 'card' }, [h('h2', {}, ['Data deletion']), h('p', {}, ['Organization owners can review the real deletion controls and pending status in privacy settings.']), h('a', { href: '#/privacy' }, ['Open privacy & data controls'])]),
     ]),
   );
 }

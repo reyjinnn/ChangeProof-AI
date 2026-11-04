@@ -98,3 +98,16 @@ test('route render announces, titles, and focuses the heading', async () => {
   expect(document.getElementById('announcer')?.textContent).toBe('Loaded: Probe.');
   expect(document.activeElement?.textContent).toBe('Probe page');
 });
+
+test('following a navigation link also resets the mobile trigger state', async () => {
+  registerRoute({ path: '/drawer-destination', title: 'Destination', render: (outlet) => { outlet.textContent = 'Destination'; } });
+  const app = document.createElement('div');
+  document.body.appendChild(app);
+  const { outlet } = renderShell(app);
+  const menu = document.querySelector<HTMLButtonElement>('.menu-button');
+  menu?.click();
+  expect(menu?.getAttribute('aria-expanded')).toBe('true');
+  await renderRoute(outlet, '#/drawer-destination');
+  expect(menu?.getAttribute('aria-expanded')).toBe('false');
+  expect(document.body.classList.contains('nav-open')).toBe(false);
+});

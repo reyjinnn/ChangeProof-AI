@@ -1,114 +1,72 @@
-/* Service status page (T-42). The default route: reads live health
- * from the API so the shell always lands on real behavior, never a
- * decorative placeholder. */
-
+/* Workspace overview: measured HTTP health is separate from repair readiness. */
 import type { HealthData } from '../../../src/core/contracts/schemas/http.js';
 
 import { apiGet, ApiRequestError } from './api.js';
 import { badge, emptyState, errorState, h, pageHead } from './components.js';
+import { currentRouteEpoch, isCurrentRouteEpoch } from './routes.js';
 import type { AccountState } from './session.js';
 
 export async function renderStatus(outlet: HTMLElement): Promise<void> {
+  const epoch = currentRouteEpoch();
   outlet.replaceChildren(emptyState('Checking service status…', 'Contacting the ChangeProof API.'));
   try {
     const [health, session] = await Promise.all([
       apiGet<HealthData>('/api/health'),
-      apiGet<AccountState>('/api/auth/session').catch((): AccountState => ({ authenticated: false })),
+      apiGet<AccountState>('/api/auth/session').catch(() => undefined),
     ]);
-
+    if (!isCurrentRouteEpoch(epoch)) return;
+    const account = session === undefined ? 'Unavailable' : session.authenticated ? 'Active' : 'Guest';
     const head = pageHead({
-      eyebrow: 'Workspace Overview',
-      title: 'Service status',
-      subtitle: 'Live control-plane telemetry, tenant boundary status, and verification architecture.',
+      title: 'Workspace overview',
+      subtitle: 'Start with the change. Keep the evidence in view.',
     });
-
-    const stats = h('div', { class: 'stats' }, [
-      h('div', { class: 'stat' }, [
-        h('div', { class: 'label' }, ['API health']),
-        h('div', { class: 'value' }, [health.status.toUpperCase()]),
-        h('div', { class: 'sub' }, ['Live /api/health endpoint']),
-      ]),
-      h('div', { class: 'stat' }, [
-        h('div', { class: 'label' }, ['Content manifest']),
-        h('div', { class: 'value' }, [`v${health.contentVersion}`]),
-        h('div', { class: 'sub' }, ['Published contract version']),
-      ]),
-      h('div', { class: 'stat' }, [
-        h('div', { class: 'label' }, ['Session state']),
-        h('div', { class: 'value' }, [session.authenticated ? 'Active' : 'Guest']),
-        h('div', { class: 'sub' }, [
-          session.authenticated ? 'Authenticated workspace session' : 'Sign in to access tenant runs',
-        ]),
-      ]),
-      h('div', { class: 'stat' }, [
-        h('div', { class: 'label' }, ['Verdict authority']),
-        h('div', { class: 'value' }, ['Policy']),
-        h('div', { class: 'sub' }, ['Deterministic verifier only']),
-      ]),
+    head.classList.add('overview-head');
+    const stat = (label: string, value: string, note: string): HTMLElement => h('div', { class: 'stat' }, [
+      h('div', { class: 'label' }, [label]), h('div', { class: 'value' }, [value]), h('div', { class: 'sub' }, [note]),
     ]);
-
-    const welcomeCard = h('section', { class: 'card welcome-panel', 'aria-live': 'polite' }, [
-      h('div', {}, [
-        h('div', { class: 'eyebrow' }, ['Control Plane Telemetry']),
-        h('h2', {}, ['Workspace & verification command center']),
-        h('p', {}, [
-          'API ',
-          badge('ok', health.status),
-          document.createTextNode(` · content ${health.contentVersion}`),
-        ]),
-        h('p', { class: 'muted' }, [
-          'This status reflects the API behind this dashboard only. It says nothing about any repair verdict.',
+    const stats = h('div', { class: 'stats overview-stats' }, [
+      stat('API health', health.status.toUpperCase(), 'Live response from this service'),
+      stat('Published content', health.contentVersion, 'Content manifest version'),
+      stat('Account service', account, session === undefined ? 'Sign-in service could not be reached' : 'Current server-reported session'),
+      stat('Repair readiness', 'Not assessed', 'API health is not execution proof'),
+    ]);
+    const welcome = h('section', { class: 'welcome-panel workspace-focus' }, [
+      h('div', { class: 'workspace-focus-copy' }, [
+        h('div', { class: 'mini-label' }, ['WORKSPACE SUMMARY']),
+        h('h2', {}, ['Your next change.', h('br'), 'Evidence in view.']),
+        h('p', {}, ['Explore a synthetic sample or sign in to work with your projects and runs.']),
+        h('div', { class: 'cta-row' }, [
+          h('a', { class: 'button', href: '#/p/sample-report' }, ['Explore a sample report']),
+          h('a', { class: 'button secondary-light', href: '#/runs' }, ['View runs']),
         ]),
       ]),
       h('div', { class: 'workspace-live-summary' }, [
-        h('div', { class: 'live-summary-caption' }, ['Boundary Checks']),
-        h('div', { class: 'live-summary-row' }, [
-          h('span', { class: 'live-dot', 'aria-hidden': 'true' }, []),
-          h('span', {}, [`API (${health.status})`]),
-        ]),
-        h('div', { class: 'live-summary-row' }, [
-          h('span', { class: 'live-dot', 'aria-hidden': 'true' }, []),
-          h('span', {}, [
-            session.authenticated ? 'Tenant scope active' : 'Guest scope',
-          ]),
-        ]),
-        h('div', { class: 'live-summary-row' }, [
-          h('span', { class: 'live-dot', 'aria-hidden': 'true' }, []),
-          h('span', {}, ['SHA-256 evidence store']),
-        ]),
+        h('div', { class: 'live-summary-caption' }, ['Service connection']),
+        h('p', {}, ['API ', badge('ok', health.status)]),
+        h('p', {}, [`Account: ${account}`]),
+        h('small', {}, ['Live service facts, not a repair verdict.']),
       ]),
     ]);
-
-    const quickStack = h('section', { class: 'card quick-card' }, [
-      h('div', {}, [
-        h('div', { class: 'eyebrow' }, ['Assurance Guarantees']),
-        h('h2', {}, ['Verification boundaries']),
-      ]),
-      h('div', { class: 'quick-actions-list' }, [
-        h('div', { class: 'faq-item' }, [
-          h('strong', {}, ['1. Frozen protected oracle']),
-          h('p', { class: 'muted' }, ['Mounted only inside the independent verifier outside the candidate workspace.']),
-        ]),
-        h('div', { class: 'faq-item' }, [
-          h('strong', {}, ['2. Isolated guest execution']),
-          h('p', { class: 'muted' }, ['Customer code never executes on the control plane or web host process.']),
-        ]),
-        h('div', { class: 'faq-item' }, [
-          h('strong', {}, ['3. Pure deterministic policy']),
-          h('p', { class: 'muted' }, ['Dimensions are assessed separately without averaging or model self-judgment.']),
-        ]),
-      ]),
+    const actions = h('section', { class: 'card quick-card' }, [
+      h('div', { class: 'mini-label' }, ['MAKE YOUR NEXT MOVE']), h('h2', {}, ['Quick actions']),
+      h('a', { class: 'quick-link', href: '#/runs/new' }, [h('strong', {}, ['Submit a change']), h('span', {}, ['Issue, PR, or change intent'])]),
+      h('a', { class: 'quick-link', href: '#/projects/new' }, [h('strong', {}, ['Connect project']), h('span', {}, ['Repositories and readiness'])]),
+      h('a', { class: 'quick-link', href: '#/evidence' }, [h('strong', {}, ['Explore evidence']), h('span', {}, ['Manifests and verification results'])]),
     ]);
-
-    const grid = h('div', { class: 'overview-grid' }, [welcomeCard, quickStack]);
-    outlet.replaceChildren(head, stats, grid);
+    const readiness = h('section', { class: 'card readiness-note' }, [
+      h('h2', {}, ['Before a live repair']),
+      h('p', {}, ['No live Muse model or Modal sandbox connection is confirmed by this overview. Live repair also requires a configured worker, approved intent, and the required verification inputs.']),
+      h('p', { class: 'muted' }, ['Samples are illustrative. A queued run is not a completed repair, and missing execution evidence must remain unverified.']),
+      h('a', { class: 'text-link', href: '#/p/verification' }, ['Read how verification works →']),
+    ]);
+    outlet.replaceChildren(head, h('div', { class: 'overview-grid' }, [welcome, actions]), stats, readiness);
   } catch (error) {
+    if (!isCurrentRouteEpoch(epoch)) return;
     const message = error instanceof ApiRequestError ? error.failure.message : 'An unexpected error occurred.';
-    outlet.replaceChildren(
-      errorState('Service unreachable', message, {
-        label: 'Retry',
-        onClick: () => void renderStatus(outlet),
-      }),
-    );
+    const state = errorState('Service unreachable', message, {
+      label: 'Retry', onClick: () => void renderStatus(outlet),
+    });
+    state.querySelector('h2')?.replaceWith(h('h1', {}, ['Service unreachable']));
+    outlet.replaceChildren(state);
   }
 }

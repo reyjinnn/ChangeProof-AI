@@ -1,0 +1,3 @@
+/* The original DOM starts from browser defaults, not the previous generic
+ * application skin. Keep SVG presentation attributes and inherited tokens. */
+.reyn-design :where(*:not(svg):not(svg *)) { all: revert; }

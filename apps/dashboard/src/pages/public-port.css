@@ -1,0 +1,39 @@
+/* Integration-only corrections around the directly ported public skin. */
+body.public-surface:has(#public-site-page) { background: #fafafa; }
+body.public-surface:has(#public-site-page)::before { display: none; }
+body.public-surface #outlet:has(> #public-site-page) { max-width: none; margin: 0; padding: 0; }
+#public-site-page { display: flow-root; min-height: 100dvh; }
+#public-site-page .reyn-content { padding: 0; }
+#public-site-page [hidden] { display: none; }
+#public-site-page [id] { scroll-margin-top: 110px; }
+#public-site-page .public-nav { z-index: 40; }
+#public-site-page.modern-design .reyn-content h1[tabindex="-1"]:focus { outline: none; box-shadow: none; }
+#public-site-page.modern-design .public-page-content .public-info-card { background: var(--glass); }
+#public-site-page .cp-ghost-fibers { display: block; }
+#public-site-page .port-readiness-note { max-width: 800px; margin: 32px auto; padding: 0 24px; color: var(--muted); font-size: 12px; line-height: 1.7; text-align: center; }
+#public-site-page .published-content { max-width: 1120px; margin: 36px auto; padding: 0 24px; }
+#public-site-page .published-actions { margin: 24px 0; }
+#public-site-page .modern-reveal, #public-site-page [data-hero] { opacity: 1; transform: none; }
+#public-site-page .legal-draft { margin-bottom: 28px; }
+#public-site-page.modern-design .modern-release b { background: #245d94; color: #fff; }
+#public-site-page.modern-design [data-proof-tab][aria-selected=true] span { color: #fff; }
+[data-theme=dark] #public-site-page.modern-design [data-proof-tab][aria-selected=true] span { color: #173b61; }
+#public-site-page.modern-design .cp-tech-strip > p,
+#public-site-page.modern-design [data-proof-tab]:not([aria-selected=true]) span,
+#public-site-page.modern-design .proof-panel-heading > span,
+#public-site-page.modern-design .proof-flow-node > span,
+#public-site-page.modern-design .cp-capabilities-foot { color: #4d6781; }
+[data-theme=dark] #public-site-page.modern-design .cp-tech-strip > p,
+[data-theme=dark] #public-site-page.modern-design [data-proof-tab]:not([aria-selected=true]) span,
+[data-theme=dark] #public-site-page.modern-design .proof-panel-heading > span,
+[data-theme=dark] #public-site-page.modern-design .proof-flow-node > span,
+[data-theme=dark] #public-site-page.modern-design .cp-capabilities-foot { color: #bad4ec; }
+#public-site-page.modern-design .cp-workflow-sheet small { color: #234869; }
+[data-theme=dark] #public-site-page.modern-design .cp-workflow-sheet small { color: #d5e8f8; }
+#public-site-page .public-note { line-height: 1.7; }
+#public-site-page :is(button,a,input,summary):focus-visible { outline: 3px solid var(--blue); outline-offset: 4px; }
+#public-site-page .public-links [data-theme-toggle] .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+@media(prefers-reduced-motion:reduce) { #public-site-page *, #public-site-page *::before, #public-site-page *::after { animation: none; transition: none; scroll-behavior: auto; } }
+
+#public-site-page .footer-wordmark > svg { display:block; width:100%; height:1em; overflow:visible; font:inherit; letter-spacing:inherit; }
+#public-site-page .footer-wordmark text { font:inherit; letter-spacing:inherit; }

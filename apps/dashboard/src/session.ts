@@ -4,7 +4,7 @@
  * tickets. */
 
 import { apiGet, apiPost } from './api.js';
-import { h } from './components.js';
+import { h, svgEl } from './components.js';
 
 export const SESSION_CHANGED_EVENT = 'cp:session-changed';
 
@@ -39,12 +39,18 @@ export function renderAccount(state: AccountState): void {
         notifySessionChanged();
       });
   });
-  slot.replaceChildren(
-    h('span', { class: 'badge', 'data-tone': 'info' }, [`${state.tenantId} · ${state.role}`]),
-    h('a', { class: 'button', href: '#/settings' }, ['Settings']),
-    document.createTextNode(' '),
-    logout,
-  );
+  const summary = h('summary', { id: 'account-summary', 'aria-label': 'Account menu', title: `${state.tenantId} · ${state.role}` }, [
+    svgEl('svg', { viewBox: '0 0 24 24', width: '18', height: '18', fill: 'none', stroke: 'currentColor', 'stroke-width': '1.6', 'aria-hidden': 'true' }, [svgEl('circle', { cx: '12', cy: '8', r: '3.5' }), svgEl('path', { d: 'M5 21v-2a7 7 0 0 1 14 0v2' })]),
+  ]);
+  const menu = h('details', { id: 'account-menu', class: 'account-menu' }, [summary,
+    h('div', { class: 'account-popover' }, [
+      h('strong', {}, [state.tenantId]), h('span', { class: 'badge', 'data-tone': 'info' }, [`${state.tenantId} · ${state.role}`]),
+      h('a', { href: '#/account' }, ['Account settings']), h('a', { href: '#/team' }, ['Team & access']), h('a', { href: '#/privacy' }, ['Privacy & data']),
+      h('a', { class: 'button', href: '#/settings' }, ['Settings']), logout,
+    ]),
+  ]);
+  menu.addEventListener('keydown', event => { if (event.key === 'Escape') { event.stopPropagation(); menu.open = false; summary.focus(); } });
+  slot.replaceChildren(menu);
 }
 
 export async function refreshAccount(): Promise<void> {

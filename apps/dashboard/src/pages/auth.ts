@@ -13,7 +13,9 @@ import { apiGet, apiPost, ApiRequestError } from '../api.js';
 import { emptyState, errorState, field, h } from '../components.js';
 import { notifySessionChanged } from '../session.js';
 import { validateReturnTarget } from './public.js';
-import { registerRoute, type RouteContext } from '../routes.js';
+import { currentRouteEpoch, isCurrentRouteEpoch, registerRoute, type Route, type RouteContext } from '../routes.js';
+import { registerPassword, registerShell } from './register.js';
+import { recoveryModal, standaloneAuth } from './auth-port.js';
 
 let claimTicket: string | undefined;
 
@@ -52,39 +54,7 @@ interface Providers {
 }
 
 function authShell(formCard: HTMLElement): HTMLElement {
-  const story = h('aside', { class: 'fresh-auth-story', 'aria-label': 'Security guarantees' }, [
-    h('div', {}, [
-      h('div', { class: 'auth-story-eyebrow' }, ['Tenant Isolation & Identity']),
-      h('h2', {}, ['Evidence-backed change assurance with strict tenant boundaries']),
-      h('p', {}, [
-        'Every run, artifact, and session is scoped to your organization grant version. The browser holds no authority; single-use verification tickets stay in memory only.',
-      ]),
-    ]),
-    h('div', { class: 'auth-proof' }, [
-      h('div', { class: 'auth-proof-row' }, [
-        h('span', { class: 'auth-step-icon', 'aria-hidden': 'true' }, ['01']),
-        h('div', {}, [
-          h('strong', {}, ['Server-validated return targets']),
-          h('small', {}, ['External or untrusted redirect URLs are rejected at the boundary.']),
-        ]),
-      ]),
-      h('div', { class: 'auth-proof-row' }, [
-        h('span', { class: 'auth-step-icon', 'aria-hidden': 'true' }, ['02']),
-        h('div', {}, [
-          h('strong', {}, ['In-memory single-use tickets']),
-          h('small', {}, ['Verification and claim tokens never touch localStorage.']),
-        ]),
-      ]),
-      h('div', { class: 'auth-proof-row' }, [
-        h('span', { class: 'auth-step-icon', 'aria-hidden': 'true' }, ['03']),
-        h('div', {}, [
-          h('strong', {}, ['Explicit tenant selection']),
-          h('small', {}, ['Multi-org accounts choose their active organization explicitly.']),
-        ]),
-      ]),
-    ]),
-  ]);
-  return h('div', { class: 'fresh-auth-shell' }, [story, formCard]);
+  return standaloneAuth(formCard);
 }
 
 function providersNote(host: HTMLElement): void {
@@ -93,7 +63,7 @@ function providersNote(host: HTMLElement): void {
       if (providers.github) return;
       host.appendChild(
         h('p', { class: 'muted' }, [
-          'GitHub login is unavailable: no authorized GitHub App is configured for this service. Email login below works.',
+          'GitHub login is unavailable: no authorized GitHub App is configured. Email sign-in requires the account service to be available.',
         ]),
       );
     })
@@ -113,13 +83,20 @@ function loginForm(outlet: HTMLElement, ctx: RouteContext): void {
     required: true,
     autocomplete: 'current-password',
   });
+  for (const part of [email, password]) {
+    const label = part.wrap.querySelector('label')?.textContent ?? '';
+    part.wrap = h('label', { class: 'field', for: part.input.id }, [label, part.input]);
+  }
+  email.input.placeholder = 'name@company.com';
+  password.input.placeholder = 'Enter your password';
+  registerPassword(password.input, password.wrap);
   const tenant = field({ id: 'login-tenant', label: 'Organization (only if you belong to several)', autocomplete: 'organization' });
   const prefillTenant = params.get('tenant');
   if (prefillTenant !== undefined && prefillTenant !== '') tenant.input.value = prefillTenant;
   const tenantRow = tenant.wrap;
   if (prefillTenant === undefined || prefillTenant === '') tenantRow.style.display = 'none';
   const remember = h('input', { id: 'login-remember', name: 'login-remember', type: 'checkbox' });
-  const rememberRow = h('p', {}, [remember, h('label', { for: 'login-remember' }, [' Keep me logged in on this device'])]);
+  const rememberRow = h('div', { class: 'auth-form-options' }, [h('label', { for: 'login-remember' }, [remember, 'Remember me']), h('a', { href: '#/forgot-password' }, ['Forgot password?'])]);
   const alert = h('div', {}, []);
   const submit = h('button', { class: 'button primary', type: 'submit' }, ['Log in']);
   const form = h('form', { novalidate: 'novalidate' }, [
@@ -157,9 +134,9 @@ function loginForm(outlet: HTMLElement, ctx: RouteContext): void {
           ...(tenant.input.value.trim() === '' ? {} : { tenantId: tenant.input.value.trim() }),
           ...(ret.valid ? { returnTarget: ret.target } : {}),
         });
-        // The return target was validated server-side; deep /app links
-        // land on the start page until the run journey (T-45) owns them.
-        window.location.hash = '#/';
+        // The API has accepted the return target; the hash router maps
+        // documented /app paths to the corresponding real workspace view.
+        window.location.hash = ret.valid ? `#${ret.target}` : '#/';
         notifySessionChanged();
       } catch (error) {
         const message = error instanceof ApiRequestError ? error.failure.message : 'Login failed.';
@@ -182,19 +159,11 @@ function loginForm(outlet: HTMLElement, ctx: RouteContext): void {
       }
     })();
   });
-  const card = h('section', { class: 'card' }, [
-    h('div', { class: 'eyebrow' }, ['Account Access']),
-    h('h1', {}, ['Log in']),
-    ret.valid ? h('p', { class: 'muted' }, [`After login you continue inside the app (${ret.target}).`]) : h('p', {}, []),
-    form,
-    h('p', {}, [
-      h('a', { href: '#/forgot-password' }, ['Forgot your password?']),
-      document.createTextNode(' · '),
-      h('a', { href: '#/register' }, ['Create an account']),
-    ]),
-  ]);
-  outlet.replaceChildren(authShell(card));
-  providersNote(card);
+  const modal = registerShell(form, 'login');
+  if (ret.valid) form.parentElement?.insertBefore(h('p', { class: 'return-note' }, [`After login you continue inside the app (${ret.target}).`]), form);
+  outlet.replaceChildren(modal);
+  const panel = modal.querySelector<HTMLElement>('.fresh-auth-form');
+  if (panel !== null) providersNote(panel);
 }
 
 function registerForm(outlet: HTMLElement): void {
@@ -205,7 +174,6 @@ function registerForm(outlet: HTMLElement): void {
     type: 'password',
     required: true,
     autocomplete: 'new-password',
-    hint: 'Between 10 and 128 characters.',
   });
   const confirm = field({
     id: 'reg-confirm',
@@ -214,12 +182,30 @@ function registerForm(outlet: HTMLElement): void {
     required: true,
     autocomplete: 'new-password',
   });
+  for (const part of [email, password, confirm]) {
+    const label = part.wrap.querySelector('label')?.textContent ?? '';
+    part.wrap = h('label', { class: 'field', for: part.input.id }, [label, part.input]);
+  }
+  email.input.placeholder = 'name@company.com';
+  password.input.placeholder = 'Between 10 and 128 characters';
+  confirm.input.placeholder = 'Enter your password again';
+  password.input.minLength = 10;
+  password.input.maxLength = 128;
+  registerPassword(password.input, password.wrap);
+  registerPassword(confirm.input, confirm.wrap);
   const alert = h('div', {}, []);
   const submit = h('button', { class: 'button primary', type: 'submit' }, ['Create account']);
-  const form = h('form', { novalidate: 'novalidate' }, [email.wrap, password.wrap, confirm.wrap, alert, h('p', {}, [submit])]);
+  const form = h('form', { id: 'freshRegisterForm', novalidate: 'novalidate' }, [
+    email.wrap, password.wrap, confirm.wrap,
+    h('p', { class: 'field-note', id: 'reg-password-hint' }, ['Use between 10 and 128 characters.']),
+    h('p', { class: 'auth-policy' }, ['We verify your email. Read our ', h('a', { href: '#/p/privacy-policy' }, ['privacy policy']), '.']),
+    alert, submit,
+  ]);
+  password.input.setAttribute('aria-describedby', 'reg-password-hint');
   form.addEventListener('submit', (event) => {
     event.preventDefault();
     for (const part of [email, password, confirm]) clearFieldProblem(part.input, part.wrap);
+    password.input.setAttribute('aria-describedby', 'reg-password-hint');
     if (email.input.value.trim() === '') {
       setFieldProblem(email.input, email.wrap, 'Enter your email address.');
       email.input.focus();
@@ -227,6 +213,7 @@ function registerForm(outlet: HTMLElement): void {
     }
     if (password.input.value.length < 10 || password.input.value.length > 128) {
       setFieldProblem(password.input, password.wrap, 'Use between 10 and 128 characters.');
+      password.input.setAttribute('aria-describedby', 'reg-password-hint reg-password-error');
       password.input.focus();
       return;
     }
@@ -249,17 +236,7 @@ function registerForm(outlet: HTMLElement): void {
       }
     })();
   });
-  outlet.replaceChildren(
-    authShell(
-      h('section', { class: 'card' }, [
-        h('div', { class: 'eyebrow' }, ['Account Registration']),
-        h('h1', {}, ['Create an account']),
-        h('p', { class: 'muted' }, ['One account per email address. Verification mail follows.']),
-        form,
-        h('p', {}, [h('a', { href: '#/login' }, ['Already have an account? Log in'])]),
-      ]),
-    ),
-  );
+  outlet.replaceChildren(registerShell(form));
 }
 
 function checkEmailPage(outlet: HTMLElement, ctx: RouteContext): void {
@@ -370,9 +347,7 @@ function forgotPasswordPage(outlet: HTMLElement): void {
       }
     })();
   });
-  outlet.replaceChildren(
-    authShell(h('section', { class: 'card' }, [h('div', { class: 'eyebrow' }, ['Account Recovery']), h('h1', {}, ['Reset your password']), done, form])),
-  );
+  outlet.replaceChildren(recoveryModal(form, done));
 }
 
 function resetPasswordPage(outlet: HTMLElement, ctx: RouteContext): void {
@@ -548,59 +523,80 @@ function invitePage(outlet: HTMLElement, ctx: RouteContext): void {
   })();
 }
 
+function registerAccountRoute(route: Route): void {
+  registerRoute({ ...route, render: async (outlet, ctx) => {
+    const epoch = currentRouteEpoch();
+    const frame = (): void => {
+      if (!isCurrentRouteEpoch(epoch)) { observer.disconnect(); return; }
+      if (outlet.childNodes.length === 0 || [...outlet.children].some(e => e.classList.contains('reyn-design') || e.classList.contains('register-page'))) return;
+      const card = h('section');
+      card.append(...outlet.childNodes);
+      const heading = card.querySelector('h2');
+      if (card.querySelector('h1') === null && heading !== null) heading.replaceWith(h('h1', {}, [heading.textContent]));
+      outlet.replaceChildren(authShell(card));
+    };
+    // Async verification/reset responses keep their real handlers and state;
+    // this observer only supplies the original account presentation.
+    const observer = new MutationObserver(frame);
+    observer.observe(outlet, { childList: true });
+    await route.render(outlet, ctx);
+    frame();
+  } });
+}
+
 export function registerAuthPages(): void {
   // /login overwrites the T-43 notice: same route, now the real form.
-  registerRoute({ path: '/login', title: 'Log in', navLabel: 'Login', navSection: 'account', render: loginForm });
-  registerRoute({
+  registerAccountRoute({ path: '/login', title: 'Log in', navLabel: 'Login', navSection: 'account', render: loginForm });
+  registerAccountRoute({
     path: '/register',
     title: 'Create an account',
     render: (outlet) => {
       registerForm(outlet);
     },
   });
-  registerRoute({
+  registerAccountRoute({
     path: '/check-email',
     title: 'Check your email',
     render: (outlet, ctx) => {
       checkEmailPage(outlet, ctx);
     },
   });
-  registerRoute({
+  registerAccountRoute({
     path: '/verify-email',
     title: 'Verify email',
     render: (outlet, ctx) => {
       verifyEmailPage(outlet, ctx);
     },
   });
-  registerRoute({
+  registerAccountRoute({
     path: '/forgot-password',
     title: 'Reset your password',
     render: (outlet) => {
       forgotPasswordPage(outlet);
     },
   });
-  registerRoute({
+  registerAccountRoute({
     path: '/reset-password',
     title: 'Choose a new password',
     render: (outlet, ctx) => {
       resetPasswordPage(outlet, ctx);
     },
   });
-  registerRoute({
+  registerAccountRoute({
     path: '/create-org',
     title: 'Create your organization',
     render: (outlet) => {
       createOrgPage(outlet);
     },
   });
-  registerRoute({
+  registerAccountRoute({
     path: '/invite',
     title: 'Accept invitation',
     render: (outlet, ctx) => {
       invitePage(outlet, ctx);
     },
   });
-  registerRoute({
+  registerAccountRoute({
     path: '/session-expired',
     title: 'Session expired',
     render: (outlet) => {

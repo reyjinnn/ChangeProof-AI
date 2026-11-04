@@ -29,12 +29,22 @@ export async function launchBrowser() {
 
 /** axe-core scan injected from the pinned devDependency (no CDN). */
 export async function axeScan(page, rootDir) {
+  // Capture the settled interface. Do not disable rules or infinite motion;
+  // only await finite decorative transitions already in progress.
+  await page.evaluate(async () => {
+    const finite = document.getAnimations().filter(animation => {
+      const timing = animation.effect?.getTiming();
+      return animation.playState === 'running' && timing?.iterations !== Infinity && typeof timing?.duration === 'number' && timing.duration <= 1000;
+    });
+    await Promise.allSettled(finite.map(animation => animation.finished));
+  });
   const axePath = `${rootDir}/node_modules/axe-core/axe.min.js`;
   if (!existsSync(axePath)) {
     throw new Error('axe-core is not installed; the accessibility scan cannot run.');
   }
   await page.addScriptTag({ content: readFileSync(axePath, 'utf8') });
   const violations = await page.evaluate(async () => window.axe.run(document, { resultTypes: ['violations'] }));
+  if ((violations.violations ?? []).length > 0) console.error(JSON.stringify(violations.violations.map(v => ({ id: v.id, nodes: v.nodes.map(n => ({ target: n.target, reason: n.failureSummary })) }))));
   return violations.violations ?? [];
 }
 
