@@ -8,7 +8,6 @@
 
 import { apiGet, apiPost } from './api.js';
 import {
-  changeproofMarkSvg,
   closeCustomSelect,
   drawer,
   enhanceCustomSelects,
@@ -612,12 +611,14 @@ async function refreshPlanMeter(host: HTMLElement): Promise<void> {
         h('span', {}, [` ${String(used)} / ${String(limit)} cr`]),
       ]),
       bar,
+      h('a', { href: '#/usage' }, ['Manage usage →']),
     );
   } catch {
-    // host.replaceChildren(
-    //   h('div', {}, [h('strong', {}, ['Usage']), h('span', {}, [' unavailable'])]),
-    //   h('div', { class: 'meter' }, []),
-    // );
+    host.replaceChildren(
+      h('div', {}, [h('strong', {}, ['Usage']), h('span', {}, ['Unavailable'])]),
+      h('div', { class: 'meter' }, []),
+      h('a', { href: '#/usage' }, ['Manage usage →']),
+    );
   }
 }
 
@@ -714,10 +715,10 @@ export function renderShell(app: HTMLElement): Shell {
   document.documentElement.dataset['theme'] = loadTheme();
   document.body.classList.toggle('is-collapsed', loadSidebarCollapsed());
 
-  const skip = h('a', { class: 'skip-link', href: '#outlet' }, ['Skip to content']);
+  const skip = h('a', { class: 'skip-link', href: '#content' }, ['Skip to content']);
 
-  const brandmark = h('span', { class: 'cp-brandmark', 'aria-hidden': 'true' }, []);
-  brandmark.appendChild(changeproofMarkSvg());
+  const brandmark = h('span', { class: 'brandmark', 'aria-hidden': 'true' }, []);
+  brandmark.appendChild(iconSvg('shield'));
   const brand = h('a', { href: '#/dashboard', class: 'brand' }, []);
   brand.append(brandmark, h('span', { class: 'brand-word' }, ['ChangeProof ', h('em', {}, ['AI'])]));
   const menuClose = h('button', { class: 'mobile-close', type: 'button', 'aria-label': 'Close navigation', id: 'menuClose' }, ['×']);
@@ -751,8 +752,9 @@ export function renderShell(app: HTMLElement): Shell {
 
   const planMeter = h('div', { class: 'plan-mini', id: 'planMeter' }, []);
   planMeter.replaceChildren(
-    h('div', {}, [h('strong', {}, ['Usage']), h('span', {}, [' Loading…'])]),
+    h('div', {}, [h('strong', {}, ['Usage']), h('span', {}, ['Loading…'])]),
     h('div', { class: 'meter' }, []),
+    h('a', { href: '#/usage' }, ['Manage usage →']),
   );
   const orgButton = h('button', { class: 'organization', type: 'button', 'data-modern': 'workspace', 'aria-label': 'Select workspace' }, [
     h('span', { class: 'org-logo' }, ['–']),
@@ -857,8 +859,7 @@ export function renderShell(app: HTMLElement): Shell {
   // shape the page. Merging both onto one element lets `#content` margin
   // rules cancel the sidebar offset and slide content underneath it.
   const outlet = h('div', { id: 'content', tabindex: '-1' }, []);
-  // ponytail: id outlet matches e2e `main#outlet` selector; drop it if specs switch to main #content.
-  const mainLandmark = h('main', { id: 'outlet', tabindex: '-1' }, [outlet]);
+  const mainLandmark = h('main', {}, [outlet]);
   const publicFooter = h('footer', { class: 'modern-footer', id: 'publicFooter' }, []);
   const main = h('div', { class: 'main' }, [topbar, publicNav, mainLandmark, publicFooter]);
   const root = h('div', { class: 'app', id: 'shell' }, [skip, sidebar, main]);
