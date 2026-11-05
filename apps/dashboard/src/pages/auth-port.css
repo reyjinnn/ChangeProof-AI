@@ -1,0 +1,21 @@
+body.auth-surface #outlet:has(> .auth-port), body.auth-surface #outlet:has(> .recovery-modal) { max-width: none; padding: 0; }
+.auth-port .fresh-auth-shell { margin: 70px auto; }
+.auth-port .fresh-auth-form h1:focus { outline: none; box-shadow: none; }
+.auth-port .fresh-auth-form input { max-width: 100%; }
+.register-page.login-port form input:not([type=checkbox]) { display: block; width: 100%; min-height: 50px; margin-top: 6px; padding: 13px 14px; border: 1px solid #8290a3; border-radius: 12px; background: #fff; color: var(--reg-ink); font: 400 13px/1.5 Inter,sans-serif; }
+.register-page.login-port .password-wrap input { margin-top: 0; padding-right: 54px; }
+.register-page.login-port .auth-form-options { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 16px 0 20px; font-size: 12px; }
+.register-page.login-port .auth-form-options label { display: inline-flex; align-items: center; gap: 7px; font-size: 12px; }
+.register-page.login-port .auth-form-options input { accent-color: #284b7b; }
+.register-page.login-port .muted { color: #405b78; font: 11px/1.65 Inter,sans-serif; margin: 14px 0 0; }
+.register-page.login-port .return-note { margin-bottom: 16px; font-size: 12px; }
+[data-theme=dark] .register-page.login-port form input:not([type=checkbox]) { background: #141416; color: #f3f5f8; border-color: #788ba6; }
+[data-theme=dark] .register-page.login-port .muted { color: #b4c7dd; }
+.recovery-modal .recovery-backdrop { position: fixed; inset: 0; overflow: hidden; pointer-events: none; }
+.recovery-modal .signin-dialog { z-index: 1; }
+.recovery-modal .signin-dialog h1 { font-size: 28px; }
+.recovery-modal .signin-dialog form .field { display: block; }
+.recovery-modal .signin-dialog button[type=submit] { width: 100%; }
+.recovery-modal [role=status], .recovery-modal [aria-live] { color: var(--ink); }
+body:has(.recovery-modal) { overflow: hidden; }
+@media(max-width:760px) { .auth-port .fresh-auth-shell { margin: 28px auto; } }

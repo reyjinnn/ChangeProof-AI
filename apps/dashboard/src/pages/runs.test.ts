@@ -167,6 +167,8 @@ test('run lists render runs and projects from search', async () => {
   await settle(outlet, 'run-1');
   expect(outlet.querySelector('a[href="#/run?id=run-1"]')).not.toBeNull();
   expect(posted.filter((call) => call.url === '/api/search')).toHaveLength(2);
+  expect(outlet.querySelectorAll('.run-search-table')).toHaveLength(2);
+  expect(outlet.querySelector('.run-search-table caption')?.textContent).toContain('current-grant');
 });
 
 test('empty runs explain the next step instead of a blank page', async () => {

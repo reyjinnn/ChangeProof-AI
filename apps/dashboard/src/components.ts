@@ -9,6 +9,44 @@ import { ICON_PATHS, type IconName } from './icons.js';
 export type { IconName };
 export type BadgeTone = 'ok' | 'warn' | 'bad' | 'info';
 
+/** Shared across public/auth headers and the workspace; never a separate theme. */
+export function themeToggle(): HTMLButtonElement {
+  const button = h('button', { class: 'button theme-control', type: 'button', 'data-theme-toggle': '' });
+  const update = (target: HTMLButtonElement, theme: 'light' | 'dark'): void => {
+    const label = theme === 'dark' ? 'Light mode' : 'Dark mode';
+    target.setAttribute('aria-label', label);
+    target.title = label;
+    target.replaceChildren(iconSvg('theme'), h('span', { class: 'sr-only' }, [label]));
+  };
+  update(button, loadTheme());
+  button.addEventListener('click', () => {
+    const next = document.documentElement.dataset['theme'] === 'dark' ? 'light' : 'dark';
+    saveTheme(next);
+    for (const control of document.querySelectorAll<HTMLButtonElement>('[data-theme-toggle]')) update(control, next);
+  });
+  return button;
+}
+
+export function siteHeader(): HTMLElement {
+  return h('header', { class: 'site-header' }, [
+    h('a', { class: 'site-brand', href: '#/p/', 'aria-label': 'ChangeProof AI home' }, [
+      h('img', { src: '/assets/changeproof-mark.svg', width: '32', height: '32', alt: '' }),
+      h('strong', {}, ['ChangeProof ', h('span', {}, ['AI'])]),
+    ]),
+    h('nav', { class: 'site-links', 'aria-label': 'Public' }, [
+      h('a', { href: '#/p/product' }, ['Product']),
+      h('a', { href: '#/p/templates' }, ['Templates']),
+      h('a', { href: '#/p/sample-report' }, ['Sample reports']),
+      h('a', { href: '#/p/help' }, ['Help']),
+    ]),
+    h('div', { class: 'site-actions' }, [
+      themeToggle(),
+      h('a', { class: 'button primary', href: '#/login' }, ['Get started']),
+      h('a', { class: 'site-workspace', href: '#/' }, ['Workspace']),
+    ]),
+  ]);
+}
+
 export function esc(value: string): string {
   return value
     .replace(/&/g, '&amp;')
@@ -136,7 +174,7 @@ export function pageHead(options: {
   if (options.subtitle !== undefined) {
     leftChildren.push(h('p', { class: 'sub' }, [options.subtitle]));
   }
-  const head = h('div', { class: 'pagehead' }, [h('div', {}, leftChildren)]);
+  const head = h('div', { class: 'pagehead page-head' }, [h('div', {}, leftChildren)]);
   if (options.actions !== undefined && options.actions.length > 0) {
     head.appendChild(h('div', { class: 'actions' }, options.actions));
   }

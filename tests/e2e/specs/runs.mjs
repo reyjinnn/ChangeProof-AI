@@ -6,7 +6,7 @@
 import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
 
-import { axeScan } from '../helpers.mjs';
+import { axeScan, captureVisualMatrix } from '../helpers.mjs';
 
 const require = createRequire(import.meta.url);
 const { Pool } = require('pg');
@@ -144,6 +144,15 @@ export async function spec({ base, context, rootDir, mailApi, databaseUrl }) {
     await page.getByText('submitted').first().waitFor();
     assert.match((await page.locator('main#outlet').textContent()) ?? '', /queued/);
     assert.deepEqual((await axeScan(page, rootDir)).map((v) => v.id), []);
+    await captureVisualMatrix(page, 'run-detail-controlled-queued', rootDir);
+    const detailUrl = page.url();
+    await page.goto(`${base}/#/runs`, { waitUntil: 'networkidle' });
+    await page.locator('#run-filter-state').selectOption('queued');
+    await page.locator('#run-filter button[type=submit]').click();
+    await page.locator('.run-search-table a').first().waitFor();
+    await captureVisualMatrix(page, 'runs-filtered-controlled-queued', rootDir);
+    await page.goto(detailUrl, { waitUntil: 'networkidle' });
+    await page.getByText('submitted').first().waitFor();
 
     // Cancel lands, then retry files a new run for the same meaning.
     await page.locator('#cancel-run').click();

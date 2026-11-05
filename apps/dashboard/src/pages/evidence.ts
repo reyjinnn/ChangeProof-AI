@@ -626,7 +626,7 @@ async function renderEvidenceLibrary(outlet: HTMLElement): Promise<void> {
 }
 
 export function registerEvidencePages(): void {
-  registerRoute({ path: '/evidence', title: 'Evidence', render: renderLibrary });
+  registerRoute({ path: '/evidence', title: 'Evidence', navLabel: 'Evidence', navSection: 'workspace', render: renderLibrary });
   registerRoute({ path: '/evidence/view', title: 'Evidence viewer', render: renderViewer });
   registerRoute({
     path: '/evidence-library',

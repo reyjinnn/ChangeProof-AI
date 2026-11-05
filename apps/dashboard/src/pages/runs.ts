@@ -191,13 +191,16 @@ async function search(
   });
 }
 
-function hitArticle(hit: SearchHit): HTMLElement {
-  const target = hit.kind === 'run' ? `#/run?id=${encodeURIComponent(hit.id)}` : '#/runs/new';
-  return h('article', { class: 'faq-item' }, [
-    h('h3', {}, [h('a', { href: target }, [hit.title])]),
-    h('p', {}, [h('code', { class: 'inline' }, [hit.id]), document.createTextNode(` · ${hit.snippet}`)]),
-    h('p', { class: 'muted' }, [`Created ${hit.createdAt}`]),
-  ]);
+function hitTable(hits: readonly SearchHit[]): HTMLElement {
+  return h('div', { class: 'table-wrap' }, [h('table', { class: 'run-search-table' }, [
+    h('caption', {}, ['Matches from current-grant search']),
+    h('thead', {}, [h('tr', {}, ['Name & context', 'Reference', 'Created'].map(label => h('th', { scope: 'col' }, [label])))]),
+    h('tbody', {}, hits.map(hit => h('tr', {}, [
+      h('th', { scope: 'row' }, [h('a', { href: hit.kind === 'run' ? `#/run?id=${encodeURIComponent(hit.id)}` : '#/runs/new' }, [hit.title]), h('small', {}, [hit.snippet])]),
+      h('td', { 'data-label': 'Reference' }, [h('code', { class: 'inline' }, [hit.id])]),
+      h('td', { 'data-label': 'Created' }, [h('time', { datetime: hit.createdAt }, [hit.createdAt])]),
+    ]))),
+  ])]);
 }
 
 /* Run-tab journey shared by review/impact/investigation/campaigns/evidence/
@@ -493,7 +496,7 @@ async function renderLists(outlet: HTMLElement): Promise<void> {
       if (projects.hits.length === 0) {
         projectSection.appendChild(emptyState('No projects yet', 'Create one while filing a run.'));
       } else {
-        for (const hit of projects.hits) projectSection.appendChild(hitArticle(hit));
+        projectSection.appendChild(hitTable(projects.hits));
       }
       lists.replaceChildren(
         stats,
@@ -739,9 +742,13 @@ async function renderForm(outlet: HTMLElement, ctx: RouteContext): Promise<void>
     if (lines.length > 0) notes.input.value = lines.join('\n');
   };
   templateSelect.addEventListener('change', applyTemplate);
+  const requestedTemplate = ctx.params.get('template');
+  if (templates.some(template => template.id === requestedTemplate)) { templateSelect.value = requestedTemplate ?? ''; applyTemplate(); }
 
   const project = field({ id: 'run-project', label: 'Project id', required: true, hint: 'Pick a known id or create one.' });
   project.input.setAttribute('list', 'project-options');
+  const requestedProject = ctx.params.get('project');
+  if (projects.hits.some(hit => hit.id === requestedProject)) project.input.value = requestedProject ?? '';
   const projectOptions = h('datalist', { id: 'project-options' }, [
     ...projects.hits.map((hit) => h('option', { value: hit.id }, [hit.title])),
   ]);

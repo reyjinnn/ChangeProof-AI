@@ -35,15 +35,13 @@ export function navRoutes(): readonly Route[] {
 /** `#/runs/abc?cursor=3` -> { path: '/runs/abc', params: { cursor: '3' } }. */
 export function parseHash(hash: string): { path: string; params: ReadonlyMap<string, string> } {
   const withoutMark = hash.startsWith('#') ? hash.slice(1) : hash;
-  const [rawPath, rawQuery] = withoutMark.split('?');
-  const path = rawPath === undefined || rawPath === '' ? '/' : rawPath;
+  const queryAt = withoutMark.indexOf('?');
+  const rawPath = queryAt < 0 ? withoutMark : withoutMark.slice(0, queryAt);
+  const rawQuery = queryAt < 0 ? '' : withoutMark.slice(queryAt + 1);
+  const path = rawPath === '' ? '/' : rawPath;
   const params = new Map<string, string>();
-  if (rawQuery !== undefined) {
-    for (const pair of rawQuery.split('&')) {
-      const [key, value] = pair.split('=');
-      if (key !== undefined && key !== '') params.set(decodeURIComponent(key), decodeURIComponent(value ?? ''));
-    }
-  }
+  // A pasted deep link must not crash the app on malformed percent encoding.
+  new URLSearchParams(rawQuery).forEach((value, key) => { if (key !== '') params.set(key, value); });
   return { path, params };
 }
 
@@ -52,9 +50,11 @@ function renderNotFound(outlet: HTMLElement, path: string): void {
     emptyState(
       'Page not found',
       `No screen exists at "${path}". Use the navigation to continue.`,
-      h('a', { class: 'button', href: '#/' }, ['Back to start']),
+      h('a', { class: 'button', href: path.startsWith('/p/') ? '#/p/' : '#/' }, ['Back to start']),
     ),
   );
+  const title = outlet.querySelector('h2');
+  title?.replaceWith(h('h1', {}, ['Page not found']));
   document.title = 'Not found — ChangeProof AI';
 }
 
@@ -83,7 +83,17 @@ export function isCurrentRouteEpoch(value: number): boolean {
 export async function renderRoute(outlet: HTMLElement, hash: string): Promise<void> {
   epoch += 1;
   const mine = epoch;
-  const { path, params } = parseHash(hash);
+  const initial = (hash === '' || hash === '#') && registry.has('/p/') ? '#/p/' : hash;
+  const parsed = parseHash(initial);
+  let path = parsed.path;
+  const params = new Map(parsed.params);
+  if (path === '/app') path = '/';
+  else if (path.startsWith('/app/')) path = path.slice(4);
+  const run = /^\/runs\/([^/]+)$/.exec(path);
+  if (run?.[1] !== undefined && run[1] !== 'new') {
+    try { params.set('id', decodeURIComponent(run[1])); path = '/run'; }
+    catch { /* Preserve malformed resource paths as not-found. */ }
+  }
   const route = registry.get(path);
   closeDrawer();
   closeFloatingPanels();
@@ -97,6 +107,8 @@ export async function renderRoute(outlet: HTMLElement, hash: string): Promise<vo
   }
   document.title = `${route.title} — ChangeProof AI`;
   outlet.replaceChildren();
+  const context = document.getElementById('page-context');
+  if (context !== null) context.textContent = route.title;
   await route.render(outlet, { hash, params });
   // A superseded render must not mark nav, announce, or steal focus for
   // a page the user already left.
@@ -106,12 +118,25 @@ export async function renderRoute(outlet: HTMLElement, hash: string): Promise<vo
   announce(route.title);
   // Route change moves focus to the page heading (or the main landmark)
   // so keyboard and screen-reader users land on the new content.
-  const heading = outlet.querySelector('h1');
+  let heading = outlet.querySelector('h1');
+  if (heading === null) {
+    const fallback = outlet.querySelector('h2');
+    if (fallback !== null) { heading = h('h1', {}, [fallback.textContent]); fallback.replaceWith(heading); }
+  }
   if (heading instanceof HTMLElement) {
     heading.setAttribute('tabindex', '-1');
     heading.focus({ preventScroll: true });
   } else {
     outlet.focus({ preventScroll: true });
+  }
+  const section = params.get('section');
+  const destination = section === undefined ? undefined : [...outlet.querySelectorAll<HTMLElement>('[id]')].find(node => node.id === section);
+  if (destination !== undefined) {
+    destination.scrollIntoView({ block: 'start', behavior: 'instant' });
+    destination.tabIndex = -1;
+    destination.focus({ preventScroll: true });
+  } else {
+    window.scrollTo({ top: 0, behavior: 'instant' });
   }
 }
 

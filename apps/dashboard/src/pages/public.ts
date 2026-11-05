@@ -76,10 +76,14 @@ async function load<T>(
   run: () => Promise<T>,
   render: (value: T) => void | Promise<void>,
 ): Promise<void> {
+  const epoch = currentRouteEpoch();
   outlet.replaceChildren(emptyState('Loading…', 'Reading the latest published content.'));
   try {
-    await render(await run());
+    const value = await run();
+    if (!isCurrentRouteEpoch(epoch)) return;
+    await render(value);
   } catch (error) {
+    if (!isCurrentRouteEpoch(epoch)) return;
     const message = error instanceof ApiRequestError ? error.failure.message : 'An unexpected error occurred.';
     outlet.replaceChildren(
       errorState('Content unavailable', message, {
@@ -1940,16 +1944,33 @@ function pageHead(route: PublicRoute): HTMLElement {
   const shade = h('div', { class: 'cp-ghost-shade', 'aria-hidden': 'true' }, []);
   const pill = h('div', { class: 'modern-release' }, [
     h('b', {}, [route.section.toUpperCase()]),
-    h('span', {}, ['Live published manifest · deterministic verification']),
+    h('span', {}, ['Change intelligence. Independent proof.']),
   ]);
-  const hero = h('section', { class: 'cp-identity-hero' }, [
-    canvas,
-    shade,
+  const copy = h('div', { class: 'hero-copy' }, [
     pill,
     h('h1', {}, [route.title]),
     h('p', { class: 'modern-hero-sub' }, [route.summary]),
     ...(route.ctas.length > 0 ? [ctaRow(route.ctas)] : []),
   ]);
+  const hero = h('section', { class: `cp-identity-hero${route.path === '/' ? ' home-hero' : ''}` }, [
+    canvas,
+    shade,
+    copy,
+  ]);
+  if (route.path === '/') {
+    hero.append(h('aside', { class: 'hero-preview', 'aria-label': 'Illustrative verification workflow' }, [
+      h('div', { class: 'preview-caption' }, [h('span', { class: 'preview-dot', 'aria-hidden': 'true' }), 'Architecture preview']),
+      h('h2', {}, ['From change to a clearer decision.']),
+      h('p', { class: 'muted' }, ['A shared graph. A scoped candidate. Independent checks. Evidence you can review.']),
+      h('ol', { class: 'preview-steps' }, [
+        h('li', {}, [h('span', {}, ['01']), h('strong', {}, ['Understand the impact']), h('small', {}, ['Keep unresolved edges visible'])]),
+        h('li', {}, [h('span', {}, ['02']), h('strong', {}, ['Verify independently']), h('small', {}, ['Check the intended workflow'])]),
+        h('li', {}, [h('span', {}, ['03']), h('strong', {}, ['Review the evidence']), h('small', {}, ['See what remains unproven'])]),
+      ]),
+      h('p', { class: 'preview-disclaimer' }, ['Illustration only. No analysis or repair has been executed.']),
+      h('a', { class: 'text-link', href: '#/p/sample-report' }, ['Explore a synthetic sample →']),
+    ]));
+  }
   queueMicrotask(() => {
     stopActiveGhost();
     activeGhost = initGhostFibers();
@@ -1977,23 +1998,23 @@ function renderPublicNav(activeManifestPath: string): HTMLElement {
     }
     bar.appendChild(link);
   }
-  return bar;
+  return h('div', { class: 'public-navigation' }, [siteHeader(), bar]);
 }
 
 async function renderFaqBlock(host: HTMLElement): Promise<void> {
   const results = h('div', { 'aria-live': 'polite' }, []);
   const { wrap, input } = field({ id: 'faq-q', label: 'Search frequently asked questions' });
   const button = h('button', { class: 'button primary', type: 'submit' }, ['Search']);
-  const form = h('form', { class: 'search-form', role: 'search' }, [wrap, button]);
-  const list = h('div', {}, []);
-  host.appendChild(h('section', { class: 'card' }, [h('h2', {}, ['Questions and answers']), form, results, list]));
+  const form = h('form', { class: 'search-form public-search', role: 'search' }, [wrap, button]);
+  const list = h('div', { class: 'public-faq-list' }, []);
+  host.appendChild(h('section', { class: 'public-help-live' }, [form, results, list]));
 
   const renderFaqs = (faqs: readonly PublicFaq[]): void => {
     list.replaceChildren();
     for (const faq of faqs) {
       list.appendChild(
-        h('article', { class: 'faq-item' }, [
-          h('h3', {}, [faq.question]),
+        h('details', { class: 'public-faq faq-item' }, [
+          h('summary', {}, [faq.question]),
           h('p', {}, [faq.answer]),
           h('p', { class: 'muted' }, [`Topics: ${faq.topics.join(', ')} · Updated ${faq.updatedAt}`]),
         ]),
@@ -2043,10 +2064,10 @@ async function renderFaqBlock(host: HTMLElement): Promise<void> {
 async function renderTemplatesBlock(host: HTMLElement): Promise<void> {
   try {
     const templates = await apiGet<readonly PublicTemplate[]>('/api/site/templates');
-    const cards = h('div', { class: 'grid3' }, []);
+    const cards = h('div', { class: 'public-info-grid' }, []);
     for (const template of templates) {
       cards.appendChild(
-        h('article', { class: 'card' }, [
+        h('article', { class: 'public-info-card' }, [
           h('div', { class: 'eyebrow' }, ['Starter Template']),
           h('h2', {}, [template.title]),
           h('p', {}, [template.description]),
@@ -2088,24 +2109,24 @@ async function renderChangelogBlock(host: HTMLElement): Promise<void> {
       '/api/site/changelog',
     );
     const group = (title: string, entries: readonly ChangelogEntry[]): HTMLElement => {
-      const section = h('section', { class: 'card' }, [h('h2', {}, [title])]);
+      const section = h('section', { class: 'public-release' }, [h('h2', {}, [title])]);
       if (entries.length === 0) {
         section.appendChild(h('p', { class: 'muted' }, ['Nothing published here yet.']));
         return section;
       }
       for (const entry of entries) {
         section.appendChild(
-          h('article', { class: 'faq-item' }, [
+          h('article', { class: 'faq-item release-entry' }, [
+            h('time', { class: 'release-date', datetime: entry.date }, [entry.date]),
             h('h3', {}, [entry.version === undefined ? entry.title : `${entry.title} (${entry.version})`]),
             h('p', {}, [entry.body]),
-            h('p', { class: 'muted' }, [entry.date]),
           ]),
         );
       }
       return section;
     };
     // Design notes and shipped releases stay visibly separate (FR3-37).
-    host.appendChild(h('div', { class: 'split' }, [group('Design notes', log.design), group('Releases', log.releases)]));
+    host.append(group('Design notes', log.design), group('Releases', log.releases));
   } catch (error) {
     const message = error instanceof ApiRequestError ? error.failure.message : 'Changelog failed to load.';
     host.appendChild(errorState('Changelog unavailable', message));
@@ -2115,18 +2136,18 @@ async function renderChangelogBlock(host: HTMLElement): Promise<void> {
 async function renderRoadmapBlock(host: HTMLElement): Promise<void> {
   try {
     const items = await apiGet<readonly RoadmapItem[]>('/api/site/roadmap');
-    const grid = h('div', { class: 'grid2' }, []);
+    const grid = h('div', { class: 'public-info-grid' }, []);
     for (const item of items) {
       const tone = item.status === 'supported' ? 'ok' : item.status === 'in-qualification' ? 'warn' : 'info';
       grid.appendChild(
-        h('article', { class: 'faq-item' }, [
+        h('article', { class: 'public-info-card' }, [
           h('h3', {}, [item.title]),
           h('p', {}, [badge(tone, item.status)]),
           ...(item.evidenceRef === undefined ? [] : [h('p', { class: 'muted' }, [`Evidence: ${item.evidenceRef}`])]),
         ]),
       );
     }
-    const section = h('section', { class: 'card' }, [h('h2', {}, ['Qualification status']), grid]);
+    const section = h('section', {}, [h('h2', {}, ['Qualification status']), grid]);
     host.appendChild(section);
   } catch (error) {
     const message = error instanceof ApiRequestError ? error.failure.message : 'Roadmap failed to load.';
@@ -2137,6 +2158,13 @@ async function renderRoadmapBlock(host: HTMLElement): Promise<void> {
 async function renderPricingBlock(host: HTMLElement): Promise<void> {
   try {
     const pricing = await apiGet<PricingSnapshot>('/api/site/pricing');
+    if (host.classList.contains('reyn-design')) {
+      const card = host.querySelector('.public-price-feature, .price-card');
+      const note = card?.querySelector('p');
+      if (note !== null && note !== undefined) note.textContent = pricing.tiers.map(tier => tier.notes).join(' ');
+      card?.append(h('p', { class: 'pricing-version' }, [`Published pricing: ${pricing.pricingVersion} · ${pricing.currency}. Paid prices are not finalized.`]));
+      return;
+    }
     const grid = h('div', { class: 'grid3' }, []);
     for (const tier of pricing.tiers) {
       grid.appendChild(
@@ -2244,6 +2272,27 @@ function renderTemplateBody(outlet: HTMLElement, template: PublicTemplate): void
     ]),
     h('section', { class: 'card' }, [h('h2', {}, ['What you will provide']), fields]),
   );
+  framePublicDetail(outlet, '/templates', template.title);
+}
+
+function framePublicDetail(outlet: HTMLElement, path: string, title: string): void {
+  const root = renderPublicDesign(path);
+  const body = root?.querySelector('.public-page-content');
+  if (root === undefined || body === null || body === undefined) return;
+  const heading = root.querySelector('h1');
+  if (heading !== null) heading.textContent = title;
+  const children = [...outlet.children];
+  children[0]?.querySelector('h1')?.remove();
+  if (path === '/sample-report') {
+    const provenance = h('aside', { class: 'public-note sample-provenance', 'aria-label': 'Published sample provenance' });
+    for (const child of children) provenance.append(...child.childNodes);
+    body.prepend(provenance);
+    const label = root.querySelector('.sample-design-label');
+    const disclosure = 'SYNTHETIC DESIGN EXAMPLE — the diagram illustrates the layout, not live API evidence.';
+    if (label !== null) label.textContent = disclosure;
+    else root.querySelector('.public-report')?.prepend(h('p', { class: 'sample-design-label' }, [disclosure]));
+  } else body.replaceChildren(...children);
+  outlet.replaceChildren(root);
 }
 
 async function renderSampleDetail(outlet: HTMLElement, id: string): Promise<void> {
@@ -2268,6 +2317,7 @@ async function renderSampleDetail(outlet: HTMLElement, id: string): Promise<void
       h('p', { class: 'muted' }, ['Samples show the report layout only; they are not customer results.']),
       ]),
     );
+    framePublicDetail(outlet, '/sample-report', sample.title);
   },
   );
 }

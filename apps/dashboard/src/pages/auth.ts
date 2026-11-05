@@ -437,6 +437,13 @@ async function loginForm(outlet: HTMLElement, ctx: RouteContext): Promise<void> 
     autocomplete: 'current-password',
     placeholder: 'Enter your password',
   });
+  for (const part of [email, password]) {
+    const label = part.wrap.querySelector('label')?.textContent ?? '';
+    part.wrap = h('label', { class: 'field', for: part.input.id }, [label, part.input]);
+  }
+  email.input.placeholder = 'name@company.com';
+  password.input.placeholder = 'Enter your password';
+  registerPassword(password.input, password.wrap);
   const tenant = field({ id: 'login-tenant', label: 'Organization (only if you belong to several)', autocomplete: 'organization' });
   const prefillTenant = params.get('tenant');
   if (prefillTenant !== undefined && prefillTenant !== '') tenant.input.value = prefillTenant;
@@ -1316,7 +1323,7 @@ export function registerAuthPages(): void {
     title: 'Create an account',
     render: (outlet, ctx) => registerForm(outlet, ctx),
   });
-  registerRoute({
+  registerAccountRoute({
     path: '/check-email',
     title: 'Check your email',
     render: (outlet, ctx) => checkEmailPage(outlet, ctx),
@@ -1335,12 +1342,12 @@ export function registerAuthPages(): void {
       verifyEmailPage(outlet, ctx);
     },
   });
-  registerRoute({
+  registerAccountRoute({
     path: '/forgot-password',
     title: 'Reset your password',
     render: (outlet) => forgotPasswordPage(outlet),
   });
-  registerRoute({
+  registerAccountRoute({
     path: '/reset-password',
     title: 'Choose a new password',
     render: (outlet, ctx) => {

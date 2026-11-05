@@ -96,9 +96,9 @@ test('generic page renders title, summary, and working CTA hrefs', async () => {
   stubFetch({ '/api/site/routes?path=%2Fpricing': { status: 200, json: PRICING } });
   const outlet = boot();
   await renderRoute(outlet, '#/p/pricing');
-  expect(outlet.querySelector('h1')?.textContent).toBe('Pricing');
-  const hrefs = [...outlet.querySelectorAll('.cta-row a')].map((a) => a.getAttribute('href'));
-  expect(hrefs).toEqual(['#/p/', '#/login?return=%2Fapp']);
+  expect(outlet.querySelector('h1')?.textContent).toBe('Start small. Stay in control.');
+  expect(outlet.querySelector('.public-price-feature a')?.getAttribute('href')).toBe('#/register');
+  expect(outlet.querySelector('a[href="#/p/product"]')).not.toBeNull();
 });
 
 test('template apply refusal lands on the login notice with its return', async () => {

@@ -241,6 +241,15 @@ async function renderBilling(outlet: HTMLElement): Promise<void> {
           ]),
         ),
       ]),
+    ]);
+  outlet.replaceChildren(
+    pageHead({ title: 'Usage & data', subtitle: 'Your current billing period, reservations, and data controls.' }),
+    entitlement,
+    stats,
+    h('div', { class: 'split' }, [reservations, invoices]),
+    h('div', { class: 'grid2' }, [
+      h('section', { class: 'card' }, [h('h2', {}, ['Data and privacy']), h('p', {}, ['Provider terms, region, and retention must be confirmed by the operator. This preview does not promise a retention period.']), h('a', { href: '#/p/privacy-policy' }, ['Read the draft privacy policy'])]),
+      h('section', { class: 'card' }, [h('h2', {}, ['Data deletion']), h('p', {}, ['Organization owners can review the real deletion controls and pending status in privacy settings.']), h('a', { href: '#/privacy' }, ['Open privacy & data controls'])]),
     ]),
   );
 

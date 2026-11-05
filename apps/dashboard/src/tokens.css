@@ -16,6 +16,7 @@
  * (mockup 433: Inter stack; Plus Jakarta Sans survives only where the
  * mockup sets it explicitly, e.g. .cp-workflow-logo). */
 
+@layer legacy {
 @font-face {
   font-family: "Inter";
   src: url("/assets/fonts/inter-latin-variable.woff2") format("woff2");
@@ -94,8 +95,8 @@
   --lavender: #242a33;
   --green: #a2ddba;
   --green-soft: #263e2e;
-  --amber: #bbd1f3;
-  --amber-soft: #273c58;
+  --amber: #f2cd88;
+  --amber-soft: #403523;
   --red: #ffb5bf;
   --red-soft: #452a30;
   --info: #b8cef0;

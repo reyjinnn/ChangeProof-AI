@@ -10,7 +10,7 @@ import { writeFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { join } from 'node:path';
 
-import { axeScan } from '../helpers.mjs';
+import { axeScan, captureVisualMatrix } from '../helpers.mjs';
 
 const require = createRequire(import.meta.url);
 const { Pool } = require('pg');
@@ -175,6 +175,7 @@ export async function spec({ base, context, rootDir, mailApi, databaseUrl, evide
     await page.getByText(digest.slice(0, 12)).first().waitFor();
     assert.deepEqual((await axeScan(page, rootDir)).map((v) => v.id), []);
     await assertNoOverflow('evidence library');
+    await captureVisualMatrix(page, 'evidence-controlled-artifact', rootDir);
 
     // Publication absence is explicit, and export is offered.
     await page.getByText('no authorized GitHub App').waitFor();
@@ -188,6 +189,7 @@ export async function spec({ base, context, rootDir, mailApi, databaseUrl, evide
     assert.ok(((await page.locator('main#outlet').textContent()) ?? '').includes(digest));
     assert.deepEqual((await axeScan(page, rootDir)).map((v) => v.id), []);
     await assertNoOverflow('evidence viewer');
+    await captureVisualMatrix(page, 'evidence-viewer-controlled-artifact', rootDir);
 
     // Tampered bytes: same digest name, different content — the server
     // recomputes the hash and the UI repeats its refusal (NEG3-33).

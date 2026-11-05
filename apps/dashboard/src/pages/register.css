@@ -1,0 +1,82 @@
+/* Effective Register skin extracted from ROOT mockup.html (signin modal).
+ * One scoped cascade; the other auth/public routes retain their existing skin. */
+body:has(.register-page) { overflow: hidden; background: #edf4fc; }
+body.auth-surface #outlet:has(> .register-page) { max-width: none; margin: 0; padding: 0; }
+.register-page { --reg-ink: #20242b; --reg-muted: #606773; --reg-blue: #284b7b; --reg-line: #d7dce3; font: 14px/1.65 "Inter", "Segoe UI", sans-serif; color: var(--reg-ink); }
+.register-page *, .register-page *::before, .register-page *::after { box-sizing: border-box; }
+.register-page .register-backdrop { position: fixed; inset: 0; overflow: hidden; pointer-events: none; }
+.register-page .register-backdrop .landing-page { background: #fafafa; }
+.register-page .register-backdrop .public-nav { margin-bottom: 0; }
+.register-page .register-backdrop .landing-hero h1 mark { padding: 0 .04em; border-radius: 0; background: none; color: #27639e; box-shadow: inset 0 -.1em #9dc9ee; line-height: inherit; }
+.register-page .signin-overlay { position: fixed; inset: 0; z-index: 1200; display: grid; place-items: center; padding: 18px; backdrop-filter: blur(18px); }
+.register-page .signin-dialog { position: relative; isolation: isolate; width: min(400px, 100%); max-height: calc(100dvh - 36px); overflow: auto; padding: 26px; border: 1px solid #ffffffc7; border-radius: 24px; background: transparent; box-shadow: 0 30px 90px #122d4c47, inset 0 1px #ffffffd9; scrollbar-width: thin; }
+.register-page .fresh-auth-form { display: block; width: 100%; max-width: none; margin: 0; padding: 0; border: 0; border-radius: 0; background: transparent; box-shadow: none; }
+.register-page .signin-brand { display: flex; align-items: center; justify-content: center; width: 100%; margin: 2px 0 20px; color: #214b77; }
+.register-page .signin-brand-mark { display: grid; place-items: center; flex: none; width: 64px; height: 64px; border: 1px solid #689bc96b; border-radius: 19px; background: linear-gradient(145deg, #ffffffc7, #acd3f666); box-shadow: inset 0 1px #ffffffdb, 0 9px 22px #2e639621; }
+.register-page .signin-brand-mark svg { width: 38px; height: 38px; }
+.register-page .signin-brand-label { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
+.register-page button, .register-page input { font-family: inherit; font-weight: 400; letter-spacing: normal; }
+.register-page form { display: block; margin: 0; }
+.register-page label.field { display: block; margin: 0 0 20px; color: var(--reg-ink); font-size: 12px; font-weight: 600; line-height: 1.65; }
+.register-page #freshRegisterForm input { display: block; width: 100%; min-width: 0; height: 47px; min-height: 46px; margin: 6px 0 0; padding: 13px 14px; border: 1px solid #8290a3; border-radius: 12px; background: #fff; color: var(--reg-ink); font-size: 13px; line-height: 1.5; box-shadow: 0 1px 2px #234a8603; }
+.register-page input::placeholder { color: var(--reg-muted); font-size: 12px; font-weight: 400; }
+.register-page #freshRegisterForm input:focus { border-color: #819dc2; box-shadow: 0 0 0 3px #365e960a; }
+.register-page .password-wrap { position: relative; display: flex; align-items: center; margin-top: 6px; }
+.register-page #freshRegisterForm .password-wrap input { margin-top: 0; padding-right: 54px; border-color: #91b1d085; }
+.register-page #freshRegisterForm .field:nth-of-type(3) input { height: 50px; }
+.register-page .password-toggle { position: absolute; top: 50%; right: 7px; transform: translateY(-50%); display: grid; place-items: center; width: 36px; height: 36px; min-height: 36px; padding: 8px; margin: 0; border: 0; border-radius: 9px; background: transparent; box-shadow: none; color: var(--reg-muted); font-size: 12px; font-weight: 600; line-height: 1; cursor: pointer; }
+.register-page .password-toggle:hover { background: #edf1f7; }
+.register-page .icon { display: block; width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0; }
+.register-page .field-note { margin: -6px 0 15px; color: #405b78; font-size: 11px; line-height: 1.75; }
+.register-page .auth-policy { margin: 19px 0; color: #405b78; font-size: 11px; line-height: 1.85; }
+.register-page .auth-policy a { text-decoration: underline; }
+.register-page a { color: var(--reg-blue); text-decoration: none; }
+.register-page a:hover { text-decoration: underline; }
+.register-page button[type=submit] { display: inline-block; width: 100%; height: 49px; min-height: 49px; padding: 10px 16px; border: 1px solid transparent; border-radius: 12px; background: var(--reg-blue); color: #fff; font-size: 13px; font-weight: 600; line-height: 1.4; box-shadow: inset 0 1px #ffffff38, 0 10px 22px #25558b29; cursor: pointer; }
+.register-page button[type=submit]:hover { background: #1d3c65; }
+.register-page button[type=submit]::after { content: " →"; }
+.register-page button[type=submit]:disabled { cursor: wait; opacity: .7; }
+.register-page .auth-divider { display: flex; align-items: center; gap: 12px; margin: 21px 0 17px; color: var(--reg-muted); font-size: 9px; line-height: 1.65; letter-spacing: 1.2px; }
+.register-page.login-port .auth-divider, .register-page.login-port .auth-switch { color: #405b78; }
+[data-theme=dark] .register-page.login-port .auth-divider, [data-theme=dark] .register-page.login-port .auth-switch { color: #b4c7dd; }
+.register-page .auth-divider::before, .register-page .auth-divider::after { content: ""; height: 1px; flex: 1; background: var(--reg-line); }
+.register-page .github-auth { display: flex; align-items: center; justify-content: center; gap: 9px; width: 100%; height: 50px; min-height: 50px; margin: 0; padding: 10px 16px; border: 1px solid #91b1d085; border-radius: 12px; background: #ffffff70; color: var(--reg-ink); font-size: 12px; font-weight: 600; line-height: 1.4; box-shadow: none; opacity: 1; cursor: not-allowed; }
+.register-page .github-auth .icon { width: 17px; height: 17px; }
+.register-page .auth-switch { margin: 22px 0; color: #405b78; font-size: 12px; line-height: 1.65; text-align: center; }
+.register-page .auth-switch a { font-weight: 650; }
+.register-page .signin-close { position: absolute; top: 17px; right: 17px; z-index: 1; display: grid; place-items: center; width: 34px; height: 34px; min-height: 34px; padding: 0; margin: 0; border: 0; border-radius: 0; background: transparent; color: #284c70; font-size: 22px; font-weight: 600; line-height: 1; box-shadow: none; cursor: pointer; }
+.register-page .signin-close:hover { background: transparent; color: #173b61; }
+.register-page .signin-dialog:focus-visible { outline: 3px solid var(--reg-blue); outline-offset: 4px; box-shadow: 0 0 0 6px #fff; }
+.register-page :is(button,a,input):focus-visible { outline: 3px solid var(--reg-blue); outline-offset: 4px; }
+.register-page .error-text { margin: 8px 0; color: #a43642; font-size: 12px; line-height: 1.5; }
+[data-theme=dark] .register-page { --reg-ink: #f3f5f8; --reg-muted: #bdc4ce; --reg-blue: #9bbce9; --reg-line: #383e47; }
+[data-theme=dark] .register-page .register-backdrop .landing-page { background: #0b0b0d; }
+[data-theme=dark] .register-page .register-backdrop .landing-hero { background: #060c1b; color: #f5f9ff; }
+[data-theme=dark] .register-page .register-backdrop .cp-ghost-shade { background: transparent; }
+[data-theme=dark] .register-page .register-backdrop .modern-cta-pair .landing-primary { background: #88cfff; color: #092445; border-color: #88cfff; }
+[data-theme=dark] .register-page .signin-dialog { border-color: #b1d2ed4d; box-shadow: 0 30px 90px #00000085, inset 0 1px #ffffff29; }
+[data-theme=dark] .register-page .signin-brand { color: #f1f7ff; }
+[data-theme=dark] .register-page .signin-brand-mark { background: linear-gradient(145deg,#87b5dc4d,#294b6b59); border-color: #b1d2ed5c; box-shadow: inset 0 1px #ffffff2e,0 9px 22px #0000001f; }
+[data-theme=dark] .register-page #freshRegisterForm input { background: #141416; border-color: #788ba6; }
+[data-theme=dark] .register-page #freshRegisterForm .password-wrap input { border-color: #b1d2ed52; }
+[data-theme=dark] .register-page .github-auth { background: #2d496452; border-color: #b1d2ed52; }
+[data-theme=dark] .register-page .auth-policy, [data-theme=dark] .register-page .field-note, [data-theme=dark] .register-page .auth-switch { color: #b4c7dd; }
+[data-theme=dark] .register-page .signin-close { color: #e8f2ff; }
+[data-theme=dark] .register-page .register-backdrop .landing-hero h1 mark { color: #79c8ff; box-shadow: inset 0 -.1em #286fb1; }
+[data-theme=dark] .register-page button[type=submit] { background: #315c92; color: #fff; }
+[data-theme=dark] .register-page .signin-dialog:focus-visible { outline-color: #9bbce9; box-shadow: 0 0 0 6px #141416; }
+[data-theme=dark] .register-page .error-text { color: #ffb4bf; }
+.register-page #freshRegisterForm input[aria-invalid=true] { border-color: #a43642; }
+@media(max-width:600px) {
+  .register-page .signin-overlay { padding: 12px; }
+  .register-page .signin-dialog { max-height: calc(100dvh - 24px); padding: 24px 20px; border-radius: 20px; }
+  .register-page .auth-divider { font-size: 9px; letter-spacing: 1px; }
+  .register-page .auth-policy { min-height: 50px; font-size: 10px; }
+  .register-page .auth-switch { font-size: 11px; }
+  .register-page #freshRegisterForm .field:not(:nth-of-type(3)) input { height: 46px; }
+}
+@media(prefers-reduced-motion:no-preference) {
+  .register-page .signin-dialog { animation: register-glass-in .28s cubic-bezier(.22,1,.36,1) both; }
+  @keyframes register-glass-in { from { opacity: 0; transform: translateY(18px) scale(.97); } to { opacity: 1; transform: translateY(0) scale(1); } }
+}
+@media(prefers-reduced-motion:reduce) { .register-page *, .register-page *::before, .register-page *::after { animation: none; transition: none; scroll-behavior: auto; } }
