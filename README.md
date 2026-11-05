@@ -1,473 +1,234 @@
-# ChangeProof AI 1.0
+# ChangeProof AI
 
-ChangeProof AI investigates, fixes, and **independently verifies the impact of software changes** across languages, frameworks, databases, events, caches, and repositories.
+## What is this?
 
-This repository is open for development contributions. The hosted customer experience described in the specifications is a product target, not a claim that those hosted features are already available.
+**ChangeProof AI** is a tool that investigates, fixes, and proves the impact of software changes. A change counts as safe only when execution evidence says so.
+
+The problem it solves: a small change rarely stays in one file. It propagates to other services, database schemas, event payloads, cache contents, and dependency versions. The breakage only surfaces later, somewhere else.
+
+The workflow looks like this:
 
 ```text
 intent / issue
   → impact graph
   → diagnosis
-  → candidate bundle (coordinated patches)
+  → coordinated patch bundle
   → real execution
   → independent verification
   → immutable evidence
   → evidence-based PR
-  → outcome validation by the owner
 ```
 
-**Unit of value:** *a business workflow restored with evidence* — not files changed, languages detected, tool calls made, or a convincing demo.
+Core principles:
 
-When the evidence is insufficient, the product must still return a diagnosis, explicit obstacles, and the next safe step. Obstacles are never disguised as success.
+- A claim of "fixed" counts only when real execution results back it.
+- Verdicts come only from deterministic policy applied to verifier evidence. The AI that did the work never grades its own output.
+- Any gate that claims build, server, database, broker, or browser coverage must exercise the real system rather than mocks or cached results.
+- When evidence is insufficient, the system still returns a diagnosis, explicit obstacles, and the next safe step. Obstacles are never disguised as success.
 
----
-
-## Table of contents
-
-- [Why it exists](#why-it-exists)
-- [Golden rules](#golden-rules)
-- [Architecture](#architecture)
-- [Repository layout](#repository-layout)
-- [Stack](#stack)
-- [Contributing and local setup](#contributing-and-local-setup)
-- [Commands](#commands)
-- [Testing](#testing)
-- [Documentation map](#documentation-map)
-- [Work order and phases](#work-order-and-phases)
-- [Current status](#current-status)
-- [License](#license)
+This repository is open for development contributions. Hosted/customer features mentioned in the specification documents are **product targets**, not claims that everything is already implemented.
 
 ---
 
-## Why it exists
+## What can it do?
 
-A software change rarely stays inside the file that was edited. It crosses service boundaries, schemas, event payloads, cached shapes, and version mix — and the damage usually shows up later, somewhere else.
-
-ChangeProof AI makes that blast radius **explicit, then proven**:
-
-| It does | It refuses to do |
+| Capability | Description |
 | --- | --- |
-| Build an impact graph with explicit edge confidence: `proven`, `inferred`, `unresolved` | Silently promote `inferred` to `proven` |
-| Produce a candidate bundle of coordinated patches | Publish a PR backed only by plausible narrative |
-| Run real compilers, servers, databases, brokers, browsers | Fall back to mocks or cached green results |
-| Evaluate each evidence dimension separately | Average dimensions into one confidence score |
-| Keep the model out of the verdict | Let the model grade its own work |
+| Impact graph | Builds a change impact graph with explicit per-edge confidence: `proven`, `inferred`, `unresolved`. `inferred` edges are never silently promoted to `proven`. |
+| Diagnosis + patch bundle | Produces a diagnosis and a candidate bundle of coordinated patches across files, repositories, and languages instead of a single-file workaround. |
+| Real-runtime verification | Runs actual compilers, servers, databases, brokers, and browsers, then evaluates each evidence dimension separately (never averaged into one score). |
+| Permanent evidence | Stores immutable per-run evidence artifacts, so results can be re-audited at any time. |
+| Web dashboard | UI for landing pages, registration/login (email plus optional GitHub OAuth), projects, runs, evidence, notifications, billing, teamwork, and enterprise pages. |
+| Operator CLI (`changeproof`) | Self-hosting: `install`, `upgrade`, `backup`, `restore`, `teardown`, `status`, plus BYOK management (`byok-provision`, `byok-rotate`, `byok-revoke`). |
+| Live probes | Verifies one real integration seam per command: `model-live` (one bounded model call), `modal-probe` (Modal sandbox isolation), `github-probe` (GitHub installation access). |
+| JSON HTTP API | Auth, organization, runs, notifications, teamwork, billing, and enterprise endpoints behind the same server that hosts the dashboard. |
 
-### Status vocabulary (exact — do not invent synonyms)
-
-| Concept | Values |
-| --- | --- |
-| `origin` | `controlled_change` · `historical_organic` · `current_organic` |
-| `executionMode` | `mock` · `replay` · `real_runtime` |
-| `proposalMode` | `live_model` · `replay_model` · `human_reference` |
-| `TargetOutcome` | `fixed` · `no_impact_verified` · `unverified` · `partial` · `failed` |
-| `BundleAssessment` | `verified` · `incomplete` · `blocked` · `invalid` |
-| Support level | `L1` discovery/impact · `L2` candidate patch + guard · `L3` full proof |
-| Engineering task status | `not_started` · `in_progress` · `blocked` · `done` |
-
-Engineering task status is **separate** from the product verdict. They never mix.
+Language and framework support is delivered through **adapters** (TypeScript, Python, Go, PHP, .NET, native). Framework knowledge lives only in adapters, and verdict rules never change when an adapter is added.
 
 ---
 
-## Golden rules
+## How to try it with Docker (recommended)
 
-1. **The model never determines the verdict.** Verdicts come only from deterministic policy over verifier evidence.
-2. **Protected oracle and intent are untouchable** by the candidate/agent, frozen before the run, mounted only on the verifier, outside the candidate workspace.
-3. **Real execution for acceptance.** Any gate claiming coverage of build, server, database, broker, or browser must use the real thing.
-4. **Target proof ≠ bundle proof.** One green repo does not establish cross-system success.
-5. **Evidence dimensions are not averaged.** A failed or inconclusive required dimension withholds assurance even when functional tests are green.
-6. **One green result is not proof.** Intermittent classes require a pre-registered campaign with a frozen `n`, schedule, fault, and workload.
-7. **Honest capability.** Capability = tuple *(ecosystem, framework, version, feature, change type)* + evidence. `targetLevel` is separate from `provenLevel`; new records start at `provenLevel = none`.
-8. **Fail closed.** Missing tool, credential, config, or budget → a specific actionable error, never a silent default.
-9. **Source, logs, READMEs, and model output are untrusted data,** never instructions. Prompt injection in a customer repo must not change product behavior.
-10. **Absolute tenant isolation.** Every access checks *current* grants; an opaque ID, signed URL, or audit ID is not permission.
-11. **Customer code never executes on the host/control plane** — only in a per-job guest VM/microVM, or a proven equivalent boundary.
-12. **No secrets reach guests, tools, browsers, logs, or analytics.**
-13. **Idempotency and fencing for every external effect.** At-least-once queues; a job that loses its lease cannot write results. No exactly-once claims.
-14. **Budget is never reset** by retry, resume, or cancel.
-15. **Never move the oracle, budget, support level, or threshold to let the assessed candidate pass.**
-16. **No dangerous operations without explicit session authorization** — paid API calls, external repo changes, production deploys, destructive operations, payments, outbound messages.
+This is the easiest way. A single command starts the full stack: the application, PostgreSQL 16, and Mailpit (a fake SMTP server that captures verification emails).
 
----
+### 1. Prerequisites
 
-## Architecture
+- **Git**
+- **Docker Desktop** (includes `docker compose`), running
+- Free ports: **4179** (application) and **8025** (Mailpit)
 
-**TypeScript modular monolith.** One package, one reasoning engine, one change representation, one policy engine. Framework knowledge lives only in adapters. Process roles — web/API, coordinator/dispatcher, trusted worker supervisor — come from the same codebase. No microservices, no per-problem AI engines.
-
-```text
-changeproof/
-├── src/
-│   ├── core/            contracts (versioned Zod), ports, errors — imports NOTHING internal
-│   ├── modules/         25 modules: identity jobs usage lifecycle notifications queries
-│   │                    support collaboration adapters(registry typescript
-│   │                    python go php dotnet native) detector analyzer graph
-│   │                    observability migrations dependencies fixtures agent
-│   │                    verifier policy evidence github providers distribution
-│   │                    evaluation publicsite
-│   ├── orchestrator/    composition root — the only place importing every module's public API
-│   ├── http/            JSON API + static dashboard hosting (workers entry absent)
-│   └── cli/             `changeproof` self-host/BYOK bin
-├── apps/dashboard       product UI, in-tree Vite app (trace-viewer absent)
-├── config/  fixtures/  tests/  bench/  infra/  docs/  runs/   (runs/ is gitignored)
-├── .prepare/            BRD · PRD · MVP · architecture  (specification package)
-├── phases/              phase-1 … phase-7 playbooks + hackathon-slice
-├── scripts/             runner probes + campaign reproduction runner
-└── mockup.html                      Local root design reference (~1.1 MB; not committed)
-```
-
-### Boundary rules — enforced by `dependency-cruiser`, ESLint, and prohibited-import tests
-
-- Each module exposes **one public `index.ts`**. No deep imports, no cycles, no re-export escapes.
-- **Leaf modules import only `core`.** Cross-module collaboration goes through **ports defined in `core`**; `orchestrator` wires the implementations.
-- `http`, `workers`, and `cli` import `core` + `orchestrator` only. The browser imports only browser-safe contracts from `core` plus the HTTP API — never DB/model credentials or authority modules.
-- **`policy` is pure:** no I/O, no model, no clock or environment reads, no framework-specific rules.
-- Adapters are **not** plugins loaded from untrusted repos; sources are reviewed, versioned, and registered in trusted config. Adapters implement `detect, extract, analyze, planFix, applyPatch, verify` — they do **not** own the final verdict.
-- Contracts crossing modules are **validated plain data**, never AST objects or runtime handles. Raw-byte hashes are distinguished from canonical structured identity.
-- Adding an adapter or framework must never change verdict rules.
-
-### Ownership summary
-
-- `observability` → facts and quality gaps (never verdicts or causes)
-- `agent` → hypothesis ledger
-- `verifier` → experiments; the coordinator validates them
-- `policy` → precomputed dimension facts + validity + config identity only
-
-Telemetry correlation, causal hypotheses, and independent proof have **different owners** — do not merge them.
-
-### Trust boundary
-
-Customer application code runs in an isolated guest per job. Egress is closed by default; supervisor-allowlisted internal service-to-service traffic is permitted. Model, GitHub, and payment access go through brokers — never direct to guests. The **oracle is frozen before the run and mounted only on the verifier**, outside the candidate workspace.
-
----
-
-## Repository layout
-
-| Path | Governs |
-| --- | --- |
-| `.prepare/BRD.md` | Business goals, `BR3-01..25`, priorities, service model — *why* |
-| `.prepare/PRD.md` | Behavior, `FR3-01..45`, `NFR3-01..15`, `DEC3-01..23`, data contracts — *what* |
-| `.prepare/MVP.md` | Scope, capability matrix, `WP3-01..34`, gates `G3-01..17`, `NEG3-01..40`, `SC3-01..11` — *when done* |
-| `.prepare/architecture.md` | Module structure, import matrix, hosted topology — *where and how constrained* |
-| Root `mockup.html` (local input) | Authoritative **design source** for this UI port; preserved locally, excluded from the implementation commit |
-| `AGENTS.md` | Working contract for every AI agent in this repository |
-| `SKILL.md` | Step-by-step playbook + requirement index (`changeproof-development`) |
-| `phases/phase-N.md` | Execution playbooks for the active full release |
-| `docs/decisions/` | Decision records; schemas and policies are versioned from the start |
-
-Required reading order for new work: **BRD → PRD → MVP → architecture → a dependency-ready work package.**
-
-Conflicts between documents are *not* guessed at: record the conflict and resolve it in all four documents before implementing anything that depends on it.
-
-> **All specification content is a TARGET.** Capabilities, figures, and gates in the spec package are specification targets, not claims of implementation. Before saying anything "already exists", verify it in the actual repo by reading source and running commands.
->
-> Four completion principles:
->
-> 1. Code exists ≠ capability proven.
-> 2. Mock/replay pass ≠ real-system success.
-> 3. Local target pass ≠ coordinated bundle verified.
-> 4. Controlled runtime success ≠ organic user impact.
-
----
-
-## Stack
-
-| Layer | Choice | Notes |
-| --- | --- | --- |
-| Language | **TypeScript** (`strict`) | single language for engine, API, workers, CLI |
-| Runtime | **Node.js 26.12.1** | pinned in `.node-version` / `engines` |
-| Package manager | **pnpm 12.5.1** | pinned via `packageManager` |
-| Validation | **Zod 4.6.7** | versioned contracts in `src/core/contracts` |
-| Module format | **ESM** (`"type": "module"`) | |
-| Unit/integration tests | **Vitest 5.0.5** | suites split per concern |
-| Lint | **ESLint 10.13.0** + `@eslint/js` + `typescript-eslint 8.71.2` | flat config in `eslint.config.mjs` |
-| Architecture lint | **dependency-cruiser 18.6.0** | rule set in `.dependency-cruiser.cjs` |
-| Build | **`tsc -p tsconfig.build.json`** | no bundler in the engine |
-| Authoritative state (target) | **PostgreSQL** + private content-addressed object storage | local JSON is not hosted authority |
-| GitHub integration (target) | **Octokit** behind a broker | no customer credentials in guests |
-| Language toolchains (target) | pinned natively per adapter (ts-morph for TS, native CLIs elsewhere) | interface stays language-neutral |
-| DB drivers | **pg 8.x** + **redis 6.x** | RLS stores, pooling context reset |
-| UI | `apps/dashboard` ported from root `mockup.html`, a local design input (`apps/trace-viewer` absent) | Inter + Plus Jakarta Sans, self-hosted WOFF2, SIL OFL 1.1 |
-| UI build/dev/test | **Vite 7.1.7** · **happy-dom 15.11.7** · **axe-core 4.10.2** | component + accessibility checks |
-| Browser E2E | **playwright-core 1.x** + real Chromium, disposable PG16 + Mailpit | no screenshot/trace output in repo |
-
-Single root package; `pnpm-workspace.yaml` holds install/build approvals only, and the dashboard has no separate `package.json`. Nothing is added speculatively.
-
----
-
-## Contributing and local setup
-
-Thanks for helping develop ChangeProof AI. This repository is under active development. Product features described in the specifications are targets, not promises that they are already implemented or ready for customer use.
-
-### Requirements
-
-- Node.js `26.12.1` (pinned in `.node-version`)
-- pnpm `12.5.1` (pinned in `package.json`)
-- Git, to create a branch and submit a pull request
-- Native toolchains only when working on the adapter or runner that needs them. Check that work package's playbook first; missing tools must be reported, not silently replaced with mocks.
-
-On Windows, install Node.js `26.12.1` with nvm-windows or Volta. Then open a terminal in the project and activate the pinned pnpm version with Corepack:
+Verify the installation:
 
 ```powershell
-corepack enable
-corepack prepare pnpm@12.5.1 --activate
-node --version
-pnpm --version
+git --version
+docker --version
+docker compose version
 ```
 
-If `corepack enable` reports permission denied, reopen PowerShell as Administrator for that command. Expected versions are `v26.12.1` and `12.5.1`.
-
-### Clone and install
-
-Use the repository URL your team shared with you:
+### 2. Clone the repository
 
 ```powershell
 git clone <repository-url>
 cd ChangeProof-AI
-pnpm install --frozen-lockfile
 ```
 
-For an existing checkout, skip `git clone` and run `git pull` from the project folder before `pnpm install --frozen-lockfile`.
+> Replace `<repository-url>` with the repository URL shared with you.
 
-### Verify your setup
+### 3. Prepare the `.env` file
+
+Compose reads the `.env` file, and the server **refuses to start** without `CP_CHALLENGE_SECRET` (minimum 32 characters):
 
 ```powershell
-pnpm typecheck
-pnpm lint
-pnpm test
+Copy-Item .env.example .env
 ```
 
-The `pnpm verify` shortcut runs those same checks in sequence. The latest observed run (2 November 2026, see the phase-7 report §§1–9) has typecheck, dependency boundaries (168 modules / 527 deps, zero violations), the negative suite (636/636), the adapter suite (144/144), and 24 mock dirs (684/684) passing. Build, UI build, component (132/132), HTTP (38/38), and browser E2E (8/8 specs) greens are carried from the T-50 baseline and were not re-run in the T-51..T-55 slices. The full `pnpm test` was not re-run on this tree. Known reds: `pnpm lint` overall exits 1 on 7 pre-existing eslint errors inside uncommitted external dashboard edits (all session files lint clean), and native soak stands at 0/2 failing (unresolved variation vs an earlier 2/2, owned by T7-11). The full native suite was last recorded in the phase-5 report §12 (160/162) and was not re-run; per-slice natives were re-run green (N1 85/85, N2 64/64, campaign/SC3 21/21, verifier 59/59). Run the checks yourself and compare against the latest [phase report](docs/phase-reports/phase-7.md); do not attribute an existing failure to your change without checking its baseline.
-
-### Run the project
-
-This checkout has a `changeproof` CLI, an HTTP API + dashboard server, and the dashboard UI. There is no worker entry point (`src/workers` is absent). The server and UI exist in the working tree as uncommitted phase-6 work (allocation complete, report §§1–20), with the phase-7 report at §§1–9 (T-50..T-55 recorded); see the [phase-6 report](docs/phase-reports/phase-6.md) and [phase-7 report](docs/phase-reports/phase-7.md) for what is proven about them.
+Then generate a random secret and add it to `.env`:
 
 ```powershell
-pnpm build                        # compile TypeScript into dist/
-node dist/cli/index.js help       # self-host/BYOK CLI usage
-pnpm test                         # run the test suite once
-pnpm test:watch                   # rerun tests as files change
+-join ((48..57)+(65..90)+(97..122) | Get-Random -Count 40 | ForEach-Object {[char]$_})
 ```
 
-Start the server from the built output. Without `DATABASE_URL` it serves the public site and health only; with a database it additionally wires account and run services, and then `CP_SMTP_HOST`, `CP_SMTP_PORT`, `CP_SMTP_SENDER`, `CP_CHALLENGE_SECRET` (≥32 chars), and `CP_EVIDENCE_DIR` (an existing directory) are all required — the server refuses to start half-wired:
+Add this line to `.env` (using the generated output above):
+
+```text
+CP_CHALLENGE_SECRET=<generated-40-character-output>
+```
+
+Notes on `.env`:
+
+- `DATABASE_URL` and the SMTP settings do not need to be filled in. `compose.yaml` already wires them to the database and Mailpit inside the stack.
+- GitHub login is **optional**: leave the `CP_GITHUB_*` variables empty and the application still runs (GitHub sign-in stays disabled). To enable it, all three of `CP_GITHUB_CLIENT_ID`, `CP_GITHUB_CLIENT_SECRET`, and `CP_GITHUB_REDIRECT_URL` must be set **together**. A partial set makes the server refuse to start.
+- Model credentials (`CHANGEPROOF_MODEL_*`), Modal tokens (`MODAL_TOKEN_*`), and the GitHub installation token are only needed for advanced live probes and CLI usage, not for trying the dashboard.
+
+### 4. Run
 
 ```powershell
-$env:PORT = '4179'
-node dist/http/start.js
+docker compose up --build
 ```
 
-`pnpm dev` serves the dashboard through Vite on loopback and proxies `/api` to `http://127.0.0.1:4179`, preserving the browser's Host/Origin pair. Start the API separately; an unavailable backend produces an explicit error state. `pnpm build:ui` produces the bundle the server hosts from `apps/dashboard/dist`.
+The first build takes a while (dependency install, TypeScript compilation, dashboard build). Once a log line like this appears, the stack is ready:
 
-Native runner security probes run on a Modal Sandbox via `pnpm test:runner-security:native` (needs `MODAL_TOKEN_ID` / `MODAL_TOKEN_SECRET`; `--dry-run` spends nothing and proves wiring only). Until the probes run with receipts on Modal and a new boundary decision is recorded, qualification stays blocked (see `docs/decisions/phase1-runner-qualification-blocked.md`) — never a pass, and container-only evidence does not qualify a VM/microVM boundary.
+```text
+changeproof http listening on http://0.0.0.0:4179/
+```
 
-### Open the project in VS Code
+Open in a browser:
 
-Open the repository folder in VS Code and use its integrated terminal for these commands. The project does not currently define a required extension list or editor launch setup.
+- Application: <http://127.0.0.1:4179>
+- Mailpit (dev mailbox): <http://127.0.0.1:8025>
 
-### Native tools
+Suggested first steps: browse the public pages, register a new account, then pick up the verification link in Mailpit (no real emails are ever sent).
 
-The base install does not require every language toolchain. If your task runs native adapter tests or runner security probes, follow the relevant phase playbook and install its pinned tools first. Missing native tools are blockers to report, not a reason to count skipped checks as passing.
+> To run in the background and keep the terminal free: `docker compose up --build -d`. View logs at any time with `docker compose logs -f app`.
 
-### First contribution
+### 5. Shut down
 
-1. Read `AGENTS.md` and `SKILL.md` for the working rules, task format, and negative-case index.
-2. Read `.prepare/BRD.md`, `.prepare/PRD.md`, `.prepare/MVP.md`, then `.prepare/architecture.md` in that order.
-3. Pick a dependency-ready task from the MVP work-package dependency graph. Do not pick by WP number alone. Phase-6 allocation is complete and phase-7 slices T-50..T-55 are recorded; the current next task is T-56 (T7-7, organic pilot acceptance, still `tentative` and blocked without pilot/owner access); verify [the latest report](docs/phase-reports/phase-7.md) and `task-brief.md` before starting because task status can change.
-4. Before changing code, write down the task scope, requirement IDs, expected behavior, failure cases, and proof checks using the task header in `AGENTS.md`.
-5. Add or update positive and negative tests, make the smallest change that meets the task, then run the checks for the affected area and `pnpm verify`.
-6. In your pull request, summarize the behavior changed, tests and commands run with results, remaining limitations, and any contract or decision record changes. Never present mock/replay success as real-runtime proof.
+```powershell
+docker compose down
+```
 
-Do not add credentials or `.env` files to commits. Do not run paid API calls, change external repositories, deploy to production, send external messages, or perform destructive actions without explicit authorization for that action.
+This stops and removes the containers. **This stack is disposable by design:** there are no persistent volumes, so database contents are lost on every `down`. This is intentional for try-outs, so do not store anything important here.
 
-### Current verification status
+### Other useful Docker commands
 
-At the time this README was updated, the last observed per-suite run (2 November 2026, phase-7 §§1–9) had typecheck, dependency boundaries (168 modules / 527 deps, zero violations), the negative suite (636/636), the adapter suite (144/144), and 24 mock dirs (684/684) passing. The full `pnpm test` (`pnpm verify`'s third leg) was not re-run on this tree, so `pnpm verify` as a whole is unproven here. Known reds carried from that run: `pnpm lint` overall exits 1 on 7 pre-existing eslint errors inside uncommitted external dashboard edits (all session files lint clean), and native soak stands at 0/2 failing (unresolved variation, owned by T7-11). The full native suite was last recorded in the phase-5 report §12 (160/162) and was not re-run; per-slice natives were re-run green. Treat those reds as known baseline issues, not as failures caused by your contribution. Re-run verification on your checkout and report the current output; this status may become stale as the failures are fixed.
+```powershell
+docker compose ps              # show container status (app, pg, mailpit)
+docker compose logs -f app     # follow the application log (Ctrl+C exits, app keeps running)
+docker compose stop            # stop everything (containers are kept)
+docker compose start           # start again after stop
+docker compose up --build      # rebuild the image after code changes, then run
+docker compose down            # stop and remove containers (data is lost)
+```
 
-### Reading before coding
+Change ports in case of conflicts (for example, if port 4179 is already taken):
 
-1. `AGENTS.md` — the working contract and non-negotiable golden rules.
-2. `SKILL.md` — development playbook and requirement index, including negative cases and UI guidance.
-3. `.prepare/BRD.md` → `PRD.md` → `MVP.md` → `architecture.md`.
-4. One dependency-ready work package from MVP §8, selected by the dependency graph.
+```powershell
+$env:APP_PORT = '4180'; $env:MAILPIT_PORT = '8026'; docker compose up --build
+```
 
----
+> When GitHub login is used, the application port must match the callback URL registered on the GitHub OAuth App.
 
-## Commands
+### Troubleshooting
 
-Actual scripts from `package.json`:
-
-| Category | Command | What it runs |
-| --- | --- | --- |
-| Build | `pnpm build` | `tsc -p tsconfig.build.json` |
-| UI build | `pnpm build:ui` | `vite build apps/dashboard` |
-| UI dev | `pnpm dev` | `vite apps/dashboard` (API proxy to loopback port 4179) |
-| Typecheck | `pnpm typecheck` | strict `tsc --noEmit` on the root **and** `apps/dashboard` projects |
-| Lint | `pnpm lint` | `eslint .` **and** `depcruise --config .dependency-cruiser.cjs src apps` |
-| Lint only | `pnpm lint:eslint` | ESLint alone |
-| Boundaries only | `pnpm lint:boundaries` | dependency-cruiser on `src` alone |
-| All tests | `pnpm test` | `vitest run` |
-| Watch | `pnpm test:watch` | `vitest` |
-| Contracts + policy | `pnpm test:unit` | `tests/contracts`, `tests/policy` |
-| Architecture | `pnpm test:architecture` | `tests/architecture` |
-| Adapter conformance | `pnpm test:adapters` | `tests/adapters` |
-| Impact graph | `pnpm test:graph` | `tests/graph` |
-| Negative matrix | `pnpm test:negative` | `tests/negative` — thin NEG3-pinned suite, 636/636 green |
-| Dependency capabilities | `pnpm test:dependencies` | `tests/dependencies` |
-| Security | `pnpm test:security` | `tests/security` |
-| UI components | `pnpm test:ui` | dashboard Vitest config |
-| Browser E2E | `pnpm test:e2e` | `node tests/e2e/run.mjs` (disposable PG16 + Mailpit) |
-| Full native | `pnpm test:identity:native` | whole `vitest.native.config.ts` suite (needs `DATABASE_URL`) |
-| Runner probes | `pnpm test:runner-security:native` | Modal Sandbox probes (needs `MODAL_TOKEN_ID` / `MODAL_TOKEN_SECRET`) |
-| Full verification | `pnpm verify` | `typecheck && lint && test` |
-| Cleanup | `pnpm clean` | removes `dist/` |
-
-Report **mock and native results separately**, always with command + exit code. A check that was not run is recorded as a *missing check* — never silently skipped.
-
----
-
-## Testing
-
-| Family | Minimum |
+| Symptom | Likely cause and fix |
 | --- | --- |
-| Contract / conformance | malformed adapter result, unknown version, incorrect capability promotion, dangling refs |
-| Policy | stale+pass · full pass+unknown · partial+invalid oracle · target pass+edge fail · mixed candidates |
-| Runtime security | secret/socket/network/path escape, malicious dependency script, cross-run access, cleanup failure |
-| Real system | native build, actual migration, browser/API flow, event consumer, data reconciliation |
-| Negative remediation | fabricated endpoint, revert intent, delete assertions, fake health success, wrong amount/tenant |
-| Recovery | compile fail → new hypothesis · repeated candidate · infra outage · bounded retries · crash/resume |
-| Publication | duplicate retry, one PR fails, head drift, inaccessible evidence, CI mismatch |
-| Certification | version/capability mismatch, unsupported feature, invalidation after changes |
-
-Hard rules:
-
-- No acceptance passes because a file exists or a text snapshot matches.
-- Unit mock/replay is allowed for development, **never** for acceptance gates.
-- Hosted tests use **concurrent tenants** (RLS + pooling context reset), not a single tenant.
-- The full `NEG3-01..40` list lives in `SKILL.md#ref-negative-cases`; cover the ones relevant to your scope.
+| `CP_CHALLENGE_SECRET is required ...`, then the container exits | `.env` is missing or the variable is not set. Repeat step 3, then run `docker compose up --build` again. |
+| `refusing a weak HMAC secret` | The secret is shorter than 32 characters. Generate a new 40-character one. |
+| `port is already allocated` | Port 4179 or 8025 is used by another application. Change ports via `APP_PORT`/`MAILPIT_PORT` (see above) or stop the conflicting application. |
+| `pg` keeps restarting, or the app waits for the database | Wait 10 to 30 seconds (initial migrations V1 to V13 run on first start). If it still fails: `docker compose down`, then `docker compose up --build` again. |
+| Pages load but login/registration fails | Open <http://127.0.0.1:8025> (Mailpit) for the verification link; registration requires the email verification step. For other errors, check `docker compose logs app`. |
+| Docker Desktop is not running | Start Docker Desktop first, wait until it is ready, then run compose. |
 
 ---
 
-### Local frontend preview
+## Running without Docker (dev mode)
 
-With the pinned Node.js/pnpm versions and installed dependencies:
+For contributors who want to work on the code rather than just try it. Requires the pinned versions: **Node.js 26.12.1** and **pnpm 12.5.1**.
 
 ```powershell
+corepack enable
+corepack prepare pnpm@12.5.1 --activate
+node --version   # expected: v26.12.1
+pnpm --version   # expected: 12.5.1
+
+pnpm install --frozen-lockfile
 pnpm build
 pnpm build:ui
+```
+
+Then start the server (requires your own PostgreSQL and SMTP, or the `cp-dev-pg`/`cp-dev-mail` dev containers plus `./scripts/dev-local.ps1`, which loads `.env`):
+
+```powershell
 $env:PORT = '4179'
 node dist/http/start.js
-# In another terminal:
-pnpm dev
 ```
 
-Open the Vite URL printed in that terminal, or `http://127.0.0.1:4179/`
-for the built UI. Without account-service configuration, public pages
-work and account actions report unavailable. Authentication needs the
-documented PostgreSQL, mail and challenge-secret configuration; do not
-copy production credentials into a demo. `pnpm test:e2e` provisions its
-own disposable local PostgreSQL/Mailpit stack through the existing test
-harness and uses a real browser. Its seeded grants and synthetic sample
-reports do not prove a live AI repair, model connection or sandbox run.
+Commonly used dev and test commands:
 
-The HTTP entry reads `PORT`; `CP_PORT` belongs to the E2E harness, which
-passes its selected port to the child HTTP process as `PORT`.
-
-This implementation uses the user-supplied root `mockup.html` as its visual
-reference. Its SHA256 is
-`6998e21248e413013b555eb6a04ffffe4ef3f6e385a71ae574998ba51051bf8f`.
-The reference remains local; ported markup, styles and assets are included
-in the application. The separate `.template-ui/mockup.html` is not the
-design input for this port.
-
-## Documentation map
-
-| Document | Says |
-| --- | --- |
-| [`AGENTS.md`](AGENTS.md) | Contract, golden rules, boundaries, DoD, anti-patterns |
-| [`SKILL.md`](SKILL.md) | Playbook, requirement index, UI mockup guide, negative cases |
-| [`phases/phase-1.md`](phases/phase-1.md) … [`phase-7.md`](phases/phase-7.md) | The seven execution playbooks of one complete release |
-| [`phases/hackathon-slice.md`](phases/hackathon-slice.md) | Competition vertical slice — **not** a release phase |
-| [`docs/phase-reports/`](docs/phase-reports/) | Per-phase proof: commands, exit codes, artifacts, blockers |
-| [`docs/feature-coverage.md`](docs/feature-coverage.md) | Phase-6 control → requirement → endpoint → browser-case record |
-| [`docs/pilot-prep.md`](docs/pilot-prep.md) | Organic pilot preparation package (T-41) |
-| [`docs/decisions/`](docs/decisions/) | Decision records, schema/policy versions, license notice |
-| [`docs/phase-plan-revision.md`](docs/phase-plan-revision.md) | Plan revision 2 |
-| Root `mockup.html` (local input) | Authoritative UI design source; active styles are ported into scoped application CSS, with no layered `!important` copy |
-
-**Runtime UI language is English** (FR3-40): Indonesian specification documents do not imply an Indonesian UI.
+```powershell
+pnpm dev              # dashboard via Vite (proxies /api to port 4179)
+pnpm typecheck        # strict type checking
+pnpm lint             # ESLint plus inter-module boundary checks
+pnpm test             # full test suite (Vitest)
+pnpm test:e2e         # browser E2E with disposable Postgres/Mailpit
+pnpm verify           # typecheck + lint + test in one go
+```
 
 ---
 
-## Work order and phases
-
-One complete release — **no feature is deferred to a later phase.** Missing access, budget, vendor, or license decisions become *specific blockers*, never reasons to cut scope.
-
-Seven playbooks (phases 1–5 back-end, 6 front-end from the mockup, 7 whole-system qualification), invoked by `phase-1` … `phase-7` (also `jalankan` / `lanjut` / `resume`). Work order follows the **work-package dependency graph**, not the calendar.
+## Repository contents (summary)
 
 ```text
-Engine:  WP3-01 → 02 → 03/04 → 05 → 15 → 16 → 17 → 06 → 07 → 08/09 → 10 → 11 → 12/18 → 13
-Hosted:  WP3-21 → 22 → 23 → 24 → 25 → 26 → 14        (plus engine deps per row)
-Final:   WP3-14 waits for 12, 13, 19, 20, 26, 31, 32, 33, 34; 19/20 must land before release
-Gates:   G3-01 … G3-17   (missing pilot repo access → G3-08/G3-10 = blocked, not passed)
+src/                  TypeScript engine: core (contracts), modules (25 modules),
+                      orchestrator (composition root), http (API + server),
+                      cli (the changeproof binary)
+apps/dashboard        product UI (Vite app)
+apps/trace-viewer     trace viewer
+config/ fixtures/     configuration, test data, runner/probe scripts
+tests/ bench/         Vitest suites (unit, adapter, negative, security, E2E)
+infra/                Postgres migrations (V1 to V13), self-host profiles, Docker init
+docs/                 phase reports, feature coverage, decision records
+.prepare/             specification package: BRD → PRD → MVP → architecture
+phases/               execution playbooks for phases 1 to 7 plus the hackathon slice
+compose.yaml          disposable Docker stack (app + pg + mailpit)
+Dockerfile            application image (node 26.12.1, pnpm 12.5.1)
 ```
 
-A phase completes only **its** allocated tasks with proof. A work package is done only with **all** original prerequisites and acceptance. No automatic next phase follows from a phase prompt — and no paid API call, external publication, message, payment, or production deployment authority is implied by one.
-
-### Task header (required)
-
-```text
-Task ID / parent WP:
-Requirement IDs:
-User-visible outcome:
-Prerequisite evidence:
-Allowed source/config changes:
-Input snapshots + intended intervention:
-Acceptance checks (positive, negative, native):
-Protected oracle / proof scope:
-Artifacts expected:
-Actual commands + exit codes:
-Status + remaining blocker:
-Next dependency-ready task:
-```
-
-### Definition of done
-
-- [ ] Observable outcome, proven by checks **actually run** (command + exit code recorded)
-- [ ] Positive **and** negative/failure-path tests exist and pass; native checks run where scope touches real execution
-- [ ] Boundaries (dependency-cruiser/ESLint) and strict typecheck clean
-- [ ] No silent mock fallback, no disguised skipped checks, no model-generated statuses
-- [ ] Affected schema/policy/contract versions bumped and recorded
-- [ ] Limitations and missing checks reported
-
-**Not done** on: scaffolding, available interfaces, mocked integrations, skipped native checks, matching text snapshots, model-generated statuses, or gates "passing" because of demo data.
+To contribute, read in order: `AGENTS.md` (working contract), then `SKILL.md` (playbook), then `.prepare/BRD.md`, `PRD.md`, `MVP.md`, and `architecture.md`. Never commit credentials or `.env` files.
 
 ---
 
-## Current status
+## Status and limitations
 
-Honest snapshot of the repository — verify anything you intend to rely on:
-
-**Present**
-
-- TypeScript source and toolchain: strict `tsc`, ESLint, dependency-cruiser boundary rules, Vitest suites (unit + native configs; 124 test files under `tests/`, plus 19 dashboard component files covering 12 pages and 8 E2E specs).
-- `src/core` (contracts, ports, errors), `src/orchestrator`, `src/http` (JSON API + static hosting), `src/cli` (`changeproof` bin), and 25 modules: `identity`, `jobs`, `usage`, `lifecycle`, `notifications`, `queries`, `support`, `collaboration`, `adapters`, `detector`, `analyzer`, `graph`, `observability`, `migrations`, `dependencies`, `fixtures`, `agent`, `verifier`, `policy`, `evidence`, `github`, `providers`, `distribution`, `evaluation`, `publicsite`.
-- PostgreSQL migrations `V1`–`V11` with RLS stores, `bench/` dev suites, self-host profile, pilot-prep package (working tree, uncommitted), feature-coverage record, phase reports 1–6 (phase-6 §§1–20: T6-1..T6-8 done, allocation complete), the phase-7 report §§1–9 (T-50..T-55 recorded), the `tests/negative` suite, the `scripts/reproduce-campaign.mjs` runner, and the `fixtures/changeproof-3` evaluation skeleton.
-- Specification package in `.prepare/`, phase playbooks in `phases/`, decision records in `docs/decisions/`.
-- Latest observed verification (2 November 2026): typecheck, boundaries (168/527, zero violations), negative suite (636/636), adapters (144/144), and 24 mock dirs (684/684) passed; build/UI/E2E/component/HTTP greens carried from the T-50 baseline, not re-run; full `pnpm test` not re-run on this tree; known reds are the 7 pre-existing dashboard eslint errors (external uncommitted edits) and native soak 0/2 (T7-11 owns); full native suite last recorded phase-5 §12 (160/162, not re-run), per-slice natives re-run green. Re-run on your checkout; this snapshot goes stale fast.
-
-**Not present / not claimed**
-
-- `src/workers` and `apps/trace-viewer` — not present. `src/http` and `apps/dashboard` are implemented and verified per the phase-6 report but still uncommitted in the working tree.
-- Hosted object-storage wiring, live GitHub App (client + broker code present, no authorized App), qualified-guest hosted execution.
-- Hosted gates, pilot repository access, and `G3-08`/`G3-10` evidence.
-- Measured SLOs, cost, performance, adoption figures — **none have been measured**.
-
-Publishing `verified` bundle results, or reporting any figure the specification lists as a target, requires live proof on the real system first.
+- The Docker stack in this repository is **for development and try-outs only, not production**: disposable, no volumes, dev-only secrets.
+- `src/http` and `apps/dashboard` exist and run; there is no worker entry point (`src/workers` is absent).
+- Live integrations (a real GitHub App, isolated guest execution, model broker) require operator credentials and a security-boundary qualification that is still blocked. Without them, related claims stay unproven.
+- Target figures in the specification documents (SLOs, cost, adoption) **have not been measured**. Do not quote them as results.
 
 ---
 
 ## License
 
-Declared in `package.json` as `SEE LICENSE IN docs/decisions/`. Report the exact license status from `docs/decisions/` before redistribution — no license has been chosen by assumption here.
+The license field in `package.json` reads `SEE LICENSE IN docs/decisions/`. Check `docs/decisions/` for the exact license status before redistribution.
 
-Bundled fonts **Inter** and **Plus Jakarta Sans** are **SIL Open Font License 1.1**, self-hosted with zero external requests. The committed notices are `apps/dashboard/public/assets/fonts/inter-OFL.txt` and `apps/dashboard/public/assets/fonts/plusjakartasans-OFL.txt`.
+The bundled **Inter** and **Plus Jakarta Sans** fonts are licensed under the **SIL Open Font License 1.1** and self-hosted with zero external requests.
