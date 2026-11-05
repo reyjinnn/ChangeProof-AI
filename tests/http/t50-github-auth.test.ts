@@ -4,7 +4,13 @@ import { afterAll, beforeAll, expect, test } from 'vitest';
 
 import { ChangeProofError, type TenantContext } from '../../src/core/index.js';
 import type { AuthDeps } from '../../src/http/routes-auth.js';
+import {
+  FREE_TIER_INITIAL_CAP,
+  FREE_TIER_INITIAL_PERIOD_ID,
+  FREE_TIER_INITIAL_RATE_VERSION,
+} from '../../src/http/routes-auth.js';
 import { createHttpServer, type HttpHandle } from '../../src/http/index.js';
+import type { UsageStore } from '../../src/modules/usage/index.js';
 import type { EmailIdentityStore } from '../../src/modules/identity/index.js';
 import type { IdentityStore } from '../../src/modules/identity/index.js';
 import type { GitHubIdentityDb } from '../../src/modules/identity/index.js';
@@ -61,6 +67,26 @@ const identityStore: IdentityStore = {
   listMembers: unimplemented('listMembers'),
 };
 
+const entitlementCalls: { tenantId: string; capAmount: number; rateVersion: string; periodId: string }[] = [];
+const usageStore: UsageStore = {
+  setEntitlement: (input) => {
+    entitlementCalls.push({
+      tenantId: input.tenantId,
+      capAmount: input.capAmount,
+      rateVersion: input.rateVersion,
+      periodId: input.periodId,
+    });
+    return Promise.resolve();
+  },
+  rolloverPeriod: unimplemented('rolloverPeriod'),
+  admitReservation: unimplemented('admitReservation'),
+  recordConsume: unimplemented('recordConsume'),
+  releaseReservation: unimplemented('releaseReservation'),
+  settleReservation: unimplemented('settleReservation'),
+  recordPaymentEvent: unimplemented('recordPaymentEvent'),
+  readBalances: unimplemented('readBalances'),
+  listLedger: unimplemented('listLedger'),
+};
 const emailStore: EmailIdentityStore = {
   registerUser: unimplemented('registerUser'),
   resendVerification: unimplemented('resendVerification'),
@@ -174,6 +200,7 @@ function authDeps(withGithub: boolean): AuthDeps {
   return {
     identity: { store: identityStore, saml: undefined as never, scim: undefined as never, assertNoLastOwnerLockout: () => undefined },
     email: { store: emailStore },
+    usage: { store: usageStore },
     ...(withGithub ? { github: github() } : {}),
   };
 }
@@ -271,7 +298,7 @@ test('new GitHub users register, verify implicitly, and land in a session', asyn
   const { state, nonce } = await startState('?origin=register');
   const done = await call('GET', `${base}/api/auth/github/callback?code=code-1&state=${encodeURIComponent(state)}`, nonce);
   expect(done.status).toBe(302);
-  expect(done.location).toBe('/');
+  expect(done.location).toBe('/#/dashboard');
   const session = cookiePair(done.cookies, 'cp_session') ?? '';
   expect(session.startsWith('cp_session=sess-')).toBe(true);
   expect(done.cookies.join(';')).toContain('SameSite=Strict');
@@ -287,9 +314,36 @@ test('returning users log in without a second registration', async () => {
   const { state, nonce } = await startState();
   const done = await call('GET', `${base}/api/auth/github/callback?code=code-2&state=${encodeURIComponent(state)}`, nonce);
   expect(done.status).toBe(302);
-  expect(done.location).toBe('/');
+  expect(done.location).toBe('/#/dashboard');
   expect(cookiePair(done.cookies, 'cp_session')?.startsWith('cp_session=sess-')).toBe(true);
   expect(current.registered).toHaveLength(0);
+});
+
+test('an explicit return target wins over the workspace default', async () => {
+  current = scenario();
+  current.links.set('1001', { user_id: 'user-1', login: 'octocat' });
+  current.emails.set('octo@example.com', 'user-1');
+  current.tenants.set('user-1', ['acme']);
+  const { state, nonce } = await startState('?return=%2Fapp%2Fruns');
+  const done = await call('GET', `${base}/api/auth/github/callback?code=c&state=${encodeURIComponent(state)}`, nonce);
+  expect(done.status).toBe(302);
+  expect(done.location).toBe('/app/runs');
+  expect(cookiePair(done.cookies, 'cp_session')?.startsWith('cp_session=sess-')).toBe(true);
+});
+
+test('new tenants receive the initial free-tier entitlement', async () => {
+  current = scenario();
+  entitlementCalls.length = 0;
+  const { state, nonce } = await startState('?origin=register');
+  const done = await call('GET', `${base}/api/auth/github/callback?code=code-1&state=${encodeURIComponent(state)}`, nonce);
+  expect(done.status).toBe(302);
+  expect(entitlementCalls).toHaveLength(1);
+  expect(entitlementCalls[0]).toMatchObject({
+    capAmount: FREE_TIER_INITIAL_CAP,
+    rateVersion: FREE_TIER_INITIAL_RATE_VERSION,
+    periodId: FREE_TIER_INITIAL_PERIOD_ID,
+  });
+  expect(entitlementCalls[0]?.tenantId.startsWith('gh-octocat-')).toBe(true);
 });
 
 test('a forged state, a missing code, and a nonce mismatch all fail closed', async () => {
@@ -350,7 +404,7 @@ test('multi-tenant users name their organization instead of landing somewhere', 
     hinted.nonce,
   );
   expect(picked.status).toBe(302);
-  expect(picked.location).toBe('/');
+  expect(picked.location).toBe('/#/dashboard');
   expect(cookiePair(picked.cookies, 'cp_session')?.startsWith('cp_session=sess-')).toBe(true);
 });
 

@@ -18,6 +18,7 @@ import {
   composePublicSite,
   composeQueries,
   composeUsage,
+  type InstallationConnectComposition,
   type JobsComposition,
   type LifecycleComposition,
   type UsageComposition,
@@ -112,6 +113,14 @@ async function callBytes(
   const response = await fetch(`${base}${path}`, { method, headers });
   return { status: response.status, text: await response.text(), contentType: response.headers.get('content-type') };
 }
+
+const githubConnect: InstallationConnectComposition = {
+  connect: (installationId: string) =>
+    Promise.resolve({
+      installationId,
+      repositories: [{ id: '9001', fullName: 'acme/probe', isPrivate: false }],
+    }),
+};
 
 function cookieOf(callResult: Call): string {
   const first = callResult.setCookie[0];
@@ -245,6 +254,7 @@ beforeAll(async () => {
     runs: {
       session: { deriveContext: (input) => identity.store.deriveContext(input) },
       lifecycle,
+      githubConnect,
       queries,
     },
   });
@@ -634,6 +644,37 @@ test('github connections stay honestly empty; unknown revocations 404 quietly', 
   expect(missing.status).toBe(404);
   const message = (missing.body as { error: { message: string } }).error.message;
   expect(message).not.toContain(fixture.tenantId);
+});
+
+test('connecting an installation stores one verified row per repo', async () => {
+  const fixture = await seedFixture('connect');
+  const done = await call('POST', '/api/github/connections', { installationId: '178697398' }, fixture.cookie);
+  expect(done.status).toBe(201);
+  const scope = createHash('sha256').update(fixture.tenantId).digest('hex').slice(0, 12);
+  expect((done.body as { data: { connectionIds: string[] } }).data.connectionIds).toEqual([
+    `conn-178697398-9001-${scope}`,
+  ]);
+  const listed = await call('GET', '/api/github/connections', undefined, fixture.cookie);
+  const connections = (listed.body as { data: { connections: { name: string; status: string }[] } }).data.connections;
+  expect(connections).toHaveLength(1);
+  expect(connections[0]).toMatchObject({ name: 'acme/probe', status: 'active' });
+});
+
+test('two tenants connecting one installation get disjoint rows', async () => {
+  const first = await seedFixture('connect-a');
+  const second = await seedFixture('connect-b');
+  const one = await call('POST', '/api/github/connections', { installationId: '178697398' }, first.cookie);
+  expect(one.status).toBe(201);
+  const two = await call('POST', '/api/github/connections', { installationId: '178697398' }, second.cookie);
+  expect(two.status).toBe(201);
+  const idsOne = (one.body as { data: { connectionIds: string[] } }).data.connectionIds;
+  const idsTwo = (two.body as { data: { connectionIds: string[] } }).data.connectionIds;
+  expect(idsOne).toHaveLength(1);
+  expect(idsTwo).toHaveLength(1);
+  expect(idsOne[0]).not.toBe(idsTwo[0]);
+  const relisted = await call('GET', '/api/github/connections', undefined, first.cookie);
+  const connections = (relisted.body as { data: { connections: { id: string }[] } }).data.connections;
+  expect(connections.map((connection) => connection.id)).toEqual(idsOne);
 });
 
 test('telemetry corpus registers file metadata per tenant', async () => {

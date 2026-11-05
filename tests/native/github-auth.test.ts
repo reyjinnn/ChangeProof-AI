@@ -8,7 +8,7 @@ import { afterAll, beforeAll, expect, test } from 'vitest';
 import type { GitHubOAuthProfile, GitHubOAuthTransport } from '../../src/modules/github/index.js';
 import { createMapSecretBroker } from '../../src/modules/github/broker.js';
 import { createHttpServer, type HttpHandle } from '../../src/http/index.js';
-import { composeEmailIdentity, composeGitHubAuth, composeIdentityStore } from '../../src/orchestrator/index.js';
+import { composeEmailIdentity, composeGitHubAuth, composeIdentityStore, composeUsage } from '../../src/orchestrator/index.js';
 import type { EmailDeliveryReceipt, EmailMessage } from '../../src/core/index.js';
 
 import { databaseUrlFor, resetProbeDatabase } from './db.js';
@@ -17,7 +17,7 @@ import { databaseUrlFor, resetProbeDatabase } from './db.js';
  * GitHub OAuth over real PostgreSQL + the real server (FR3-29/FR3-38).
  *
  * Native check, reported separately: run with `DATABASE_URL=…` against a
- * disposable PostgreSQL 16 container. Applies V1 + V2 + V5 + V10 + V13
+ * disposable PostgreSQL 16 container. Applies V1 + V2 + V4 + V5 + V10 + V13
  * into its own `t_githubauth` database. The provider transport is a fake
  * at the port boundary (no OAuth App credentials in tests); every
  * database effect here — registration, link, session, tenant — is real,
@@ -71,6 +71,7 @@ beforeAll(async () => {
   await resetProbeDatabase(databaseUrl, 't_githubauth');
   await admin.query(migration('V1__identity_tenancy.sql'));
   await admin.query(migration('V2__identity_services.sql'));
+  await admin.query(migration('V4__usage.sql'));
   await admin.query(migration('V5__email_identity.sql'));
   await admin.query(migration('V10__enterprise.sql'));
   await admin.query(migration('V13__github_identity.sql'));
@@ -81,6 +82,7 @@ beforeAll(async () => {
     auth: {
       identity: composeIdentityStore(appPool),
       email: composeEmailIdentity(appPool, { delivery, secrets, challengeSecretRef: 'email-challenge-secret' }),
+      usage: { store: composeUsage(appPool).store },
       github: composeGitHubAuth({
         db: appPool,
         secrets,
@@ -140,7 +142,7 @@ test('native registration creates a verified user, link, tenant, and session', a
   profile = { githubId: '424242', login: 'octocat', email: 'octo-native@example.com' };
   const done = await roundTrip('?origin=register');
   expect(done.status).toBe(302);
-  expect(done.location).toBe('/');
+  expect(done.location).toBe('/#/dashboard');
   const session = cookiePair(done.cookies, 'cp_session') ?? '';
   expect(session.startsWith('cp_session=sess-')).toBe(true);
   const user = await admin.query(`SELECT id, email, verified_at FROM email_users WHERE email = $1`, ['octo-native@example.com']);
@@ -153,6 +155,11 @@ test('native registration creates a verified user, link, tenant, and session', a
   const envelope = (await me.json()) as { data: { authenticated: boolean; tenantId: string } };
   expect(envelope.data.authenticated).toBe(true);
   expect(envelope.data.tenantId.startsWith('gh-octocat-')).toBe(true);
+  const entitlement = await admin.query(
+    `SELECT period_id, cap_amount, rate_version FROM entitlements WHERE tenant_id = $1 AND superseded_at IS NULL`,
+    [envelope.data.tenantId],
+  );
+  expect(entitlement.rows).toEqual([{ period_id: 'period-free-1', cap_amount: 1000, rate_version: 'default-rates-1' }]);
 });
 
 test('native password accounts never auto-link on a matching email', async () => {

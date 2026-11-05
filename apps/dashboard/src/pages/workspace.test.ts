@@ -264,6 +264,80 @@ test('repositories empty state names the next safe step', async () => {
   expect(outlet.textContent).toContain('Install the GitHub App');
 });
 
+test('connect form verifies an installation, then lists its repositories', async () => {
+  let connected = false;
+  let posted: unknown;
+  stubFetch({
+    '/api/auth/session': { status: 200, json: SESSION },
+    '/api/github/connections': (_url: string, body: unknown) => {
+      if (body !== undefined) {
+        posted = body;
+        connected = true;
+        return { status: 201, json: { installationId: '178697398', connectionIds: ['conn-1'], repositoryCount: 1 } };
+      }
+      return { status: 200, json: connected ? CONNECTIONS : [] };
+    },
+  });
+  const outlet = boot();
+  await renderRoute(outlet, '#/repositories');
+  await settle(outlet, 'No connections');
+  const field = outlet.querySelector<HTMLInputElement>('#connect-installation-id');
+  if (field === null) throw new Error('connect input missing');
+  field.value = '178697398';
+  const button = [...outlet.querySelectorAll('button')].find((el) => el.textContent === 'Connect');
+  if (button === undefined) throw new Error('connect button missing');
+  button.click();
+  await settle(outlet, 'acme/storefront');
+  expect(posted).toEqual({ installationId: '178697398' });
+  expect(outlet.textContent).toContain('Connected 1 repositories');
+});
+
+test('connect refuses a malformed id locally and surfaces server failures', async () => {
+  stubFetch({
+    '/api/auth/session': { status: 200, json: SESSION },
+    '/api/github/connections': { status: 200, json: [] },
+  });
+  const outlet = boot();
+  await renderRoute(outlet, '#/repositories');
+  await settle(outlet, 'No connections');
+  const field = outlet.querySelector<HTMLInputElement>('#connect-installation-id');
+  if (field === null) throw new Error('connect input missing');
+  field.value = 'abc';
+  const button = [...outlet.querySelectorAll('button')].find((el) => el.textContent === 'Connect');
+  if (button === undefined) throw new Error('connect button missing');
+  button.click();
+  await settle(outlet, 'Enter the numeric installation id');
+});
+
+test('connect surfaces an unknown installation honestly', async () => {
+  stubFetch({
+    '/api/auth/session': { status: 200, json: SESSION },
+    '/api/github/connections': (_url: string, body: unknown) =>
+      body !== undefined
+        ? {
+            status: 404,
+            json: {
+              ok: false,
+              error: {
+                code: 'installation_not_found',
+                message: 'That installation is unknown to this GitHub App; check the id and retry.',
+              },
+            },
+          }
+        : { status: 200, json: [] },
+  });
+  const outlet = boot();
+  await renderRoute(outlet, '#/repositories');
+  await settle(outlet, 'No connections');
+  const field = outlet.querySelector<HTMLInputElement>('#connect-installation-id');
+  if (field === null) throw new Error('connect input missing');
+  field.value = '999';
+  const button = [...outlet.querySelectorAll('button')].find((el) => el.textContent === 'Connect');
+  if (button === undefined) throw new Error('connect button missing');
+  button.click();
+  await settle(outlet, 'unknown to this GitHub App');
+});
+
 test('capabilities separate target level from proven level', async () => {
   stubFetch({
     '/api/auth/session': { status: 200, json: SESSION },

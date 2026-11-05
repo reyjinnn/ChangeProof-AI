@@ -2,6 +2,7 @@ import { createHmac, timingSafeEqual } from 'node:crypto';
 
 import { ChangeProofError, type RepositoryConnection } from '../../core/index.js';
 
+export * from './app-token.js';
 export * from './broker.js';
 export * from './client.js';
 export * from './oauth.js';

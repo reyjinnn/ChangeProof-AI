@@ -97,6 +97,18 @@ test('owners see the period cap, usage, and open reservations', async () => {
   expect(outlet.textContent).toContain('run-1');
 });
 
+test('owners without an entitlement see a no-period state, never raw null', async () => {
+  stubFetch({
+    '/api/auth/session': { status: 200, json: OWNER_SESSION },
+    '/api/billing/balances': { status: 200, json: { ...BALANCES, periodId: null, cap: null } },
+  });
+  const outlet = boot();
+  await renderRoute(outlet, '#/billing');
+  await settle(outlet, 'No active billing period');
+  expect(outlet.querySelector('.stats')).toBeNull();
+  expect(outlet.textContent).not.toContain('null');
+});
+
 test('billing says plainly that invoices have no listing endpoint', async () => {
   stubFetch({
     '/api/auth/session': { status: 200, json: OWNER_SESSION },

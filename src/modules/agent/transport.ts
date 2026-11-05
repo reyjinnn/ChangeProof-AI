@@ -98,7 +98,7 @@ export function modelFetchTransport(
       }
       let payload: unknown;
       try {
-        payload = (await response.json()) as unknown;
+        payload = await response.json();
       } catch {
         throw new ChangeProofError('Model response is not JSON; refusing to guess.');
       }

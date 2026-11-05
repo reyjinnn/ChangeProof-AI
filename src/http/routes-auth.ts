@@ -7,7 +7,9 @@ import { ChangeProofError } from '../core/index.js';
 import type {
   EmailIdentityComposition,
   GitHubAuthComposition,
+  GitHubComposition,
   IdentityComposition,
+  UsageComposition,
 } from '../orchestrator/index.js';
 import {
   actingContext,
@@ -38,6 +40,16 @@ export interface AuthDeps {
   readonly email: EmailIdentityComposition;
   /** Absent without an authorized OAuth App: providers report `github: false`. */
   readonly github?: GitHubAuthComposition | undefined;
+  /**
+   * Absent without an operator-provisioned installation credential:
+   * providers report `githubApp: false`. Sign-in never implies this.
+   */
+  readonly githubApp?: GitHubComposition | undefined;
+  /**
+   * Absent on servers/tests that wire auth without usage: tenants are then
+   * created unentitled (the historical behavior) and show the no-period UI.
+   */
+  readonly usage?: { store: UsageComposition['store'] } | undefined;
 }
 
 type GitHubErrorCode =
@@ -51,6 +63,11 @@ type GitHubErrorCode =
   | 'github_taken'
   | 'tenant_deleted'
   | 'login_failed';
+
+/** [DERIVED] Initial free-tier entitlement, see docs/decisions/free-tier-initial-entitlement.md. */
+export const FREE_TIER_INITIAL_CAP = 1000;
+export const FREE_TIER_INITIAL_RATE_VERSION = 'default-rates-1';
+export const FREE_TIER_INITIAL_PERIOD_ID = 'period-free-1';
 
 const SESSION_MAX_AGE = 12 * 3600;
 const REMEMBER_MAX_AGE = 30 * 24 * 3600;
@@ -129,6 +146,30 @@ export function isAuthPath(pathname: string): boolean {
   );
 }
 
+async function provisionInitialEntitlement(
+  usage: { store: UsageComposition['store'] } | undefined,
+  tenantId: string,
+  nowIso: string,
+): Promise<void> {
+  if (usage === undefined) return;
+  try {
+    await usage.store.setEntitlement({
+      tenantId,
+      capAmount: FREE_TIER_INITIAL_CAP,
+      rateVersion: FREE_TIER_INITIAL_RATE_VERSION,
+      periodId: FREE_TIER_INITIAL_PERIOD_ID,
+      nowIso,
+    });
+  } catch (error) {
+    // Identity is the primary effect: a billing-setup failure must not
+    // strand a created account. The operator sees this line, the tenant
+    // sees the honest no-period state, and a backfill closes the gap.
+    process.stderr.write(
+      `initial entitlement failed for tenant "${tenantId}": ${error instanceof Error ? error.message : 'unknown'}\n`,
+    );
+  }
+}
+
 export async function handleAuthApi(
   auth: AuthDeps | undefined,
   request: IncomingMessage,
@@ -146,9 +187,11 @@ export async function handleAuthApi(
 
   if (method === 'GET' && pathname === '/api/auth/providers') {
     // Real capability flags. `github` is sign-in (true once an authorized
-    // OAuth App is wired); `githubApp` is repository authority, which stays
-    // false until an installation flow exists — login never implies it.
-    sendOk(response, { email: true, github: auth.github !== undefined, githubApp: false });
+    // OAuth App is wired); `githubApp` is repository authority (true once
+    // the operator provisions an installation credential). Live installation
+    // verification stays a separate proof (github-probe) — login never
+    // implies repository authority.
+    sendOk(response, { email: true, github: auth.github !== undefined, githubApp: auth.githubApp !== undefined });
     return;
   }
   if (method === 'GET' && pathname === '/api/auth/github/start') {
@@ -181,7 +224,7 @@ export async function handleAuthApi(
     const tenantParam = url.searchParams.get('tenant') ?? '';
     const tenantId = tenantParam === '' ? undefined : TenantIdSchema.parse(tenantParam);
     const returnParam = url.searchParams.get('return') ?? '';
-    const returnTarget = returnParam === '' ? undefined : returnParam;
+    const returnTarget = returnParam === '' ? '/#/dashboard' : returnParam;
     const rememberRaw = url.searchParams.get('remember') ?? '';
     const rememberMe = rememberRaw === '1' || rememberRaw.toLowerCase() === 'true';
     const nonce = randomBytes(16).toString('hex');
@@ -191,7 +234,7 @@ export async function handleAuthApi(
         nonce,
         ...(userId === undefined ? {} : { userId }),
         ...(tenantId === undefined ? {} : { tenantId }),
-        ...(returnTarget === undefined ? {} : { returnTarget }),
+        returnTarget,
         rememberMe,
         origin,
         nowMs: Date.parse(nowIso),
@@ -277,14 +320,16 @@ export async function handleAuthApi(
         githubFailure(response, 'email_taken', failPage);
         return;
       } else {
-        userId = (
+        const registered = (
           await auth.github.store.registerGitHubUser({
             email: profile.email,
             githubId: profile.githubId,
             login: profile.login,
             nowIso,
           })
-        ).userId;
+        );
+        userId = registered.userId;
+        await provisionInitialEntitlement(auth.usage, registered.tenantId, nowIso);
       }
       const session = await auth.github.store.loginWithGitHub({
         userId,
@@ -441,7 +486,9 @@ export async function handleAuthApi(
   }
   if (method === 'POST' && pathname === '/api/orgs') {
     const body = parseBody(ClaimBody, rawBody);
-    sendCreated(response, await auth.email.store.claimTenant({ ...body, nowIso }));
+    const claimed = await auth.email.store.claimTenant({ ...body, nowIso });
+    await provisionInitialEntitlement(auth.usage, claimed.tenantId, nowIso);
+    sendCreated(response, claimed);
     return;
   }
   if (method === 'POST' && pathname.endsWith('/invitations') && pathname.startsWith('/api/orgs/')) {

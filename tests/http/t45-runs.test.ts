@@ -1,9 +1,11 @@
+import { createHash } from 'node:crypto';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { afterAll, beforeAll, expect, test } from 'vitest';
 
 import {
   ChangeProofError,
+  MissingConfigurationError,
   type LifecycleRun,
   type RunEvent,
   type SearchResult,
@@ -13,7 +15,7 @@ import type { RunsDeps } from '../../src/http/routes-runs.js';
 import type { LifecycleStore } from '../../src/modules/lifecycle/index.js';
 import type { QueriesStore } from '../../src/modules/queries/index.js';
 import { createHttpServer, type HttpHandle } from '../../src/http/index.js';
-import { composePublicSite } from '../../src/orchestrator/index.js';
+import { composePublicSite, type InstallationConnectComposition } from '../../src/orchestrator/index.js';
 
 // Run-journey HTTP proof (T-45): the real server over stub stores with
 // sentinel ids. No database — the native suite proves the real stores;
@@ -24,6 +26,8 @@ const manifestPath = join(rootDir, 'config', 'publicsite', 'manifest.json');
 
 const HEX_64 = 'a'.repeat(64);
 const NOW_ISO = '2026-11-02T00:00:00.000Z';
+// Mirrors the store's tenant-scope suffix so the fake keeps the real id shape.
+const FAKE_SCOPE = createHash('sha256').update('tenant-acme').digest('hex').slice(0, 12);
 
 const ctx: TenantContext = {
   schemaVersion: '1',
@@ -168,6 +172,10 @@ const lifecycle: LifecycleStore = {
       ? Promise.reject(new ChangeProofError('Profile name must not be empty; refusing.'))
       : Promise.resolve({ profileId: 'env-2', revision: 2 }),
   listConnections: () => Promise.resolve({ connections: [] }),
+  registerConnections: (_actor, input) =>
+    Promise.resolve({
+      connectionIds: input.repositories.map((repo) => `conn-${input.installationId}-${repo.id}-${FAKE_SCOPE}`),
+    }),
   revokeConnection: (_actor, input) =>
     input.connectionId === 'conn-missing'
       ? Promise.reject(unknown('Connection'))
@@ -219,6 +227,22 @@ const queries: QueriesStore = {
   },
 };
 
+let connectFailure: Error | undefined;
+const connectCalls: string[] = [];
+const githubConnect: InstallationConnectComposition = {
+  connect: (installationId: string) => {
+    connectCalls.push(installationId);
+    if (connectFailure !== undefined) return Promise.reject(connectFailure);
+    return Promise.resolve({
+      installationId,
+      repositories: [
+        { id: '1438299201', fullName: 'reyjinnn/ChangeProof-AI', isPrivate: false },
+        { id: '1', fullName: 'reyjinnn/pilot', isPrivate: true },
+      ],
+    });
+  },
+};
+
 function deps(): RunsDeps {
   return {
     session: {
@@ -226,6 +250,7 @@ function deps(): RunsDeps {
         input.sessionId === 'sess-good' ? Promise.resolve(ctx) : Promise.reject(new ChangeProofError('nope')),
     },
     lifecycle: { store: lifecycle },
+    githubConnect,
     queries: { store: queries },
   };
 }
@@ -461,6 +486,39 @@ test('environments read and save revisions behind the session', async () => {
   expect(noMarker.status).toBe(403);
 });
 
+test('connecting an installation verifies live, then stores one row per repo', async () => {
+  connectFailure = undefined;
+  connectCalls.length = 0;
+  const done = await call('POST', '/api/github/connections', { headers: authed, body: { installationId: '178697398' } });
+  expect(done.status).toBe(201);
+  expect(connectCalls).toEqual(['178697398']);
+  expect(done.body).toEqual({
+    ok: true,
+    data: {
+      installationId: '178697398',
+      connectionIds: [`conn-178697398-1438299201-${FAKE_SCOPE}`, `conn-178697398-1-${FAKE_SCOPE}`],
+      repositoryCount: 2,
+    },
+  });
+});
+
+test('connect refuses bad ids quietly and unknown installations honestly', async () => {
+  connectFailure = undefined;
+  const malformed = await call('POST', '/api/github/connections', { headers: authed, body: { installationId: '../x' } });
+  expect(malformed.status).toBe(400);
+  connectFailure = new ChangeProofError('GitHub installation is unknown or not shared with this App; refusing.');
+  const unknown = await call('POST', '/api/github/connections', { headers: authed, body: { installationId: '999' } });
+  expect(unknown.status).toBe(404);
+  expect(JSON.stringify(unknown.body)).toContain('installation_not_found');
+  connectFailure = new MissingConfigurationError('CP_GITHUB_APP_KEY_FILE', 'secret broker ref "github-app-key"', 'test');
+  const unconfigured = await call('POST', '/api/github/connections', {
+    headers: authed,
+    body: { installationId: '178697398' },
+  });
+  expect(unconfigured.status).toBe(503);
+  connectFailure = undefined;
+});
+
 test('github connections list honestly empty and revoke refuses unknown ids', async () => {
   const listed = await call('GET', '/api/github/connections', { headers: authed });
   expect(listed.status).toBe(200);
@@ -523,6 +581,7 @@ test('new workspace paths answer 503 without the database', async () => {
     ['GET', '/api/environments', undefined],
     ['POST', '/api/environments', { name: 'x' }],
     ['GET', '/api/github/connections', undefined],
+    ['POST', '/api/github/connections', { installationId: '178697398' }],
     ['POST', '/api/github/connections/conn-1/revoke', {}],
     ['GET', '/api/telemetry/corpus', undefined],
     ['POST', '/api/telemetry/corpus', { name: 'a', sizeBytes: 1, kind: 'log' }],

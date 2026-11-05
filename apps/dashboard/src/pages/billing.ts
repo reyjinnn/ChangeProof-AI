@@ -21,8 +21,8 @@ interface Reservation {
 }
 
 interface Balances {
-  readonly periodId: string;
-  readonly cap: number;
+  readonly periodId: string | null;
+  readonly cap: number | null;
   readonly consumed: number;
   readonly reservedActive: number;
   readonly reservations: readonly Reservation[];
@@ -147,6 +147,18 @@ async function renderBilling(outlet: HTMLElement): Promise<void> {
         label: 'Retry',
         onClick: () => void renderBilling(outlet),
       }),
+    );
+    return;
+  }
+
+  if (balances.periodId === null || balances.cap === null) {
+    outlet.replaceChildren(
+      h('section', { class: 'card' }, [
+        emptyState(
+          'No active billing period',
+          'This organization has no spending cap yet, so new runs cannot be admitted. Ask your operator to set the initial entitlement; usage appears here afterwards.',
+        ),
+      ]),
     );
     return;
   }

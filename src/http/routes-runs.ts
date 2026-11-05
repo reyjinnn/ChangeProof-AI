@@ -5,6 +5,7 @@ import { z } from 'zod';
 
 import {
   ChangeProofError,
+  MissingConfigurationError,
   DraftBodySchema,
   ExecutionModeSchema,
   IdSchema,
@@ -13,7 +14,11 @@ import {
   Sha256Schema,
 } from '../core/index.js';
 import type { LifecycleSessionPort } from '../core/ports/index.js';
-import type { LifecycleComposition, QueriesComposition } from '../orchestrator/index.js';
+import type {
+  InstallationConnectComposition,
+  LifecycleComposition,
+  QueriesComposition,
+} from '../orchestrator/index.js';
 import { actingContext, HttpRouteError, parseBody, pathSegment } from './context.js';
 import { sendBytes, sendCreated, sendFail, sendOk } from './respond.js';
 
@@ -34,6 +39,7 @@ export interface RunsDeps {
   readonly session: LifecycleSessionPort;
   readonly lifecycle: LifecycleComposition;
   readonly queries: QueriesComposition;
+  readonly githubConnect?: InstallationConnectComposition | undefined;
 }
 
 const ProjectBody = z.strictObject({ name: z.string().trim().min(1).max(200) });
@@ -63,6 +69,7 @@ const EventsQuery = z.strictObject({
   afterSeq: z.coerce.number().int().nonnegative(),
   limit: z.coerce.number().int().min(1).max(100),
 });
+const ConnectBody = z.strictObject({ installationId: z.string().regex(/^[1-9][0-9]*$/) });
 const RetryBody = z.strictObject({ idempotencyKey: Sha256Schema });
 const RunsListQuery = z.strictObject({ limit: z.coerce.number().int().min(1).max(100).optional() });
 const ProjectPatchBody = z
@@ -379,6 +386,57 @@ export async function handleRunsApi(
       })),
     });
     return;
+  }
+  if (method === 'POST' && pathname === '/api/github/connections') {
+    const ctx = await actingContext(runs.session, request, nowIso);
+    const body = parseBody(ConnectBody, rawBody);
+    const connect = runs.githubConnect;
+    if (connect === undefined) {
+      sendFail(
+        response,
+        503,
+        'github_not_configured',
+        'This server has no GitHub App configured; an operator must provision the App id and key.',
+      );
+      return;
+    }
+    try {
+      const verified = await connect.connect(body.installationId, Date.parse(nowIso));
+      const stored = await orMapped(
+        runs.lifecycle.store.registerConnections(
+          { sessionId: ctx.sessionId, nowIso },
+          { installationId: verified.installationId, repositories: verified.repositories },
+        ),
+      );
+      sendCreated(response, {
+        installationId: verified.installationId,
+        connectionIds: stored.connectionIds,
+        repositoryCount: stored.connectionIds.length,
+      });
+      return;
+    } catch (error) {
+      if (error instanceof MissingConfigurationError) {
+        sendFail(response, 503, 'github_not_configured', 'This server has no GitHub App key; an operator must provision it.');
+        return;
+      }
+      if (error instanceof ChangeProofError && error.message.includes('unknown or not shared')) {
+        sendFail(
+          response,
+          404,
+          'installation_not_found',
+          'That installation is unknown to this GitHub App; check the id and retry.',
+        );
+        return;
+      }
+      if (
+        error instanceof ChangeProofError &&
+        /unreachable|answered HTTP|rejected the App credential|no installation token/.test(error.message)
+      ) {
+        sendFail(response, 502, 'github_unavailable', 'GitHub did not answer the verification; retry the connection later.');
+        return;
+      }
+      throw error;
+    }
   }
   if (method === 'POST' && pathname.startsWith('/api/github/connections/') && pathname.endsWith('/revoke')) {
     const ctx = await actingContext(runs.session, request, nowIso);

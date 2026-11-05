@@ -859,6 +859,56 @@ async function renderRepositories(outlet: HTMLElement, ctx: RouteContext): Promi
     }
     body.replaceChildren(card('Repository connections', table(['Repository', 'Status', 'Webhook', 'Updated'], rows)), details);
   };
+  const installNote = note();
+  const connectButton = h('button', { class: 'button primary', type: 'button' }, ['Connect']);
+  const connectPanel = h('details', { class: 'compact-detail' }, [
+    h('summary', {}, ['Connect an installation']),
+    h('div', { class: 'card' }, [
+      h('div', { class: 'pad' }, [
+        h('p', { class: 'help' }, [
+          'Enter the numeric installation id from the GitHub App install page. The server verifies it live before storing anything.',
+        ]),
+        h('p', {}, [
+          h('input', {
+            class: 'input',
+            id: 'connect-installation-id',
+            inputmode: 'numeric',
+            autocomplete: 'off',
+            placeholder: 'e.g. 178697398',
+            'aria-label': 'Installation id',
+          }),
+          ' ',
+          connectButton,
+        ]),
+        installNote,
+      ]),
+    ]),
+  ]);
+  connectButton.addEventListener('click', () => {
+    const field = connectPanel.querySelector('input');
+    const installationId = field?.value.trim() ?? '';
+    if (!/^[1-9][0-9]*$/.test(installationId)) {
+      installNote.replaceChildren('Enter the numeric installation id from the GitHub App install page.');
+      return;
+    }
+    connectButton.disabled = true;
+    installNote.replaceChildren('Verifying with GitHub…');
+    void apiPost<{ installationId: string; connectionIds: string[]; repositoryCount: number }>(
+      '/api/github/connections',
+      { installationId },
+    )
+      .then((created) => {
+        installNote.replaceChildren(`Connected ${String(created.repositoryCount)} repositories. Refreshing…`);
+        void load();
+      })
+      .catch((error: unknown) => {
+        installNote.replaceChildren(asErrorMessage(error));
+      })
+      .finally(() => {
+        connectButton.disabled = false;
+      });
+  });
+  outlet.insertBefore(connectPanel, body);
   await load();
 }
 

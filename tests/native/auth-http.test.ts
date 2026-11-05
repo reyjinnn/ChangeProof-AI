@@ -7,7 +7,7 @@ import { afterAll, beforeAll, expect, test } from 'vitest';
 
 import type { EmailDeliveryReceipt, EmailMessage } from '../../src/core/index.js';
 import { createHttpServer, type HttpHandle } from '../../src/http/index.js';
-import { composeEmailIdentity, composeIdentityStore } from '../../src/orchestrator/index.js';
+import { composeEmailIdentity, composeIdentityStore, composeUsage } from '../../src/orchestrator/index.js';
 import { createMapSecretBroker } from '../../src/modules/github/broker.js';
 
 import { databaseUrlFor, resetProbeDatabase } from './db.js';
@@ -17,7 +17,7 @@ import { databaseUrlFor, resetProbeDatabase } from './db.js';
  * server (FR3-29/38, NEG3-21/29/30).
  *
  * Native check, reported separately: run with `DATABASE_URL=…` against a
- * disposable PostgreSQL 16 container. Applies V1 + V2 + V5 + V10 into
+ * disposable PostgreSQL 16 container. Applies V1 + V2 + V4 + V5 + V10 into
  * its own `t_authhttp` database (V10 carries memberships.status, which
  * deriveContext reads). Delivery is an in-memory recorder at the port
  * boundary (real SMTP delivery is proven by E2E Mailpit runs, and the
@@ -113,6 +113,7 @@ beforeAll(async () => {
   await resetProbeDatabase(databaseUrl, 't_authhttp');
   await admin.query(migration('V1__identity_tenancy.sql'));
   await admin.query(migration('V2__identity_services.sql'));
+  await admin.query(migration('V4__usage.sql'));
   await admin.query(migration('V5__email_identity.sql'));
   await admin.query(migration('V10__enterprise.sql'));
   await admin.query(migration('V12__workspace.sql'));
@@ -123,6 +124,7 @@ beforeAll(async () => {
     auth: {
       identity: composeIdentityStore(appPool),
       email: composeEmailIdentity(appPool, { delivery, secrets, challengeSecretRef: 'email-challenge-secret' }),
+      usage: { store: composeUsage(appPool).store },
     },
   });
   await new Promise<void>((resolve) => handle?.server.listen(0, '127.0.0.1', resolve));
@@ -147,6 +149,15 @@ test('register → verify → claim → login → session reads back', async () 
   const session = await call('GET', '/api/auth/session', undefined, cookie);
   expect(session.status).toBe(200);
   expect(session.body).toMatchObject({ ok: true, data: { authenticated: true, tenantId: 'acme-http', role: 'owner' } });
+});
+
+test('claiming a tenant provisions the initial free-tier entitlement', async () => {
+  await registerVerifyClaim(uniqueEmail(), 'correct-horse-42', 'acme-entitle');
+  const entitlement = await admin.query(
+    `SELECT period_id, cap_amount, rate_version FROM entitlements WHERE tenant_id = $1 AND superseded_at IS NULL`,
+    ['acme-entitle'],
+  );
+  expect(entitlement.rows).toEqual([{ period_id: 'period-free-1', cap_amount: 1000, rate_version: 'default-rates-1' }]);
 });
 
 test('wrong password and unknown user share one message (NEG3-30)', async () => {

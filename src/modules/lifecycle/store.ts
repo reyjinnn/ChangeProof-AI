@@ -228,6 +228,11 @@ export interface GithubConnection {
   readonly updatedAt: string;
 }
 
+export interface RegisterConnectionsInput {
+  readonly installationId: string;
+  readonly repositories: readonly { id: string; fullName: string }[];
+}
+
 export interface RevokeConnectionInput {
   readonly connectionId: string;
 }
@@ -290,6 +295,10 @@ export interface LifecycleStore {
     actor: LifecycleActor,
     input: RevokeConnectionInput,
   ): Promise<{ connectionId: string; status: string }>;
+  registerConnections(
+    actor: LifecycleActor,
+    input: RegisterConnectionsInput,
+  ): Promise<{ connectionIds: readonly string[] }>;
   getTelemetryCorpus(actor: LifecycleActor): Promise<TelemetryCorpus>;
   registerTelemetryFile(actor: LifecycleActor, input: RegisterTelemetryInput): Promise<{ fileId: string; name: string }>;
 }
@@ -1364,6 +1373,40 @@ export function createLifecycleStore(
       };
     },
 
+    async registerConnections(actor, input) {
+      const context = await derive(actor);
+      assertCanMutateWorkspace(context);
+      if (!/^[1-9][0-9]*$/.test(input.installationId)) {
+        throw new ChangeProofError('Installation id must be a positive integer; refusing.');
+      }
+      const repos = z
+        .array(z.object({ id: IdSchema, fullName: z.string().min(1).max(400) }))
+        .parse(input.repositories);
+      if (repos.length === 0) {
+        return { connectionIds: [] };
+      }
+      return inTenant(context.tenantId, async (client) => {
+        if (!(await tableExists(client, 'github_connections'))) {
+          throw new ChangeProofError('Workspace tables are missing; apply infra/postgres/V12__workspace.sql.');
+        }
+        // The id carries a tenant scope hash: without it, a second tenant
+        // connecting the same installation collides on the global PK and the
+        // upsert trips RLS on another tenant's row. Opaque by design.
+        const scope = createHash('sha256').update(context.tenantId).digest('hex').slice(0, 12);
+        const ids: string[] = [];
+        for (const repo of repos) {
+          const id = IdSchema.parse(`conn-${input.installationId}-${repo.id}-${scope}`);
+          await client.query(
+            `INSERT INTO github_connections (id, tenant_id, repository, status, webhook_state, last_delivery_at, created_at, updated_at)
+             VALUES ($1, $2, $3, 'active', NULL, NULL, $4, $4)
+             ON CONFLICT (id) DO UPDATE SET repository = EXCLUDED.repository, status = 'active', updated_at = EXCLUDED.updated_at`,
+            [id, context.tenantId, repo.fullName, actor.nowIso],
+          );
+          ids.push(id);
+        }
+        return { connectionIds: ids };
+      });
+    },
     async revokeConnection(actor, input) {
       const context = await derive(actor);
       assertCanMutateWorkspace(context);
