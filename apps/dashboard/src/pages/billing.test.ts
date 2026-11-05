@@ -95,6 +95,10 @@ test('owners see the period cap, usage, and open reservations', async () => {
   expect(outlet.textContent).toContain('830');
   expect(outlet.textContent).toContain('res-1');
   expect(outlet.textContent).toContain('run-1');
+  expect(outlet.querySelector('h1')?.textContent).toBe('Usage & data');
+  expect(outlet.querySelector('.usage-bar')?.getAttribute('aria-label')).toContain('120 used, 50 reserved, 830 remaining');
+  expect(outlet.querySelector('.split')).not.toBeNull();
+  expect(outlet.querySelector('a[href="#/run?id=run-1"]')).not.toBeNull();
 });
 
 test('billing says plainly that invoices have no listing endpoint', async () => {
@@ -106,6 +110,18 @@ test('billing says plainly that invoices have no listing endpoint', async () => 
   await renderRoute(outlet, '#/billing');
   await settle(outlet, 'period-1');
   expect(outlet.textContent).toContain('no invoice listing');
+});
+
+test('a new organization without a configured usage period shows an honest empty state', async () => {
+  stubFetch({
+    '/api/auth/session': { status: 200, json: OWNER_SESSION },
+    '/api/billing/balances': { status: 200, json: { periodId: null, cap: null, consumed: 0, reservedActive: 0, reservations: [] } },
+  });
+  const outlet = boot();
+  await renderRoute(outlet, '#/billing');
+  expect(outlet.textContent).toContain('Usage period not configured');
+  expect(outlet.querySelector('.usage-bar')).toBeNull();
+  expect(outlet.textContent).not.toContain('null');
 });
 
 test('a failed balances read offers a retry that recovers', async () => {

@@ -120,7 +120,7 @@ export async function spec({ base, context, rootDir, mailApi, databaseUrl }) {
 
     // Billing: seeded cap, no reservations, no invoice listing.
     await page.goto(`${base}/#/billing`, { waitUntil: 'networkidle' });
-    await page.getByText('period-1').waitFor();
+    await page.getByText('period-1', { exact: true }).waitFor();
     assert.match((await page.locator('main#outlet').textContent()) ?? '', /remaining 1000/);
     await page.getByText('No open reservations').waitFor();
     await page.getByText('no invoice listing').waitFor();

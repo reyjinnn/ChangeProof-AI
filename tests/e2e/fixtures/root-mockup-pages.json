@@ -1,0 +1,229 @@
+{
+    "/":  {
+              "headline":  "Every change.One proof.",
+              "sections":  [
+                               "Follow the change.See the proof.",
+                               "A workflow worthopening up.",
+                               "Discover",
+                               "Repair",
+                               "Verify",
+                               "Operate",
+                               "Start small.Stay in control.",
+                               "Free capped tier.",
+                               "Ready to verifyyour changes?",
+                               "Product",
+                               "Learn",
+                               "Connect"
+                           ]
+          },
+    "/product":  {
+                     "headline":  "Clear changes. Confident decisions.",
+                     "sections":  [
+                                      "Understand the impact",
+                                      "Check the candidate",
+                                      "Review the evidence",
+                                      "Bring context to your team",
+                                      "Evidence at every step.",
+                                      "Product",
+                                      "Learn",
+                                      "Connect"
+                                  ]
+                 },
+    "/pricing":  {
+                     "headline":  "Start small. Stay in control.",
+                     "sections":  [
+                                      "Free capped tier.",
+                                      "Your budget stays in your control.",
+                                      "Review the estimate",
+                                      "Set limits",
+                                      "View usage",
+                                      "Product",
+                                      "Learn",
+                                      "Connect"
+                                  ]
+                 },
+    "/guides":  {
+                    "headline":  "Understand the workflow. Find your answers.",
+                    "sections":  [
+                                     "Start with GitHub",
+                                     "Getting started tutorial",
+                                     "Choose a template",
+                                     "Reading reports",
+                                     "Team and access",
+                                     "Frequently asked questions",
+                                     "Product",
+                                     "Learn",
+                                     "Connect"
+                                 ]
+                },
+    "/changelog":  {
+                       "headline":  "Follow ChangeProof\u0027s progress.",
+                       "sections":  [
+                                        "Explore ChangeProof before signing in.",
+                                        "Every change. One proof.",
+                                        "Product",
+                                        "Learn",
+                                        "Connect"
+                                    ]
+                   },
+    "/roadmap":  {
+                     "headline":  "Clear direction. Open boundaries.",
+                     "sections":  [
+                                      "MVP focus",
+                                      "Independent evidence",
+                                      "Expanding support",
+                                      "Review and audit",
+                                      "Product",
+                                      "Learn",
+                                      "Connect"
+                                  ]
+                 },
+    "/templates":  {
+                       "headline":  "Start with the right question.",
+                       "sections":  [
+                                        "API contract change",
+                                        "Dependency upgrade",
+                                        "Data migration",
+                                        "Incident investigation",
+                                        "Cross-repository change",
+                                        "Legacy systems",
+                                        "Product",
+                                        "Learn",
+                                        "Connect"
+                                    ]
+                   },
+    "/tutorials":  {
+                       "headline":  "From first steps to review.",
+                       "sections":  [
+                                        "Create an account and workspace",
+                                        "Choose GitHub access",
+                                        "Set up a project",
+                                        "Plan your run",
+                                        "Review candidates and evidence",
+                                        "Choose the next step",
+                                        "Product",
+                                        "Learn",
+                                        "Connect"
+                                    ]
+                   },
+    "/sample-report":  {
+                           "headline":  "See what evidence looks like.",
+                           "sections":  [
+                                            "Order representation change.",
+                                            "Consumer A",
+                                            "Producer",
+                                            "Consumer B",
+                                            "What does this mean?",
+                                            "Next steps",
+                                            "Product",
+                                            "Learn",
+                                            "Connect"
+                                        ]
+                       },
+    "/help":  {
+                  "headline":  "How can we help?",
+                  "sections":  [
+                                   "Public guides",
+                                   "Account help",
+                                   "Product",
+                                   "Learn",
+                                   "Connect"
+                               ]
+              },
+    "/privacy-policy":  {
+                            "headline":  "Understand how your data is used.",
+                            "sections":  [
+                                             "Selected access",
+                                             "Data boundaries",
+                                             "Team control",
+                                             "Workspace data controls",
+                                             "Browser storage",
+                                             "Retention and model providers",
+                                             "Product",
+                                             "Learn",
+                                             "Connect"
+                                         ]
+                        },
+    "/integrations":  {
+                          "headline":  "Connect change context.",
+                          "sections":  [
+                                           "Sign in with GitHub",
+                                           "Select repositories",
+                                           "Connect changes",
+                                           "Review before publication",
+                                           "Product",
+                                           "Learn",
+                                           "Connect"
+                                       ]
+                      },
+    "/impact-overview":  {
+                             "headline":  "Every impact, on one map.",
+                             "sections":  [
+                                              "Start with the contract",
+                                              "Follow relationships",
+                                              "Preserve unknowns",
+                                              "Separate analysis from evidence",
+                                              "Choose a change",
+                                              "Map targets",
+                                              "Plan checks",
+                                              "Product",
+                                              "Learn",
+                                              "Connect"
+                                          ]
+                         },
+    "/verification":  {
+                          "headline":  "Don\u0027t just trust. Verify.",
+                          "sections":  [
+                                           "Validate the old baseline",
+                                           "Reproduce the change\u0027s impact",
+                                           "Review candidate proposals",
+                                           "Check independently",
+                                           "Report results and their boundaries",
+                                           "Product",
+                                           "Learn",
+                                           "Connect"
+                                       ]
+                      },
+    "/evidence-overview":  {
+                               "headline":  "Every decision has a foundation.",
+                               "sections":  [
+                                                "Evidence manifest",
+                                                "Audit trail",
+                                                "Human review",
+                                                "Scoped publication",
+                                                "Product",
+                                                "Learn",
+                                                "Connect"
+                                            ]
+                           },
+    "/collaboration":  {
+                           "headline":  "One context for your whole team.",
+                           "sections":  [
+                                            "Invite your team",
+                                            "Assign grants",
+                                            "Check repository rights",
+                                            "Share review context",
+                                            "Product",
+                                            "Learn",
+                                            "Connect"
+                                        ]
+                       },
+    "/terms":  {
+                   "headline":  "Clear usage boundaries.",
+                   "sections":  [
+                                    "Using ChangeProof",
+                                    "Result boundaries",
+                                    "Data to use",
+                                    "AI assistance features",
+                                    "Age limit and permitted use",
+                                    "Event terms for competition submissions",
+                                    "AI output labels and provenance",
+                                    "Model data mode",
+                                    "High-impact decisions",
+                                    "Before using the service",
+                                    "Product",
+                                    "Learn",
+                                    "Connect"
+                                ]
+               }
+}

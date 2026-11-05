@@ -160,13 +160,16 @@ async function search(
   });
 }
 
-function hitArticle(hit: SearchHit): HTMLElement {
-  const target = hit.kind === 'run' ? `#/run?id=${encodeURIComponent(hit.id)}` : '#/runs/new';
-  return h('article', { class: 'faq-item' }, [
-    h('h3', {}, [h('a', { href: target }, [hit.title])]),
-    h('p', {}, [h('code', { class: 'inline' }, [hit.id]), document.createTextNode(` · ${hit.snippet}`)]),
-    h('p', { class: 'muted' }, [`Created ${hit.createdAt}`]),
-  ]);
+function hitTable(hits: readonly SearchHit[]): HTMLElement {
+  return h('div', { class: 'table-wrap' }, [h('table', { class: 'run-search-table' }, [
+    h('caption', {}, ['Matches from current-grant search']),
+    h('thead', {}, [h('tr', {}, ['Name & context', 'Reference', 'Created'].map(label => h('th', { scope: 'col' }, [label])))]),
+    h('tbody', {}, hits.map(hit => h('tr', {}, [
+      h('th', { scope: 'row' }, [h('a', { href: hit.kind === 'run' ? `#/run?id=${encodeURIComponent(hit.id)}` : '#/runs/new' }, [hit.title]), h('small', {}, [hit.snippet])]),
+      h('td', { 'data-label': 'Reference' }, [h('code', { class: 'inline' }, [hit.id])]),
+      h('td', { 'data-label': 'Created' }, [h('time', { datetime: hit.createdAt }, [hit.createdAt])]),
+    ]))),
+  ])]);
 }
 
 async function renderLists(outlet: HTMLElement): Promise<void> {
@@ -254,13 +257,13 @@ async function renderLists(outlet: HTMLElement): Promise<void> {
           emptyState('No runs yet', 'File your first run to see it here.', h('a', { class: 'button', href: '#/runs/new' }, ['File your first run'])),
         );
       } else {
-        for (const hit of runs.hits) runSection.appendChild(hitArticle(hit));
+        runSection.appendChild(hitTable(runs.hits));
       }
       const projectSection = h('section', { class: 'card' }, [h('h2', {}, ['Projects'])]);
       if (projects.hits.length === 0) {
         projectSection.appendChild(emptyState('No projects yet', 'Create one while filing a run.'));
       } else {
-        for (const hit of projects.hits) projectSection.appendChild(hitArticle(hit));
+        projectSection.appendChild(hitTable(projects.hits));
       }
       lists.replaceChildren(stats, h('div', { class: 'split' }, [runSection, projectSection]));
     } catch (error) {
@@ -422,9 +425,13 @@ async function renderForm(outlet: HTMLElement, ctx: RouteContext): Promise<void>
     if (lines.length > 0) notes.input.value = lines.join('\n');
   };
   templateSelect.addEventListener('change', applyTemplate);
+  const requestedTemplate = ctx.params.get('template');
+  if (templates.some(template => template.id === requestedTemplate)) { templateSelect.value = requestedTemplate ?? ''; applyTemplate(); }
 
   const project = field({ id: 'run-project', label: 'Project id', required: true, hint: 'Pick a known id or create one.' });
   project.input.setAttribute('list', 'project-options');
+  const requestedProject = ctx.params.get('project');
+  if (projects.hits.some(hit => hit.id === requestedProject)) project.input.value = requestedProject ?? '';
   const projectOptions = h('datalist', { id: 'project-options' }, [
     ...projects.hits.map((hit) => h('option', { value: hit.id }, [hit.title])),
   ]);
@@ -704,6 +711,13 @@ async function renderForm(outlet: HTMLElement, ctx: RouteContext): Promise<void>
     ]),
     submitSection,
   );
+  // Preserve the protected fields/handlers while matching the source's
+  // main form + independent summary composition.
+  const sections = [...outlet.children];
+  const main = h('div', { class: 'run-form-main' });
+  const summary = h('aside', { class: 'card run-form-summary', 'aria-label': 'Submission and proof requirements' }, [h('span', { class: 'mini-label' }, ['BEFORE YOU SUBMIT']), h('h2', {}, ['Scope, consent, and proof.']), h('p', {}, ['Save a versioned draft first. Submission preserves its exact identity and your current grants.']), h('p', {}, ['Muse and Modal are not configured for live repair in this demo. A queued run is not a verified repair.']), h('a', { href: '#/p/verification' }, ['Read the verification requirements'])]);
+  main.append(...sections);
+  outlet.replaceChildren(h('div', { class: 'form-grid run-form-layout' }, [main, summary]));
 
   if (resumeId !== undefined && resumeId !== '') {
     try {

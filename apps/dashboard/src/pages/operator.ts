@@ -308,5 +308,6 @@ async function renderOperator(outlet: HTMLElement): Promise<void> {
 }
 
 export function registerOperatorPages(): void {
+  registerRoute({ path: '/operations', title: 'Operator console', render: renderOperator });
   registerRoute({ path: '/operator', title: 'Operator console', render: renderOperator });
 }

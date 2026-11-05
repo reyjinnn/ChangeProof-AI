@@ -49,3 +49,12 @@ test('mutations send JSON with the CSRF marker header', async () => {
   }
   expect(seen[0]?.body).toBe('{"a":1}');
 });
+
+test.each([
+  { status: 503, body: { ok: true, data: { state: 'succeeded' } } },
+  { status: 200, body: { ok: true } },
+  { status: 403, body: { ok: false, error: 'unreadable failure' } },
+])('rejects an inconsistent or unreadable response ($status) as a typed failure', async ({ status, body }) => {
+  globalThis.fetch = vi.fn(() => Promise.resolve(jsonResponse(status, body)));
+  await expect(apiGet('/api/x')).rejects.toBeInstanceOf(ApiRequestError);
+});

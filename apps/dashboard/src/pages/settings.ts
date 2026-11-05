@@ -32,7 +32,7 @@ function asErrorMessage(error: unknown): string {
   return error instanceof ApiRequestError ? error.failure.message : 'An unexpected error occurred.';
 }
 
-async function renderSettings(outlet: HTMLElement): Promise<void> {
+async function renderSettings(outlet: HTMLElement, view: 'organization' | 'account' | 'team' | 'privacy' = 'organization'): Promise<void> {
   outlet.replaceChildren(emptyState('Loading…', 'Reading your account.'));
   let session: SessionInfo;
   try {
@@ -59,7 +59,7 @@ async function renderSettings(outlet: HTMLElement): Promise<void> {
   const tenantId = session.tenantId;
   const role = session.role;
   const account = h('section', { class: 'card' }, [
-    h('h1', {}, ['Organization settings']),
+    h('h1', {}, [view === 'organization' ? 'Organization settings' : view === 'account' ? 'Account settings' : view === 'team' ? 'Team & access' : 'Privacy & data']),
     h('dl', { class: 'detail-list' }, [
       h('dt', {}, ['Organization']),
       h('dd', {}, [tenantId]),
@@ -69,10 +69,13 @@ async function renderSettings(outlet: HTMLElement): Promise<void> {
       h('dd', {}, [session.expiresAt ?? 'unknown']),
     ]),
   ]);
-  outlet.replaceChildren(account);
-  const sessions = renderSessions(outlet, tenantId);
-  renderInvite(outlet, tenantId);
-  renderDeletion(outlet, tenantId);
+  const tabs = h('nav', { class: 'route-tabs', 'aria-label': 'Settings sections' }, [
+    ...([['/settings', 'Organization', 'organization'], ['/account', 'Account', 'account'], ['/team', 'Team & access', 'team'], ['/privacy', 'Privacy & data', 'privacy']] as const).map(([path, label, section]) => h('a', { href: `#${path}`, ...(view === section ? { 'aria-current': 'page' } : {}) }, [label])),
+  ]);
+  outlet.replaceChildren(tabs, account);
+  const sessions = view === 'organization' || view === 'account' ? renderSessions(outlet, tenantId) : Promise.resolve();
+  if (view === 'organization' || view === 'team') renderInvite(outlet, tenantId);
+  if (view === 'organization' || view === 'privacy') renderDeletion(outlet, tenantId);
   await sessions;
 }
 
@@ -187,7 +190,7 @@ function renderDeletion(host: HTMLElement, tenantId: string): void {
     autocomplete: 'off',
   });
   const alert = h('div', {}, []);
-  const submit = h('button', { class: 'button primary', type: 'submit' }, ['Delete this organization']);
+  const submit = h('button', { class: 'button danger', type: 'submit' }, ['Delete this organization']);
   const form = h('form', { novalidate: 'novalidate' }, [reason.wrap, confirm.wrap, alert, h('p', {}, [submit])]);
   form.addEventListener('submit', (event) => {
     event.preventDefault();
@@ -229,6 +232,7 @@ function renderDeletion(host: HTMLElement, tenantId: string): void {
 }
 
 export function registerSettingsPage(): void {
+  for (const view of ['account', 'team', 'privacy'] as const) registerRoute({ path: `/${view}`, title: `${view} settings`, render: outlet => renderSettings(outlet, view) });
   registerRoute({
     path: '/settings',
     title: 'Organization settings',
