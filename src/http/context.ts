@@ -38,14 +38,18 @@ export function parseBody<T>(schema: z.ZodType<T>, rawBody: string): T {
   return schema.parse(parsed);
 }
 
-export function sessionCookieId(request: IncomingMessage): string | undefined {
+export function cookieValue(request: IncomingMessage, name: string): string | undefined {
   const header = request.headers.cookie;
   if (header === undefined) return undefined;
   for (const part of header.split(';')) {
-    const [name, ...rest] = part.trim().split('=');
-    if (name === SESSION_COOKIE) return decodeURIComponent(rest.join('='));
+    const [key, ...rest] = part.trim().split('=');
+    if (key === name) return decodeURIComponent(rest.join('='));
   }
   return undefined;
+}
+
+export function sessionCookieId(request: IncomingMessage): string | undefined {
+  return cookieValue(request, SESSION_COOKIE);
 }
 
 /** Derive the acting context or throw a 401/403 the server maps directly. */

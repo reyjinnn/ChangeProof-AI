@@ -10,6 +10,7 @@ import { afterAll, beforeAll, expect, test } from 'vitest';
 import type { EmailDeliveryReceipt, EmailMessage } from '../../src/core/index.js';
 import { createHttpServer, type HttpHandle } from '../../src/http/index.js';
 import {
+  composeAdapterCapabilities,
   composeCollaboration,
   composeEmailIdentity,
   composeFileEvidence,
@@ -34,7 +35,7 @@ import { databaseUrlFor, resetProbeDatabase } from './db.js';
  * T-48 — teamwork HTTP routes over real PostgreSQL + the real server.
  *
  * Native check, reported separately: run with `DATABASE_URL=…` against a
- * disposable PostgreSQL 16 container. Applies V1–V8 + V10 into its own
+ * disposable PostgreSQL 16 container. Applies V1–V8 + V10 + V12 into its own
  * `t_teamworkhttp` database. Operator memberships and job leases are
  * seeded (no product API owns them yet); every teamwork step goes over
  * HTTP as app_user, so RLS fencing and the owner/operator split are
@@ -250,6 +251,7 @@ beforeAll(async () => {
     'V7__engagement.sql',
     'V8__teamwork.sql',
     'V10__enterprise.sql',
+    'V12__workspace.sql',
   ]) {
     await admin.query(migration(name));
   }
@@ -291,6 +293,7 @@ beforeAll(async () => {
       session: { deriveContext: (input) => identity.store.deriveContext(input) },
       support,
       collaboration,
+      capabilities: composeAdapterCapabilities().registry,
     },
   });
   await new Promise<void>((resolve) => handle?.server.listen(0, '127.0.0.1', resolve));
@@ -539,4 +542,38 @@ test('a newer candidate revision marks older comments outdated; tenants stay fen
   expect((comments.body as { data: { comments: { outdated: boolean }[] } }).data.comments[0]?.outdated).toBe(true);
   const foreign = await call('GET', `/api/threads/${threadId}/comments`, undefined, other.ownerCookie);
   expect(foreign.status).toBe(404);
+});
+
+test('capability matrix reports the fourteen registered tuples with target/proven split', async () => {
+  const fixture = await seedFixture('caps');
+  const matrix = await call('GET', '/api/support/capabilities', undefined, fixture.ownerCookie);
+  expect(matrix.status).toBe(200);
+  const records = (
+    matrix.body as {
+      data: {
+        capabilities: {
+          ecosystem: string;
+          framework: string;
+          version: string;
+          feature: string;
+          changeType: string;
+          targetLevel: string;
+          provenLevel: string;
+        }[];
+      };
+    }
+  ).data.capabilities;
+  expect(records).toHaveLength(14);
+  const rank = (level: string): number => ({ none: 0, L1: 1, L2: 2, L3: 3 })[level] ?? -1;
+  for (const record of records) {
+    expect(record.ecosystem.length).toBeGreaterThan(0);
+    expect(record.framework.length).toBeGreaterThan(0);
+    // No "all versions" claims: every tuple names an explicit range.
+    expect(record.version.trim().toLowerCase()).not.toMatch(/^(?:\*|any|all|latest|>=0)$/);
+    expect(rank(record.provenLevel)).toBeGreaterThanOrEqual(0);
+    expect(rank(record.targetLevel)).toBeGreaterThanOrEqual(1);
+    expect(rank(record.provenLevel)).toBeLessThanOrEqual(rank(record.targetLevel));
+  }
+  const guest = await call('GET', '/api/support/capabilities');
+  expect(guest.status).toBe(401);
 });

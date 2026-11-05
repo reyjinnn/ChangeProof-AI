@@ -111,16 +111,20 @@ export async function spec({ base, context, rootDir, mailApi, databaseUrl }) {
     await page.locator('#login-password').fill(password);
     await page.locator('main#outlet button[type="submit"]').click();
     await page.waitForURL(`${base}/#/`);
-    await admin.query(
-      'INSERT INTO entitlements (tenant_id, period_id, cap_amount, rate_version, created_at, superseded_at) VALUES ($1, $2, $3, $4, $5, NULL)',
-      [tenantId, 'period-1', 1000, 'test-rates-1', new Date().toISOString()],
+    // Registration auto-provisions the initial free-tier entitlement (no manual seed).
+    const entitled = await admin.query(
+      'SELECT period_id, cap_amount, rate_version FROM entitlements WHERE tenant_id = $1 AND superseded_at IS NULL',
+      [tenantId],
     );
+    assert.equal(entitled.rows.length, 1);
+    assert.equal(entitled.rows[0].period_id, 'period-free-1');
+    assert.equal(entitled.rows[0].cap_amount, 1000);
     const membership = await admin.query('SELECT user_id FROM memberships WHERE tenant_id = $1', [tenantId]);
     const ownerId = membership.rows[0].user_id;
 
     // Billing: seeded cap, no reservations, no invoice listing.
     await page.goto(`${base}/#/billing`, { waitUntil: 'networkidle' });
-    await page.getByText('period-1').waitFor();
+    await page.getByText('period-free-1').waitFor();
     assert.match((await page.locator('main#outlet').textContent()) ?? '', /remaining 1000/);
     await page.getByText('No open reservations').waitFor();
     await page.getByText('no invoice listing').waitFor();

@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content="ChangeProof AI trace viewer — read-only audit of run evidence: events, hypotheses, trial receipts, and artifact digests." />
+    <title>ChangeProof Trace Viewer</title>
+    <link rel="icon" type="image/svg+xml" href="/assets/changeproof-mark.svg" />
+    <link
+      rel="preload"
+      href="/assets/fonts/inter-latin-variable.woff2"
+      as="font"
+      type="font/woff2"
+      crossorigin="anonymous"
+    />
+    <link
+      rel="preload"
+      href="/assets/fonts/plusjakartasans-latin-variable.woff2"
+      as="font"
+      type="font/woff2"
+      crossorigin="anonymous"
+    />
+    <script>
+      // Theme before first paint; storage failures fall back to light.
+      try {
+        var t = localStorage.getItem("changeproof-modern-theme");
+        document.documentElement.dataset.theme =
+          t === "light" || t === "dark"
+            ? t
+            : matchMedia("(prefers-color-scheme: dark)").matches
+              ? "dark"
+              : "light";
+      } catch (e) {
+        document.documentElement.dataset.theme = "light";
+      }
+    </script>
+  </head>
+  <body>
+    <noscript>ChangeProof trace viewer needs JavaScript to render evidence.</noscript>
+    <div id="app"></div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

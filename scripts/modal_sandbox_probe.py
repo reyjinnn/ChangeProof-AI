@@ -30,7 +30,11 @@ import time
 RECEIPT_SCHEMA = "t08-probe/1"
 BOUNDARY_CLASS = "microvm"
 APP_NAME = "changeproof-t08-probes"
-IMAGE_REF = "modal.Image.debian_slim()"
+# Pinned digest of docker.io/library/debian:12-slim (multi-arch index; amd64
+# resolved server-side). Re-pinning requires a fresh probe run.
+PINNED_DIGEST = "sha256:99c0b25c46d0214d5a2091092e7908907dcaecd6a962cde0ac700acee222b6f3"
+PINNED_IMAGE_REF = f"docker.io/library/debian:12-slim@{PINNED_DIGEST}"
+IMAGE_REF = PINNED_IMAGE_REF
 SANDBOX_CPU = 0.25
 SANDBOX_MEMORY_MB = 256
 SANDBOX_TIMEOUT_S = 600
@@ -104,39 +108,40 @@ def exec_in(sandbox: object, argv: list[str]) -> dict:
 
 
 def check_denied(result: dict) -> str:
-    # Exit 2 means the probe itself could not run (e.g. python3 absent for
-    # the metadata check). That is inconclusive — never a pass.
+    # All probe commands use "exit 0 = isolation property held"; a nonzero
+    # exit means the denial was violated. Exit 2 means the probe itself
+    # could not run (e.g. python3 absent for the metadata check) — that is
+    # inconclusive, never a pass.
     if result["transportError"] is not None or result["exitCode"] in (None, 2):
         return "inconclusive"
-    return "pass" if result["exitCode"] != 0 else "fail"
+    return "pass" if result["exitCode"] == 0 else "fail"
 
 
 PROBES: tuple[tuple[str, str, list[str]], ...] = (
     (
         "no-docker-socket",
         "Guest must not see a Docker socket (NEG3-24).",
-        ["sh", "-c", "test ! -e /var/run/docker.sock && test ! -e /run/docker.sock"],
+        ["su", "t08probe", "-c", "test ! -e /var/run/docker.sock && test ! -e /run/docker.sock"],
     ),
     (
         "non-root-uid",
         "Guest must not run as root.",
-        ["sh", "-c", "test $(id -u) -ne 0"],
+        ["su", "t08probe", "-c", "test $(id -u) -ne 0"],
     ),
     (
         "no-device-creation",
         "Guest must not create device nodes (no privileged ops).",
-        ["sh", "-c", "mknod /tmp/t08-probe-dev c 1 3 2>/dev/null; test $? -ne 0"],
+        ["su", "t08probe", "-c", "mknod /tmp/t08-probe-dev c 1 3 2>/dev/null; test $? -ne 0"],
     ),
     (
         "metadata-unreachable",
         "Cloud metadata endpoint must be unreachable from the guest.",
         [
-            "sh",
+            "su",
+            "t08probe",
             "-c",
-            "if command -v python3 >/dev/null; then python3 -c "
-            "'import urllib.request; urllib.request.urlopen"
-            "(\"http://169.254.169.254/\", timeout=5)' 2>/dev/null; "
-            "test $? -ne 0; else exit 2; fi",
+            "python3 -c 'import urllib.request; urllib.request.urlopen"
+            "(\"http://169.254.169.254/\", timeout=5)' 2>/dev/null; test $? -ne 0",
         ],
     ),
 )
@@ -156,7 +161,7 @@ def run_probes(sandbox: object) -> list[dict]:
                 "outcome": check_denied(result),
             }
         )
-    env_result = exec_in(sandbox, ["env"])
+    env_result = exec_in(sandbox, ["su", "t08probe", "-c", "env"])
     if env_result["transportError"] is not None:
         results.append(
             {
@@ -202,7 +207,15 @@ def fail_closed(message: str) -> int:
 
 def create_sandbox(modal: object, run_id: str) -> tuple[object, str, dict]:
     app = modal.App.lookup(APP_NAME, create_if_missing=True)  # type: ignore[attr-defined]
-    image = modal.Image.debian_slim()  # type: ignore[attr-defined]
+    image = modal.Image.from_registry(PINNED_IMAGE_REF).dockerfile_commands(  # type: ignore[attr-defined]
+        # Non-root guest: the product runner executes every guest command via
+        # `su t08probe` (Sandbox.exec has no user parameter and defaults to
+        # root), so the probes use the same wrapper — the receipt measures the
+        # configured guest, not a raw root shell. python3 is installed for the
+        # metadata-egress probe.
+        "RUN apt-get update && apt-get install -y --no-install-recommends python3 && rm -rf /var/lib/apt/lists/*",
+        "RUN useradd -m -u 10000 t08probe",
+    )
     base: dict = {
         "app": app,
         "image": image,
@@ -266,7 +279,7 @@ def do_probes() -> int:
         "provider": "modal-sandbox",
         "app": APP_NAME,
         "imageRef": IMAGE_REF,
-        "imageDigestPinned": False,
+        "imageDigestPinned": True,
         "sandboxId": sandbox_id,
         "limits": {
             "cpu": SANDBOX_CPU,
@@ -278,8 +291,8 @@ def do_probes() -> int:
         "cleanup": cleanup,
         "verdict": compute_verdict(probes),
         "notes": [
-            "imageDigestPinned=false: Modal resolves debian_slim server-side; "
-            "pin the image before claiming full qualification.",
+            "imageDigestPinned=true: from_registry with pinned sha256 digest; "
+            "debian:12-slim multi-arch index (amd64 resolved server-side).",
             "A revised candidate requires fresh proof; this receipt covers "
             "only this runId.",
         ],

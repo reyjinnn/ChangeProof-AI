@@ -300,3 +300,16 @@ test('expired session on the inbox redirects to session-expired', async () => {
   await settle(outlet, 'Session expired');
   expect(window.location.hash).toBe('#/session-expired');
 });
+
+test('items use the notification toast structure', async () => {
+  stubFetch(inboxStubs());
+  const outlet = boot();
+  await renderRoute(outlet, '#/inbox');
+  await settle(outlet, '1 unread');
+  expect(outlet.querySelectorAll('article.notification-toast').length).toBe(2);
+  expect(outlet.querySelector('.notification-body')).not.toBeNull();
+  expect(outlet.querySelector('.notification-meta')).not.toBeNull();
+  expect(outlet.querySelector('.notification-actions')).not.toBeNull();
+  expect(outlet.querySelector('.read-dot')).not.toBeNull();
+  expect(outlet.querySelector('article.notification-toast.is-read')).not.toBeNull();
+});

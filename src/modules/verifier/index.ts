@@ -248,6 +248,7 @@ export class GuestRunner {
 
 export * from './campaign.js';
 export * from './executor.js';
+export * from './modal-runner.js';
 export * from './reducers.js';
 export * from './regions.js';
 export * from './soak.js';

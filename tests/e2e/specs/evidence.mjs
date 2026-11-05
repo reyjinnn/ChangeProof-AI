@@ -10,7 +10,7 @@ import { writeFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { join } from 'node:path';
 
-import { axeScan } from '../helpers.mjs';
+import { axeScan, captureVisualMatrix } from '../helpers.mjs';
 
 const require = createRequire(import.meta.url);
 const { Pool } = require('pg');
@@ -112,10 +112,14 @@ export async function spec({ base, context, rootDir, mailApi, databaseUrl, evide
     await page.locator('main#outlet button[type="submit"]').click();
     await page.waitForURL(`${base}/#/`);
 
-    await admin.query(
-      'INSERT INTO entitlements (tenant_id, period_id, cap_amount, rate_version, created_at, superseded_at) VALUES ($1, $2, $3, $4, $5, NULL)',
-      [tenantId, 'period-1', 1000, 'test-rates-1', new Date().toISOString()],
+    // Registration auto-provisions the initial free-tier entitlement (no manual seed).
+    const entitled = await admin.query(
+      'SELECT period_id, cap_amount, rate_version FROM entitlements WHERE tenant_id = $1 AND superseded_at IS NULL',
+      [tenantId],
     );
+    assert.equal(entitled.rows.length, 1);
+    assert.equal(entitled.rows[0].period_id, 'period-free-1');
+    assert.equal(entitled.rows[0].cap_amount, 1000);
 
     // Project + submit through the real form.
     await page.goto(`${base}/#/runs/new`, { waitUntil: 'networkidle' });
@@ -171,6 +175,7 @@ export async function spec({ base, context, rootDir, mailApi, databaseUrl, evide
     await page.getByText(digest.slice(0, 12)).first().waitFor();
     assert.deepEqual((await axeScan(page, rootDir)).map((v) => v.id), []);
     await assertNoOverflow('evidence library');
+    await captureVisualMatrix(page, 'evidence-controlled-artifact', rootDir);
 
     // Publication absence is explicit, and export is offered.
     await page.getByText('no authorized GitHub App').waitFor();
@@ -184,6 +189,7 @@ export async function spec({ base, context, rootDir, mailApi, databaseUrl, evide
     assert.ok(((await page.locator('main#outlet').textContent()) ?? '').includes(digest));
     assert.deepEqual((await axeScan(page, rootDir)).map((v) => v.id), []);
     await assertNoOverflow('evidence viewer');
+    await captureVisualMatrix(page, 'evidence-viewer-controlled-artifact', rootDir);
 
     // Tampered bytes: same digest name, different content — the server
     // recomputes the hash and the UI repeats its refusal (NEG3-33).

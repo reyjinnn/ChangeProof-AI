@@ -3,7 +3,7 @@
 // plus login negatives, guest guards, and axe on login/settings.
 import assert from 'node:assert/strict';
 
-import { axeScan } from '../helpers.mjs';
+import { axeScan, captureVisualMatrix } from '../helpers.mjs';
 
 export const needsDb = true;
 export const migrations = [
@@ -35,14 +35,18 @@ export async function spec({ base, context, rootDir, browser, mailApi }) {
   const memberEmail = `e2e-member-${stamp}@example.com`;
   const password = 'correct-horse-42';
   const page = await context.newPage({ viewport: { width: 1280, height: 900 } });
+  // Measure settled text, not the transient opacity of the opening modal.
+  // landing.mjs separately proves animation and reduced-motion behavior.
+  await page.emulateMedia({ reducedMotion: 'reduce' });
 
   // Guests see the settings login card, never settings (NEG3-29).
   await page.goto(`${base}/#/settings`, { waitUntil: 'networkidle' });
-  await page.locator('main#outlet h1').waitFor();
-  assert.equal(await page.locator('main#outlet h1').textContent(), 'Settings need a login');
+  await page.getByRole('heading', { level: 1 }).waitFor();
+  assert.equal(await page.getByRole('heading', { level: 1 }).textContent(), 'Settings need a login');
 
   // Register → verify → create-org → login.
   await page.goto(`${base}/#/register`, { waitUntil: 'networkidle' });
+  await captureVisualMatrix(page, 'register-empty', rootDir);
   await page.locator('#reg-email').fill(ownerEmail);
   await page.locator('#reg-password').fill(password);
   await page.locator('#reg-confirm').fill(password);
@@ -58,17 +62,19 @@ export async function spec({ base, context, rootDir, browser, mailApi }) {
   await page.getByText('Organization created').waitFor();
   await page.locator('main#outlet a', { hasText: 'Log in' }).click();
   await page.locator('#login-email').waitFor();
+  await captureVisualMatrix(page, 'login-empty', rootDir);
   assert.equal(await page.locator('#login-tenant').inputValue(), `e2e-org-${stamp}`);
   await page.locator('#login-email').fill(ownerEmail);
   await page.locator('#login-password').fill(password);
   await page.locator('main#outlet button[type="submit"]').click();
   await page.waitForURL(`${base}/#/`);
-  await page.locator('main#outlet h1').waitFor();
+  await page.getByRole('heading', { level: 1 }).waitFor();
   // Wait, never assert immediately: the account refresh lands after the
   // status heading on a fast render.
   await page.locator('#account', { hasText: new RegExp(`e2e-org-${stamp}.*owner`) }).waitFor();
 
   // Login negatives: wrong password alerts; evil return targets die at 400.
+  await page.locator('#account-summary').click();
   await page.locator('#account button', { hasText: 'Log out' }).click();
   await page.locator('#account a[href="#/login"]').waitFor();
   await page.goto(`${base}/#/login`, { waitUntil: 'networkidle' });
@@ -87,10 +93,11 @@ export async function spec({ base, context, rootDir, browser, mailApi }) {
   await page.locator('#login-password').fill(password);
   await page.locator('main#outlet button[type="submit"]').click();
   await page.waitForURL(`${base}/#/`);
-  await page.locator('#account button', { hasText: 'Log out' }).waitFor();
+  await page.locator('#account-summary').waitFor();
   await page.goto(`${base}/#/settings`, { waitUntil: 'networkidle' });
-  await page.locator('main#outlet h1').waitFor();
+  await page.getByRole('heading', { level: 1 }).waitFor();
   await page.getByText('This session').waitFor();
+  await captureVisualMatrix(page, 'settings-authenticated', rootDir);
   assert.match((await page.locator('main#outlet').textContent()) ?? '', new RegExp(`e2e-org-${stamp}`));
 
   // Invite the member; the member path runs register → own org → accept.
@@ -124,7 +131,9 @@ export async function spec({ base, context, rootDir, browser, mailApi }) {
   await member.waitForURL(`${base}/#/`);
   // Member tenant text (not just any logout button): the shared-context
   // slot still shows the owner until the member refresh lands.
+  await member.locator('#account-summary').click();
   await member.getByText(new RegExp(`e2e-home-${stamp}.*owner`)).waitFor();
+  await member.locator('#account-summary').click();
   await member.goto(`${base}/${inviteLink}`, { waitUntil: 'networkidle' });
   await member.getByText('Invitation accepted').waitFor();
   // Multi-tenant login reveals the organization field on demand.
@@ -144,6 +153,7 @@ export async function spec({ base, context, rootDir, browser, mailApi }) {
   await page.getByText('reset mail is on its way').waitFor();
   const resetToken = await mailToken(mailApi, ownerEmail, 'reset');
   await page.goto(`${base}/#/reset-password?token=${encodeURIComponent(resetToken)}`, { waitUntil: 'networkidle' });
+  await captureVisualMatrix(page, 'reset-password-valid-ticket', rootDir);
   await page.locator('#reset-password').fill('new-correct-horse-43');
   await page.locator('#reset-confirm').fill('new-correct-horse-43');
   await page.locator('main#outlet button[type="submit"]').click();
@@ -158,7 +168,7 @@ export async function spec({ base, context, rootDir, browser, mailApi }) {
   await page.locator('#login-password').fill('new-correct-horse-43');
   await page.locator('main#outlet button[type="submit"]').click();
   await page.waitForURL(`${base}/#/`);
-  await page.locator('#account button', { hasText: 'Log out' }).waitFor();
+  await page.locator('#account-summary').waitFor();
 
   // Reset replay fails closed (NEG3-30).
   const replay = await fetch(`${base}/api/auth/password/reset`, {
@@ -170,10 +180,10 @@ export async function spec({ base, context, rootDir, browser, mailApi }) {
 
   // Axe on login + settings.
   await page.goto(`${base}/#/login`, { waitUntil: 'networkidle' });
-  await page.locator('main#outlet h1').waitFor();
+  await page.getByRole('heading', { level: 1 }).waitFor();
   assert.deepEqual((await axeScan(page, rootDir)).map((v) => v.id), []);
   await page.goto(`${base}/#/settings`, { waitUntil: 'networkidle' });
-  await page.locator('main#outlet h1').waitFor();
+  await page.getByRole('heading', { level: 1 }).waitFor();
   assert.deepEqual((await axeScan(page, rootDir)).map((v) => v.id), []);
 
   await page.close();

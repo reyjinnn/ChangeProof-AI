@@ -112,7 +112,7 @@ changeproof/
 ├── .prepare/            BRD · PRD · MVP · architecture  (specification package)
 ├── phases/              phase-1 … phase-7 playbooks + hackathon-slice
 ├── scripts/             runner probes + campaign reproduction runner
-└── .template-ui/mockup.html          UI design source (~1.1 MB, embedded fonts)
+└── mockup.html                      Local root design reference (~1.1 MB; not committed)
 ```
 
 ### Boundary rules — enforced by `dependency-cruiser`, ESLint, and prohibited-import tests
@@ -148,7 +148,7 @@ Customer application code runs in an isolated guest per job. Egress is closed by
 | `.prepare/PRD.md` | Behavior, `FR3-01..45`, `NFR3-01..15`, `DEC3-01..23`, data contracts — *what* |
 | `.prepare/MVP.md` | Scope, capability matrix, `WP3-01..34`, gates `G3-01..17`, `NEG3-01..40`, `SC3-01..11` — *when done* |
 | `.prepare/architecture.md` | Module structure, import matrix, hosted topology — *where and how constrained* |
-| `.template-ui/mockup.html` | UI **design source**, not implementation evidence |
+| Root `mockup.html` (local input) | Authoritative **design source** for this UI port; preserved locally, excluded from the implementation commit |
 | `AGENTS.md` | Working contract for every AI agent in this repository |
 | `SKILL.md` | Step-by-step playbook + requirement index (`changeproof-development`) |
 | `phases/phase-N.md` | Execution playbooks for the active full release |
@@ -186,7 +186,7 @@ Conflicts between documents are *not* guessed at: record the conflict and resolv
 | GitHub integration (target) | **Octokit** behind a broker | no customer credentials in guests |
 | Language toolchains (target) | pinned natively per adapter (ts-morph for TS, native CLIs elsewhere) | interface stays language-neutral |
 | DB drivers | **pg 8.x** + **redis 6.x** | RLS stores, pooling context reset |
-| UI | `apps/dashboard` from `.template-ui/mockup.html` (`apps/trace-viewer` absent) | Inter + Plus Jakarta Sans, self-hosted WOFF2, SIL OFL 1.1 |
+| UI | `apps/dashboard` ported from root `mockup.html`, a local design input (`apps/trace-viewer` absent) | Inter + Plus Jakarta Sans, self-hosted WOFF2, SIL OFL 1.1 |
 | UI build/dev/test | **Vite 7.1.7** · **happy-dom 15.11.7** · **axe-core 4.10.2** | component + accessibility checks |
 | Browser E2E | **playwright-core 1.x** + real Chromium, disposable PG16 + Mailpit | no screenshot/trace output in repo |
 
@@ -256,7 +256,7 @@ $env:PORT = '4179'
 node dist/http/start.js
 ```
 
-`pnpm dev` serves the dashboard through Vite for UI iteration only: it defines no API proxy, so API-backed screens show their offline states unless the built server answers `/api` on the same origin. `pnpm build:ui` produces the bundle the server hosts from `apps/dashboard/dist`.
+`pnpm dev` serves the dashboard through Vite on loopback and proxies `/api` to `http://127.0.0.1:4179`, preserving the browser's Host/Origin pair. Start the API separately; an unavailable backend produces an explicit error state. `pnpm build:ui` produces the bundle the server hosts from `apps/dashboard/dist`.
 
 Native runner security probes run on a Modal Sandbox via `pnpm test:runner-security:native` (needs `MODAL_TOKEN_ID` / `MODAL_TOKEN_SECRET`; `--dry-run` spends nothing and proves wiring only). Until the probes run with receipts on Modal and a new boundary decision is recorded, qualification stays blocked (see `docs/decisions/phase1-runner-qualification-blocked.md`) — never a pass, and container-only evidence does not qualify a VM/microVM boundary.
 
@@ -300,7 +300,7 @@ Actual scripts from `package.json`:
 | --- | --- | --- |
 | Build | `pnpm build` | `tsc -p tsconfig.build.json` |
 | UI build | `pnpm build:ui` | `vite build apps/dashboard` |
-| UI dev | `pnpm dev` | `vite apps/dashboard` (UI only, no API proxy) |
+| UI dev | `pnpm dev` | `vite apps/dashboard` (API proxy to loopback port 4179) |
 | Typecheck | `pnpm typecheck` | strict `tsc --noEmit` on the root **and** `apps/dashboard` projects |
 | Lint | `pnpm lint` | `eslint .` **and** `depcruise --config .dependency-cruiser.cjs src apps` |
 | Lint only | `pnpm lint:eslint` | ESLint alone |
@@ -347,6 +347,38 @@ Hard rules:
 
 ---
 
+### Local frontend preview
+
+With the pinned Node.js/pnpm versions and installed dependencies:
+
+```powershell
+pnpm build
+pnpm build:ui
+$env:PORT = '4179'
+node dist/http/start.js
+# In another terminal:
+pnpm dev
+```
+
+Open the Vite URL printed in that terminal, or `http://127.0.0.1:4179/`
+for the built UI. Without account-service configuration, public pages
+work and account actions report unavailable. Authentication needs the
+documented PostgreSQL, mail and challenge-secret configuration; do not
+copy production credentials into a demo. `pnpm test:e2e` provisions its
+own disposable local PostgreSQL/Mailpit stack through the existing test
+harness and uses a real browser. Its seeded grants and synthetic sample
+reports do not prove a live AI repair, model connection or sandbox run.
+
+The HTTP entry reads `PORT`; `CP_PORT` belongs to the E2E harness, which
+passes its selected port to the child HTTP process as `PORT`.
+
+This implementation uses the user-supplied root `mockup.html` as its visual
+reference. Its SHA256 is
+`6998e21248e413013b555eb6a04ffffe4ef3f6e385a71ae574998ba51051bf8f`.
+The reference remains local; ported markup, styles and assets are included
+in the application. The separate `.template-ui/mockup.html` is not the
+design input for this port.
+
 ## Documentation map
 
 | Document | Says |
@@ -360,7 +392,7 @@ Hard rules:
 | [`docs/pilot-prep.md`](docs/pilot-prep.md) | Organic pilot preparation package (T-41) |
 | [`docs/decisions/`](docs/decisions/) | Decision records, schema/policy versions, license notice |
 | [`docs/phase-plan-revision.md`](docs/phase-plan-revision.md) | Plan revision 2 |
-| [`.template-ui/mockup.html`](.template-ui/mockup.html) | UI design source (design tokens extracted to one source; layered `!important` skins are not copied) |
+| Root `mockup.html` (local input) | Authoritative UI design source; active styles are ported into scoped application CSS, with no layered `!important` copy |
 
 **Runtime UI language is English** (FR3-40): Indonesian specification documents do not imply an Indonesian UI.
 
@@ -438,4 +470,4 @@ Publishing `verified` bundle results, or reporting any figure the specification 
 
 Declared in `package.json` as `SEE LICENSE IN docs/decisions/`. Report the exact license status from `docs/decisions/` before redistribution — no license has been chosen by assumption here.
 
-Bundled fonts **Inter** and **Plus Jakarta Sans** are **SIL Open Font License 1.1**, self-hosted with zero external requests, license notices embedded in `.template-ui/mockup.html` under `changeproof-source-assets`.
+Bundled fonts **Inter** and **Plus Jakarta Sans** are **SIL Open Font License 1.1**, self-hosted with zero external requests. The committed notices are `apps/dashboard/public/assets/fonts/inter-OFL.txt` and `apps/dashboard/public/assets/fonts/plusjakartasans-OFL.txt`.

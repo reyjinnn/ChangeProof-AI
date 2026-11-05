@@ -95,6 +95,22 @@ test('owners see the period cap, usage, and open reservations', async () => {
   expect(outlet.textContent).toContain('830');
   expect(outlet.textContent).toContain('res-1');
   expect(outlet.textContent).toContain('run-1');
+  expect(outlet.querySelector('h1')?.textContent).toBe('Usage & data');
+  expect(outlet.querySelector('.usage-bar')?.getAttribute('aria-label')).toContain('120 used, 50 reserved, 830 remaining');
+  expect(outlet.querySelector('.split')).not.toBeNull();
+  expect(outlet.querySelector('a[href="#/run?id=run-1"]')).not.toBeNull();
+});
+
+test('owners without an entitlement see a no-period state, never raw null', async () => {
+  stubFetch({
+    '/api/auth/session': { status: 200, json: OWNER_SESSION },
+    '/api/billing/balances': { status: 200, json: { ...BALANCES, periodId: null, cap: null } },
+  });
+  const outlet = boot();
+  await renderRoute(outlet, '#/billing');
+  await settle(outlet, 'No active billing period');
+  expect(outlet.querySelector('.stats')).toBeNull();
+  expect(outlet.textContent).not.toContain('null');
 });
 
 test('billing says plainly that invoices have no listing endpoint', async () => {
@@ -106,6 +122,18 @@ test('billing says plainly that invoices have no listing endpoint', async () => 
   await renderRoute(outlet, '#/billing');
   await settle(outlet, 'period-1');
   expect(outlet.textContent).toContain('no invoice listing');
+});
+
+test('a new organization without a configured usage period shows an honest empty state', async () => {
+  stubFetch({
+    '/api/auth/session': { status: 200, json: OWNER_SESSION },
+    '/api/billing/balances': { status: 200, json: { periodId: null, cap: null, consumed: 0, reservedActive: 0, reservations: [] } },
+  });
+  const outlet = boot();
+  await renderRoute(outlet, '#/billing');
+  expect(outlet.textContent).toContain('Usage period not configured');
+  expect(outlet.querySelector('.usage-bar')).toBeNull();
+  expect(outlet.textContent).not.toContain('null');
 });
 
 test('a failed balances read offers a retry that recovers', async () => {
@@ -125,4 +153,84 @@ test('a failed balances read offers a retry that recovers', async () => {
   required(outlet.querySelector('button'), 'retry button').click();
   await settle(outlet, 'period-1');
   expect(outlet.textContent).toContain('830');
+});
+
+test('usage is the same period page under its own route', async () => {
+  stubFetch({
+    '/api/auth/session': { status: 200, json: OWNER_SESSION },
+    '/api/billing/balances': { status: 200, json: BALANCES },
+  });
+  const outlet = boot();
+  await renderRoute(outlet, '#/usage');
+  await settle(outlet, 'period-1');
+  expect(outlet.querySelectorAll('.stats .stat').length).toBe(4);
+  expect(outlet.textContent).toContain('1000');
+  expect(outlet.textContent).toContain('830');
+  expect(outlet.textContent).toContain('res-1');
+  expect(outlet.textContent).toContain('run-1');
+});
+
+test('caps form refuses to fake a save', async () => {
+  stubFetch({
+    '/api/auth/session': { status: 200, json: OWNER_SESSION },
+    '/api/billing/balances': { status: 200, json: BALANCES },
+  });
+  const outlet = boot();
+  await renderRoute(outlet, '#/usage');
+  await settle(outlet, 'Budget & concurrency');
+  const form = required(outlet.querySelector<HTMLFormElement>('#capsForm'), 'caps form');
+  form.dispatchEvent(new SubmitEvent('submit', { bubbles: true, cancelable: true }));
+  await settle(outlet, 'no spending-limit endpoint');
+});
+
+test('ledger stays empty when nothing has settled', async () => {
+  stubFetch({
+    '/api/auth/session': { status: 200, json: OWNER_SESSION },
+    '/api/billing/balances': { status: 200, json: BALANCES },
+    '/api/billing/ledger?limit=50': { status: 200, json: { items: [] } },
+  });
+  const outlet = boot();
+  await renderRoute(outlet, '#/usage');
+  await settle(outlet, 'No ledger entries');
+  expect(outlet.textContent).toContain('No usage has settled in this period yet.');
+});
+
+test('ledger reports honestly when it cannot load', async () => {
+  stubFetch({
+    '/api/auth/session': { status: 200, json: OWNER_SESSION },
+    '/api/billing/balances': { status: 200, json: BALANCES },
+  });
+  const outlet = boot();
+  await renderRoute(outlet, '#/usage');
+  await settle(outlet, 'Ledger unavailable');
+  expect(outlet.textContent).toContain('could not be loaded');
+});
+
+test('ledger lists entries when the endpoint answers', async () => {
+  stubFetch({
+    '/api/auth/session': { status: 200, json: OWNER_SESSION },
+    '/api/billing/balances': { status: 200, json: BALANCES },
+    '/api/billing/ledger?limit=50': {
+      status: 200,
+      json: { items: [{ entryId: 'le-1', kind: 'consume', amount: 5, runId: 'run-1' }] },
+    },
+  });
+  const outlet = boot();
+  await renderRoute(outlet, '#/usage');
+  await settle(outlet, 'le-1');
+  expect(outlet.textContent).toContain('consume');
+});
+
+test('checkout refuses to fake a payment flow', async () => {
+  stubFetch({
+    '/api/auth/session': { status: 200, json: OWNER_SESSION },
+    '/api/billing/balances': { status: 200, json: BALANCES },
+  });
+  const outlet = boot();
+  await renderRoute(outlet, '#/usage');
+  await settle(outlet, 'Current plan');
+  const checkout = [...outlet.querySelectorAll('button')].find((b) => b.textContent === 'Start checkout');
+  if (checkout === undefined) throw new Error('Missing checkout button.');
+  checkout.click();
+  await settle(outlet, 'no payment endpoint');
 });

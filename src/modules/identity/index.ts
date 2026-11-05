@@ -8,6 +8,7 @@ import { assertServerAuthority } from './guards.js';
 
 export * from './challenges.js';
 export * from './email.js';
+export * from './github.js';
 export * from './guards.js';
 export * from './passwords.js';
 export * from './saml.js';

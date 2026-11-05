@@ -1,4 +1,4 @@
-# Feature coverage record — phase-6 UI (revision 1)
+# Feature coverage record — phase-6 UI (revision 2)
 
 Every route, form, button, menu, filter, export, and collaboration
 preview in the dashboard maps to its requirement, owning backend
@@ -35,6 +35,8 @@ E2E case (`tests/e2e/specs`). All green at phase-6 close; see
 | --- | --- | --- | --- | --- | --- |
 | Register / resend / verify | FR3-38 | T-18 email | `/api/auth/register·verify·verify/resend` | N+E(auth): Mailpit token | N: unknown user shares shape (NEG3-30) |
 | Login (+tenant reveal/prefill) | FR3-38, NEG3-29 | T-18 email | `/api/auth/login` + cookie | N+E: session + account slot | N: wrong pw shares message; evil target 400 |
+| GitHub login + register | FR3-29, FR3-38 | OAuth sign-in | `/api/auth/github/start·callback` + cookie | N+H: verified profile → user + link + tenant + session | H+N: forged state/nonce, email-taken no-auto-link, outage fails closed |
+| GitHub account link status | FR3-38 | OAuth sign-in | `/api/auth/github/status`, `start?mode=link` | H+E: status card, link → `#/account?githubLinked=1` | H: link needs session; taken profile refused on account page |
 | Logout | FR3-38 | T-14 identity | `/api/auth/logout` | E: slot returns to login | C: failure still clears locally |
 | Forgot / reset password | FR3-38, NEG3-30 | T-18 email | `/api/auth/password/*` | N+E: reset revokes session | N+E: replay 400 |
 | Create organization | FR3-29 | T-18 email | `/api/orgs` + claim ticket | N+E: tenant claimed | H/C: ticket single-use, in-memory only |
@@ -66,7 +68,7 @@ E2E case (`tests/e2e/specs`). All green at phase-6 close; see
 | Evidence library per run | FR3-18/31/35 | T-28 lifecycle events | `GET /api/runs/:id/events` cursor pages | C+E(evidence): artifact events listed, others filtered | C: missing run param, guest card, 401→expired |
 | Read-only viewer | FR3-18/35, NEG3-33 | T-28 lifecycle+evidence | `GET /api/runs/:id/artifacts/:digest` bytes | C+E: escaped text preview, full digest, server-verified label | C+E: tamper 400 integrity panel, 404 unknown, 403 unshared, oversize/binary download-only |
 | Run-detail evidence links | FR3-18 | T-28 lifecycle | `#/evidence?run=` + `#/evidence/view` | E: header + event links reach library/viewer | C: incomplete/invalid link states, no fetch |
-| Publication panel | FR3-19, NEG3-14 | — (no authorized App) | `GET /api/auth/providers` availability | C+E: honest no-App absence note | C: availability-unknown names the outage |
+| Publication panel | FR3-19, NEG3-14 | — (no authorized App) | `GET /api/auth/providers` `githubApp` flag | C+E: honest no-App absence note | C: sign-in alone keeps it empty; availability-unknown names the outage |
 | Run evidence export (JSON) | FR3-20/35 | — (client snapshot) | Blob from fetched server data | C: kind/runId/artifacts/provenance shape | — (snapshot labeled non-proof, nothing faked) |
 | Outcomes/evaluations note | FR3-21 | — (no backend yet) | honest absence note | C: absence note renders | — (gap recorded, nothing faked) |
 
@@ -106,6 +108,20 @@ E2E case (`tests/e2e/specs`). All green at phase-6 close; see
 | SAML provision/rotate/link/disable | FR3-44, NEG3-38 | T-32 identity | `POST·GET /api/enterprise/saml`, `/rotate·link·disable` | C+N+E: pinned issuer, rotation, member link, disabled | C+N: member provision 403, non-member link 400, garbage cert 400 |
 | SCIM mint/revoke | FR3-44, NEG3-21 | T-32 identity | `POST /api/enterprise/scim/tokens`, `:id/revoke` | C+N+E: token shown once, revoke flips true | C+N+E: foreign/already-revoked → revoked:false, indistinguishable (NEG3-21) |
 
+## T6-UI-backend-gap / WP3-21/24/25/29/30/32 — workspace reads wired real
+
+| Control | Requirement | Backend (task) | Endpoint / receipt | Positive case | Negative case |
+| --- | --- | --- | --- | --- | --- |
+| Overview run lists + stats | FR3-31 | T6 lifecycle | `GET /api/runs` | C+N: cards mirror submitted runs | C: guest card, 401→expired, empty state |
+| Project overview/settings | FR3-29/31 | T6 lifecycle (+V12 description) | `GET·PATCH /api/projects/:id` | C+N: topology, readiness, rename round-trip | C+N: unknown 404 quiet, viewer PATCH 403, empty patch 400 |
+| Capabilities matrix | FR3-24 | T6 adapters registry | `GET /api/support/capabilities` | C+N: 14 tuples, target/proven split | C: guest 401; no merged claims |
+| Environment profiles | FR3-31 | T6 lifecycle (+V12) | `GET·POST /api/environments` | C+N: revision round-trip per tenant | C+N: empty name 400, cross-tenant fence |
+| GitHub connections + revoke | FR3-29 | T6 lifecycle (+V12) | `GET·POST /api/github/connections*` | C+N: honest empty list | C+N: unknown revoke 404 quiet |
+| Telemetry corpus | FR3-31 | T6 lifecycle (+V12) | `GET·POST /api/telemetry/corpus` | C+N: metadata round-trip, gaps `[]` | C+N: bad kind/size 400 |
+| Billing summary + ledger | FR3-34 | T6 usage | `GET /api/billing/summary·ledger` | C+N: used/limit, reserve+consume rows | C: guest 401, limit 400; empty stays empty |
+| Team member table | FR3-29 | T6 identity | `GET /api/team/members` | C+N: roster with grant detail | C+N: operator 403, tenant fence |
+| Audit activity log | FR3-29 | T6 queries | `GET /api/audit/entries?limit=50` | C+N: submitted event + receipt | C: guest 401, limit 400 |
+
 ## Recorded backend-owned gaps (no UI faked for these)
 
 - Repository onboarding API (`repository_grants` has no writer):
@@ -121,8 +137,8 @@ E2E case (`tests/e2e/specs`). All green at phase-6 close; see
   behavior; no fake live stream. WP3-25 remainder.
 - Manifest carries 2 run templates; the UI renders all served
   templates generically. T-27 content gap for the other four.
-- Member/role/invite-list UI needs `listMembers`/
-  `listInvitations`. WP3-21 extension (from T-44).
+- Invitation listing still needs `listInvitations`
+  (`listMembers` landed in T6-UI-backend-gap). WP3-21 extension (from T-44).
 - Evidence has no global enumeration API (`EvidenceStore` is
   put/get/has): the library lists one run's artifact events. WP3-12.
 - PR/CI state has no HTTP read path and no authorized GitHub App:
@@ -148,3 +164,59 @@ E2E case (`tests/e2e/specs`). All green at phase-6 close; see
   lookup/revoke take pasted ids. WP3-31/32 extension.
 - SAML subject linking takes typed user ids (same class as the
   member-list gap). WP3-21 extension.
+
+## UI demo-readiness follow-up — 3 November 2026
+
+This adds evidence to the existing allocation; it does not close a full
+WP or qualify a live model/guest. See phase-6 report §21 for identities,
+commands and missing checks. Existing account/run/evidence/billing
+routes and their backend contracts are retained.
+
+| Control | Requirement | Backend | Endpoint / receipt | Positive case | Negative case |
+| --- | --- | --- | --- | --- | --- |
+| Default entry, public header/footer and workspace links | FR3-37/40 | Existing publicsite + session | `/api/site/manifest`, published route content | C routes/public; E demo/public | Explicit `#/` stays workspace; unknown route still errors |
+| Architecture tabs | FR3-37, NFR3-14 | Published explanatory content | No execution receipt claimed | C public vertical orientation, Up/Down/Left/Right/Home/End; E demo native Down/Home/End | Roving tab stop; explicit architecture-only and synthetic labels |
+| Shared theme, compact icons and mobile drawer | FR3-40, NFR3-14 | Browser non-secret theme preference | Existing local assets/fonts | E demo/shell at 1440/768/390/375px, light/dark | Escape/focus return, backdrop, route close, axe and overflow checks |
+| Overview and retry | FR3-31/40 | Existing health + identity | `/api/health`, `/api/auth/session` | C status; E demo, compact two-column mobile facts | Account failure remains Unavailable; health failure/retry; stale response cannot overwrite next page; Muse/Modal connection not claimed |
+| Public content navigation | FR3-37 | Existing publicsite | Existing route/section endpoints | E public/demo | C delayed response cannot replace a newer route |
+| Login and unavailable provider message | FR3-38 | Existing identity | Existing login/registration/recovery/session endpoints | E auth; E demo checks form ahead of supporting copy on mobile | Real rejected login and account-service errors; no invented GitHub flow |
+| API error handling | FR3-31/40, NFR3-08 | Existing JSON envelope | No contract change | C api | Malformed envelopes/non-2xx success-shaped payloads cannot become success |
+| Local development API proxy | NFR3-08/10 | Existing same-origin HTTP guard | Actual Vite config -> API | E dev-proxy: health 200; valid POST reaches 401 login gate | Foreign-Origin POST remains 403; no guard changes |
+| Reduced-motion hero | FR3-37, NFR3-14 | Local decorative canvas | No service or execution claim | E demo checks identical canvas pixels across frames under actual reduced-motion media | Correct explicit Playwright viewport/media setup; no new animation or dependency |
+
+### Landing reconstruction — authoritative root `mockup.html`
+
+The user corrected the reference path to root `mockup.html` (SHA256
+`6998e21248e413013b555eb6a04ffffe4ef3f6e385a71ae574998ba51051bf8f`).
+Its landing headline/composition supersede the earlier generic landing design;
+the backend manifest/contracts and all other page designs are retained.
+
+| Control | Requirement | Endpoint / behavior | Positive / negative evidence |
+| --- | --- | --- | --- |
+| Floating nav, two-line headline, highlighted proof, two pill CTAs | FR3-37, NFR3-14 | Product/pricing/guides/register/login use existing routes; theme uses existing store | C public home structure; E public validates two landing CTAs and all other manifest pages; identical-size native side-by-side captures |
+| Original technology identities | FR3-37 | Nine local SVGs extracted unchanged from root mockup, embedded Devicon MIT notice retained | Asset hashes; E demo local-only requests; labels describe scope preview, not certified support |
+| Particle-wave field | FR3-37, NFR3-14 | Original WebGL2 equations + Canvas2D fallback; no provider calls | E landing real GPU/forced-unavailable-GPU -> native 2D; motion preference pause/resume; route departure stops drawing; dark axe/overflow |
+| Capability disclosure | FR3-31/37 | No live connection or repair claimed | C/E labels Muse/Modal unavailable; original mockup's connected/evidence-collected wording replaced with non-status copy |
+
+
+## Root mockup complete frontend port — 4 November 2026
+
+The session explicitly supersedes older landing-only/reference-path notes. All62 source screens are mapped in the local review artifact route-inventory.json; full/viewport images at1440x900 and390x844 are in index.html. This is presentation/browser evidence, not full service/WP qualification.
+
+| Control | Requirement / backend | Observable positive and negative evidence |
+| --- | --- | --- |
+| Complete Landing / three-stage proof / four-area folder | FR3-37/40,NFR3-14; trusted static root design | C public structural/keyboard cases; native three-step controls and folder keyboard original/app; actual light/dark/GPU/reduced-motion checks. Illustrative label retained. |
+| Product / Pricing / all17public designs | FR3-37; published site APIs | Native public traverses links/FAQ/template/sample/pricing; real pricing and legal draft labels replace unapproved claims; no private payload keys. |
+| How it works / public error / history | FR3-37,NFR3-14; real registered routes | C routes/public and native public: valid Verification content; Back to start goes#/p/; refresh/back/forward stay valid. |
+| Login/recovery/verify/org/account states | FR3-38,NEG3-29/30; existing identity endpoints | C auth +native auth; same server return, password, enumeration/reset replay rules; inaccessible providers disabled. Register retained. |
+| Workspace shell/account/sidebar | FR3-40,NFR3-14; actual session/theme | Native demo/shell light/dark/mobile/drawer/focus, header clear of heading and uncropped brand. No fake user/count. |
+| Project creation / run draft | FR3-31/40; POST/api/projects, existing grants/draft APIs | C workspace empty input/strict payload/guest; native demo-flow real email->org->project->draft save+refresh. No repair success claim. |
+| Usage / no entitlement | FR3-40,NEG3-36; GET/api/billing/balances | C billing red/green for null period/cap; native new-org empty state and seeded real balances. No client entitlement/payment grant. |
+| Sixteen unavailable workspace integrations | FR3-31/40; no exposed HTTP contract | Original structural layouts; explicit service gap/disabled controls, no manufactured proof/count/graph. These remain partial. |
+
+Final:162mock UI tests and12native E2E specs pass; typecheck/lint/boundaries/backend+UI builds exit0. Full root test exits1 on feature and clean1977172 baseline with same31failures/1442passes. Semgrep/specialist skills/provider/full-workspace qualification remain missing; statusin_progress. Exact receipts, complete failure IDs, files and limitations: frontend-port-20261103-232653/final-report.md.
+
+
+### UI review remediation — 4 November 2026
+
+Workspace session loading uses the caller's route epoch before any guest/error/authorized render. C workspace:15delayed result cases (guest/authenticated/401/503/network) across3routes,3current expiry/retry cases, stale-search guard; E demo-flow: genuine held session responses released after navigation. README now documents HTTP PORT and local root design input. Landing section assertion is ordered and exact. Fresh181UI tests and12native E2E suites pass; typecheck/lint/builds0. Full-root feature/baseline each1442pass/31fail with identical failures. Similar pre-existing Settings race reproduced on clean baseline and tracked separately, not fixed by the scoped workspace guard. Full frontend remainsin_progress; previous16integration/provider/Semgrep blockers retained. Evidence: D:\20261\.changeproof-review\ui-pr-remediation-20261104-111613/.

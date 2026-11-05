@@ -167,6 +167,8 @@ test('run lists render runs and projects from search', async () => {
   await settle(outlet, 'run-1');
   expect(outlet.querySelector('a[href="#/run?id=run-1"]')).not.toBeNull();
   expect(posted.filter((call) => call.url === '/api/search')).toHaveLength(2);
+  expect(outlet.querySelectorAll('.run-search-table')).toHaveLength(2);
+  expect(outlet.querySelector('.run-search-table caption')?.textContent).toContain('current-grant');
 });
 
 test('empty runs explain the next step instead of a blank page', async () => {
@@ -591,4 +593,376 @@ test('missing run id fails closed without a request', async () => {
   await renderRoute(outlet, '#/run');
   await settle(outlet, 'Run link is incomplete');
   expect(seen.some((url) => url.startsWith('/api/runs/'))).toBe(false);
+});
+
+test('run list has chips, search, count, and a seven-column table', async () => {
+  stubFetch({
+    '/api/auth/session': { status: 200, json: SESSION },
+    '/api/search': { status: 200, json: RUN_SEARCH },
+  });
+  const outlet = boot();
+  await renderRoute(outlet, '#/runs');
+  await settle(outlet, 'run-1');
+  expect(outlet.querySelector('#runSearch')).not.toBeNull();
+  expect(required(outlet.querySelector<HTMLElement>('#runCount'), '#runCount').textContent).toBe('1');
+  const tableEl = required(outlet.querySelector<HTMLElement>('#runTable table.runs'), '#runTable table.runs');
+  expect(tableEl.querySelectorAll('thead th')).toHaveLength(7);
+  const chips = [...outlet.querySelectorAll('button.chip[data-filter]')];
+  expect(chips.map((chip) => chip.getAttribute('data-filter'))).toEqual([
+    'all',
+    'queued',
+    'running',
+    'succeeded',
+    'failed',
+    'cancelled',
+  ]);
+  expect(chips[0]?.getAttribute('aria-pressed')).toBe('true');
+  expect(outlet.querySelector('a[href="#/new-run"]')).not.toBeNull();
+});
+
+test('state chips re-search with the chosen state', async () => {
+  stubFetch({
+    '/api/auth/session': { status: 200, json: SESSION },
+    '/api/search': { status: 200, json: RUN_SEARCH },
+  });
+  const outlet = boot();
+  await renderRoute(outlet, '#/runs');
+  await settle(outlet, 'run-1');
+  required(outlet.querySelector<HTMLButtonElement>('button.chip[data-filter="running"]'), 'running chip').click();
+  await settle(outlet, 'run-1');
+  const bodies = posted.filter((call) => call.url === '/api/search').map((call) => call.body as Record<string, unknown>);
+  expect(bodies.some((body) => body['scope'] === 'runs' && body['runState'] === 'running')).toBe(true);
+  expect(required(outlet.querySelector<HTMLButtonElement>('button.chip[data-filter="running"]'), 'running chip').getAttribute('aria-pressed')).toBe(
+    'true',
+  );
+});
+
+test('run search text submits with the query', async () => {
+  stubFetch({
+    '/api/auth/session': { status: 200, json: SESSION },
+    '/api/search': { status: 200, json: RUN_SEARCH },
+  });
+  const outlet = boot();
+  await renderRoute(outlet, '#/runs');
+  await settle(outlet, 'run-1');
+  fill(outlet, 'runSearch', 'checkout');
+  required(outlet.querySelector<HTMLFormElement>('#run-filter'), '#run-filter').requestSubmit();
+  await settle(outlet, 'run-1');
+  const bodies = posted.filter((call) => call.url === '/api/search').map((call) => call.body as Record<string, unknown>);
+  expect(bodies.some((body) => body['text'] === 'checkout')).toBe(true);
+});
+
+test('new-run alias renders the same filing form', async () => {
+  formStubs();
+  const outlet = boot();
+  await renderRoute(outlet, '#/new-run');
+  await settle(outlet, 'File a run');
+  expect(outlet.querySelector('form#runForm')).not.toBeNull();
+  expect(outlet.querySelector('#run-template')).not.toBeNull();
+  expect(outlet.querySelector('#changeTemplate')).not.toBeNull();
+  expect(outlet.querySelector('#submit-run')).not.toBeNull();
+});
+
+test('change type preset fills empty intent and invariants, never overwrites', async () => {
+  formStubs();
+  const outlet = await openForm();
+  fill(outlet, 'changeTemplate', 'contract');
+  await settle(outlet, 'Filled intent and invariants');
+  expect(required(outlet.querySelector<HTMLTextAreaElement>('#draft-intent'), '#draft-intent').value).toContain('minor unit');
+  expect(required(outlet.querySelector<HTMLInputElement>('#submit-invariants'), '#submit-invariants').value).toContain(
+    'Tenant isolation holds',
+  );
+  fill(outlet, 'draft-intent', 'my own words');
+  fill(outlet, 'changeTemplate', 'incident');
+  await settle(outlet, 'nothing was overwritten');
+  expect(required(outlet.querySelector<HTMLTextAreaElement>('#draft-intent'), '#draft-intent').value).toBe('my own words');
+});
+
+test('source tabs switch the source field and append source refs', async () => {
+  formStubs();
+  const outlet = await openForm();
+  required(outlet.querySelector<HTMLButtonElement>('button.chip[data-source="issue"]'), 'issue tab').click();
+  const source = required(outlet.querySelector<HTMLInputElement>('#source-value'), '#source-value');
+  expect(source.placeholder).toContain('#418');
+  source.value = 'northwind/orders-service#418';
+  required(outlet.querySelector<HTMLButtonElement>('#source-add'), '#source-add').click();
+  expect(required(outlet.querySelector<HTMLInputElement>('#submit-sources'), '#submit-sources').value).toContain(
+    'northwind/orders-service#418',
+  );
+});
+
+test('run summary tracks mode, targets, budget, and time', async () => {
+  formStubs();
+  const outlet = await openForm();
+  expect(required(outlet.querySelector<HTMLElement>('#sumMode'), '#sumMode').textContent).toBe('Repair');
+  const repo = outlet.querySelector<HTMLInputElement>('input[name="repo"][value="repo-1"]');
+  if (repo === null) throw new Error('Missing repo checkbox.');
+  repo.checked = true;
+  repo.dispatchEvent(new Event('change', { bubbles: true }));
+  fill(outlet, 'submit-budget', '50');
+  await settle(outlet, '1 repositories');
+  expect(required(outlet.querySelector<HTMLElement>('#sumTargets'), '#sumTargets').textContent).toBe('1 repositories');
+  expect(required(outlet.querySelector<HTMLElement>('#sumCredits'), '#sumCredits').textContent).toBe('50 cr');
+  expect(required(outlet.querySelector<HTMLElement>('#sumTime'), '#sumTime').textContent).toBe('90 min');
+});
+
+test('reserve modal reviews the submit and files on confirm', async () => {
+  stubFetch({
+    '/api/auth/session': { status: 200, json: SESSION },
+    '/api/site/templates': { status: 200, json: TEMPLATES },
+    '/api/search': { status: 200, json: PROJECT_SEARCH },
+    '/api/drafts': { status: 201, json: { draftId: 'draft-9', revision: 1 } },
+    '/api/runs': {
+      status: 201,
+      json: { runId: 'run-7', jobId: 'job-7', reservationId: 'res-7', submitDigest: 'c'.repeat(64), duplicate: false },
+    },
+  });
+  const outlet = await openForm();
+  fill(outlet, 'draft-intent', 'restore checkout');
+  fillSubmit(outlet);
+  required(outlet.querySelector<HTMLButtonElement>('#reserve-run'), '#reserve-run').click();
+  await settle(document.body, 'Review run submission');
+  expect(document.body.textContent).toContain('50 cr');
+  const confirm = document.querySelector<HTMLButtonElement>('#reserve-confirm');
+  if (confirm === null) throw new Error('Missing reserve confirm.');
+  confirm.click();
+  await settle(outlet, 'Run filed');
+  expect(outlet.querySelector('a[href="#/run?id=run-7"]')).not.toBeNull();
+});
+
+test('diagnosis-only mode blocks submit with an honest reason', async () => {
+  formStubs();
+  const outlet = await openForm();
+  const diagnosis = outlet.querySelector<HTMLInputElement>('input[name="mode"][value="Diagnosis-only"]');
+  if (diagnosis === null) throw new Error('Missing diagnosis mode.');
+  diagnosis.checked = true;
+  diagnosis.dispatchEvent(new Event('change', { bubbles: true }));
+  await settle(outlet, 'not supported by the API');
+  expect(required(outlet.querySelector<HTMLButtonElement>('#submit-run'), '#submit-run').disabled).toBe(true);
+  expect(required(outlet.querySelector<HTMLButtonElement>('#reserve-run'), '#reserve-run').disabled).toBe(true);
+});
+
+test('run-created shows the accepted run without inventing a verdict', async () => {
+  stubFetch({
+    '/api/auth/session': { status: 200, json: SESSION },
+    '/api/runs/run-1': { status: 200, json: runRow() },
+  });
+  const outlet = boot();
+  await renderRoute(outlet, '#/run-created?id=run-1');
+  await settle(outlet, 'Run accepted');
+  expect(outlet.textContent).toContain('None yet');
+  expect(outlet.textContent).toContain('Not created yet');
+  expect(outlet.textContent).toContain('repo-1');
+  expect(outlet.querySelector('a[href="#/run?id=run-1"]')).not.toBeNull();
+  expect(outlet.querySelector('.run-context')).not.toBeNull();
+});
+
+test('run-created without an id fetches nothing', async () => {
+  const fetchSpy = vi.fn(() => Promise.resolve(new Response('{}', { status: 200 })));
+  globalThis.fetch = fetchSpy;
+  const outlet = boot();
+  await renderRoute(outlet, '#/run-created');
+  expect(outlet.textContent).toContain('Run link is incomplete');
+  expect(fetchSpy).not.toHaveBeenCalled();
+});
+
+test('running alias streams the run like run detail', async () => {
+  const outlet = await openDetail(
+    {
+      '/api/runs/run-1': { status: 200, json: runRow() },
+      '/api/runs/run-1/events?afterSeq=0&limit=50': {
+        status: 200,
+        json: { events: [eventRow(1, 'submitted')], cursor: 1 },
+      },
+      '/api/runs/run-1/events?afterSeq=1&limit=50': { status: 200, json: { events: [], cursor: 1 } },
+    },
+    '#/running?id=run-1',
+  );
+  await settle(outlet, 'submitted');
+  expect(outlet.querySelector('#event-log')).not.toBeNull();
+});
+
+test('run detail shows stages, live log, resources, and isolation', async () => {
+  const outlet = await openDetail({
+    '/api/runs/run-1': { status: 200, json: runRow() },
+    '/api/runs/run-1/events?afterSeq=0&limit=50': {
+      status: 200,
+      json: { events: [eventRow(1, 'submitted')], cursor: 1 },
+    },
+    '/api/runs/run-1/events?afterSeq=1&limit=50': { status: 200, json: { events: [], cursor: 1 } },
+  });
+  await settle(outlet, 'queued');
+  expect(outlet.querySelector('.run-context')).not.toBeNull();
+  expect(outlet.querySelectorAll('#run-stages > li')).toHaveLength(6);
+  expect(outlet.querySelectorAll('#run-stages .stepmark')).toHaveLength(6);
+  await settle(outlet, '#1 submitted');
+  expect(outlet.querySelector('.meter')).not.toBeNull();
+  expect(outlet.textContent).toContain('Isolation status');
+  expect(outlet.textContent).toContain('Credit and time consumption are not exposed');
+});
+
+test('tab pages fail closed without a run id', async () => {
+  const fetchSpy = vi.fn(() => Promise.resolve(new Response('{}', { status: 200 })));
+  globalThis.fetch = fetchSpy;
+  for (const hash of ['#/review', '#/impact', '#/investigation', '#/campaigns', '#/publication', '#/outcome']) {
+    const outlet = boot();
+    await renderRoute(outlet, hash);
+    expect(outlet.textContent).toContain('Run link is incomplete');
+    expect(outlet.querySelector('a[href="#/runs"]')).not.toBeNull();
+  }
+  expect(fetchSpy).not.toHaveBeenCalled();
+});
+
+test('tab pages need a login before any run read', async () => {
+  const fetchSpy = vi.fn(() =>
+    Promise.resolve(new Response(JSON.stringify({ ok: true, data: { authenticated: false } }), { status: 200 })),
+  );
+  globalThis.fetch = fetchSpy;
+  const outlet = boot();
+  await renderRoute(outlet, '#/review?run=run-1');
+  await settle(outlet, 'Run needs a login');
+  expect(fetchSpy).toHaveBeenCalledTimes(1);
+});
+
+function tabStubs(events: readonly Record<string, unknown>[]): Record<string, { status: number; json: unknown }> {
+  return {
+    '/api/auth/session': { status: 200, json: SESSION },
+    '/api/runs/run-1': { status: 200, json: runRow() },
+    '/api/runs/run-1/events?afterSeq=0&limit=100': { status: 200, json: { events, cursor: events.length } },
+  };
+}
+
+test('review shows run tabs, unverified targets, and honest file states', async () => {
+  stubFetch(tabStubs([eventRow(1, 'submitted'), eventRow(2, 'artifact', { digest: 'e'.repeat(64) })]));
+  const outlet = boot();
+  await renderRoute(outlet, '#/review?run=run-1');
+  await settle(outlet, 'No assessment to show yet');
+  const tabLinks = [...outlet.querySelectorAll('.route-tabs a')];
+  expect(tabLinks).toHaveLength(7);
+  expect(outlet.querySelector('a[href="#/impact?run=run-1"]')).not.toBeNull();
+  expect(outlet.querySelector('.route-tabs a[aria-current="page"]')?.textContent).toContain('Overview');
+  expect(outlet.textContent).toContain('unverified');
+  expect(outlet.textContent).toContain('Not assessed');
+  expect(outlet.querySelector('button.chip[data-diff]')).not.toBeNull();
+  expect(outlet.querySelector('details.compact-detail')).not.toBeNull();
+});
+
+test('review file preview renders served bytes escaped with a download', async () => {
+  const digest = 'e'.repeat(64);
+  globalThis.fetch = vi.fn((input: unknown) => {
+    const url = String(input);
+    if (url === '/api/auth/session') {
+      return Promise.resolve(new Response(JSON.stringify({ ok: true, data: SESSION }), { status: 200 }));
+    }
+    if (url === '/api/runs/run-1') {
+      return Promise.resolve(new Response(JSON.stringify({ ok: true, data: runRow() }), { status: 200 }));
+    }
+    if (url === '/api/runs/run-1/events?afterSeq=0&limit=100') {
+      return Promise.resolve(
+        new Response(
+          JSON.stringify({
+            ok: true,
+            data: { events: [eventRow(1, 'artifact', { digest })], cursor: 1 },
+          }),
+          { status: 200 },
+        ),
+      );
+    }
+    if (url === `/api/runs/run-1/artifacts/${digest}`) {
+      return Promise.resolve(
+        new Response(new TextEncoder().encode('- old\n+ new\n<script>alert(1)</script>') as BodyInit, {
+          status: 200,
+          headers: { 'Content-Type': 'application/octet-stream' },
+        }),
+      );
+    }
+    return Promise.resolve(new Response(JSON.stringify({ ok: false }), { status: 404 }));
+  });
+  const outlet = boot();
+  await renderRoute(outlet, '#/review?run=run-1');
+  await settle(outlet, 'Attached files');
+  required(outlet.querySelector<HTMLButtonElement>('button.chip[data-diff]'), 'diff tab').click();
+  await settle(outlet, '+ new');
+  expect(outlet.querySelector('#diffView script')).toBeNull();
+  expect(outlet.querySelectorAll('#diffView .diff-line')).not.toHaveLength(0);
+  expect(outlet.querySelector(`a[href="/api/runs/run-1/artifacts/${digest}"]`)).not.toBeNull();
+});
+
+test('review without artifacts says so instead of guessing a candidate', async () => {
+  stubFetch(tabStubs([eventRow(1, 'submitted')]));
+  const outlet = boot();
+  await renderRoute(outlet, '#/review?run=run-1');
+  await settle(outlet, 'No attached files');
+  expect(outlet.querySelector('button.chip[data-diff]')).toBeNull();
+});
+
+test('impact renders granted components with honest edges', async () => {
+  stubFetch({
+    '/api/auth/session': { status: 200, json: SESSION },
+    '/api/runs/run-1': { status: 200, json: runRow() },
+  });
+  const outlet = boot();
+  await renderRoute(outlet, '#/impact?run=run-1');
+  await settle(outlet, 'Dependency graph');
+  const node = required(outlet.querySelector<HTMLButtonElement>('button.graph-node'), 'graph node');
+  expect(node.textContent).toContain('repo-1');
+  node.click();
+  await settle(outlet, 'Recorded at submit');
+  expect(outlet.textContent).toContain('edges: none exposed');
+  expect(outlet.textContent).toContain('No impact paths');
+});
+
+test('investigation lists observed attempt events without a ledger claim', async () => {
+  stubFetch(tabStubs([eventRow(1, 'submitted'), eventRow(2, 'attempt_fast', { n: 1 })]));
+  const outlet = boot();
+  await renderRoute(outlet, '#/investigation?run=run-1');
+  await settle(outlet, 'Hypothesis ledger');
+  expect(outlet.textContent).toContain('not exposed by the API yet');
+  expect(outlet.textContent).toContain('attempt_fast');
+  expect(outlet.querySelector('ol.timeline .stepmark')).not.toBeNull();
+});
+
+test('campaigns shows stats without inventing a campaign', async () => {
+  stubFetch(tabStubs([eventRow(1, 'submitted')]));
+  const outlet = boot();
+  await renderRoute(outlet, '#/campaigns?run=run-1');
+  await settle(outlet, 'Verification campaign');
+  expect(outlet.querySelectorAll('.campaign-stat')).toHaveLength(4);
+  expect(outlet.textContent).toContain('not assessed');
+  expect(outlet.textContent).toContain('Trial receipts are not exposed');
+  expect(outlet.textContent).toContain('No campaign verdict without trial receipts');
+  expect(outlet.textContent).not.toContain('valid (');
+  expect(outlet.querySelector('details.compact-detail')).not.toBeNull();
+});
+
+test('publication assembles an honest draft preview from run identifiers', async () => {
+  stubFetch({
+    '/api/auth/session': { status: 200, json: SESSION },
+    '/api/runs/run-1': { status: 200, json: runRow() },
+  });
+  const outlet = boot();
+  await renderRoute(outlet, '#/publication?run=run-1');
+  await settle(outlet, 'Candidate bundle');
+  expect(outlet.textContent).toContain('not published yet');
+  required(outlet.querySelector<HTMLButtonElement>('#pr-preview'), '#pr-preview').click();
+  await settle(document.body, 'No PR has been created');
+  expect(document.body.textContent).toContain('run-1');
+});
+
+test('outcome saves a local record without claiming a verdict', async () => {
+  stubFetch({
+    '/api/auth/session': { status: 200, json: SESSION },
+    '/api/runs/run-1': { status: 200, json: runRow() },
+  });
+  const outlet = boot();
+  await renderRoute(outlet, '#/outcome?run=run-1');
+  await settle(outlet, 'Outcome record');
+  fill(outlet, 'outcome-owner', 'Reyjin');
+  fill(outlet, 'outcome-origin', 'controlled_change · run-1');
+  fill(outlet, 'outcome-observation', 'Checkout works on staging for 30 minutes.');
+  required(outlet.querySelector<HTMLFormElement>('#outcomeForm'), '#outcomeForm').requestSubmit();
+  await settle(outlet, 'recorded locally');
+  expect(window.localStorage.getItem('changeproof-draft:acme:user-owner:outcome:run-1')).toContain('Reyjin');
+  await renderRoute(outlet, '#/outcome?run=run-1');
+  await settle(outlet, 'Checkout works on staging');
 });

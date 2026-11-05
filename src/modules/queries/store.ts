@@ -107,7 +107,12 @@ export interface QueriesStore {
   cacheStats(): { hits: number; misses: number };
 }
 
-const ProjectRowSchema = z.object({ id: z.string(), name: z.string().nullable(), created_at: z.date() });
+const ProjectRowSchema = z.object({
+  id: z.string(),
+  name: z.string().nullable(),
+  description: z.string().nullable().optional(),
+  created_at: z.date(),
+});
 
 const RunRowSchema = z.object({
   id: z.string(),
@@ -198,6 +203,15 @@ export function createQueriesStore(db: QueriesDb, deps: QueriesDeps, options: Qu
   async function grantedRepos(client: QueriesDbClient): Promise<Set<string>> {
     const found = await client.query('SELECT repository_id FROM repository_grants');
     return new Set(found.rows.map((row) => (row as { repository_id: string }).repository_id));
+  }
+
+  /** Pre-V12 probe databases keep working: the description column may be absent. */
+  async function hasColumn(client: QueriesDbClient, table: string, column: string): Promise<boolean> {
+    const found = await client.query(
+      `SELECT 1 AS ok FROM information_schema.columns WHERE table_schema = 'public' AND table_name = $1 AND column_name = $2`,
+      [table, column],
+    );
+    return found.rows.length > 0;
   }
 
   return {
@@ -296,11 +310,15 @@ export function createQueriesStore(db: QueriesDb, deps: QueriesDeps, options: Qu
 
         let hitsFound: SearchHit[] = [];
         if (query.scope === 'projects') {
+          const described = await hasColumn(client, 'projects', 'description');
           const pattern = query.text === undefined ? null : `%${escapeLike(query.text)}%`;
+          const columns = described ? 'id, name, description, created_at' : 'id, name, created_at';
           const rows = await client.query(
             pattern === null
-              ? 'SELECT id, name, created_at FROM projects ORDER BY id ASC'
-              : 'SELECT id, name, created_at FROM projects WHERE id ILIKE $1 ESCAPE \'\\\' OR name ILIKE $1 ESCAPE \'\\\' ORDER BY id ASC',
+              ? `SELECT ${columns} FROM projects ORDER BY id ASC`
+              : described
+                ? `SELECT ${columns} FROM projects WHERE id ILIKE $1 ESCAPE '\\' OR name ILIKE $1 ESCAPE '\\' OR description ILIKE $1 ESCAPE '\\' ORDER BY id ASC`
+                : `SELECT ${columns} FROM projects WHERE id ILIKE $1 ESCAPE '\\' OR name ILIKE $1 ESCAPE '\\' ORDER BY id ASC`,
             pattern === null ? [] : [pattern],
           );
           for (const row of rows.rows) {
@@ -315,7 +333,7 @@ export function createQueriesStore(db: QueriesDb, deps: QueriesDeps, options: Qu
               kind: 'project',
               id: parsed.id,
               title: parsed.name ?? parsed.id,
-              snippet: `project ${parsed.id}`,
+              snippet: parsed.description ?? `project ${parsed.id}`,
               createdAt: parsed.created_at.toISOString(),
             });
           }

@@ -132,6 +132,135 @@ export interface DownloadArtifactInput {
   readonly digest: string;
 }
 
+export interface ListRunsInput {
+  readonly limit?: number;
+}
+
+export interface RunSummary {
+  readonly runId: string;
+  readonly projectId: string;
+  readonly state: string;
+  readonly createdAt: string;
+}
+
+export interface GetProjectInput {
+  readonly projectId: string;
+}
+
+export interface ProjectRepository {
+  readonly id: string;
+  readonly name: string;
+  readonly ownership: string;
+  readonly status: string;
+}
+
+export interface ProjectReadiness {
+  readonly label: string;
+  readonly status: string;
+}
+
+export interface ProjectBaseline {
+  readonly revision: string;
+  readonly pinnedAt: string;
+}
+
+export interface ProjectDetail {
+  readonly projectId: string;
+  readonly name: string;
+  readonly description: string | null;
+  readonly repositories: readonly ProjectRepository[];
+  readonly readiness: readonly ProjectReadiness[];
+  readonly baseline: ProjectBaseline | null;
+}
+
+export interface UpdateProjectInput {
+  readonly projectId: string;
+  readonly name?: string;
+  readonly description?: string;
+}
+
+export interface EnvironmentService {
+  readonly name: string;
+  readonly engine: string;
+  readonly ownership: string;
+  readonly network: string;
+}
+
+export interface EnvironmentBoundary {
+  readonly isolation: string | null;
+  readonly egress: string | null;
+  readonly dependencyFetch: string | null;
+  readonly mounts: string | null;
+  readonly cleanup: string | null;
+}
+
+export interface EnvironmentResources {
+  readonly wallTime: string | null;
+  readonly attempts: string | null;
+  readonly creditCap: string | null;
+}
+
+export interface EnvironmentProfile {
+  readonly profileId: string | null;
+  readonly name: string | null;
+  readonly revision: number | null;
+  readonly dataset: string | null;
+  readonly migration: string | null;
+  readonly services: readonly EnvironmentService[];
+  readonly journal: string | null;
+  readonly reset: string | null;
+  readonly boundary: EnvironmentBoundary;
+  readonly resources: EnvironmentResources;
+}
+
+export interface SaveEnvironmentInput {
+  readonly name: string;
+  readonly dataset?: string;
+  readonly migration?: string;
+}
+
+export interface GithubConnection {
+  readonly id: string;
+  readonly name: string;
+  readonly status: string;
+  readonly webhookState: string | null;
+  readonly lastDelivery: string | null;
+  readonly updatedAt: string;
+}
+
+export interface RegisterConnectionsInput {
+  readonly installationId: string;
+  readonly repositories: readonly { id: string; fullName: string }[];
+}
+
+export interface RevokeConnectionInput {
+  readonly connectionId: string;
+}
+
+export interface CorpusFile {
+  readonly name: string;
+  readonly kind: string;
+  readonly sizeBytes: number;
+  readonly addedAt: string;
+}
+
+export interface CoverageGap {
+  readonly area: string;
+  readonly detail: string;
+}
+
+export interface TelemetryCorpus {
+  readonly files: readonly CorpusFile[];
+  readonly gaps: readonly CoverageGap[];
+}
+
+export interface RegisterTelemetryInput {
+  readonly name: string;
+  readonly sizeBytes: number;
+  readonly kind: string;
+  readonly label?: string;
+}
+
 export interface LifecycleStore {
   createProject(actor: LifecycleActor, input: CreateProjectInput): Promise<{ projectId: string; name: string }>;
   saveDraftRevision(actor: LifecycleActor, input: SaveDraftInput): Promise<{ draftId: string; revision: number }>;
@@ -153,6 +282,25 @@ export interface LifecycleStore {
   ): Promise<{ runId: string; jobId: string; reservationId: string; submitDigest: string; duplicate: boolean }>;
   applyRepoRevocation(input: ApplyRepoRevocationInput): Promise<{ cancelledRunIds: readonly string[] }>;
   downloadArtifact(actor: LifecycleActor, input: DownloadArtifactInput): Promise<{ digest: string; bytes: Uint8Array }>;
+  listRuns(actor: LifecycleActor, input: ListRunsInput): Promise<{ runs: readonly RunSummary[] }>;
+  getProject(actor: LifecycleActor, input: GetProjectInput): Promise<ProjectDetail>;
+  updateProject(
+    actor: LifecycleActor,
+    input: UpdateProjectInput,
+  ): Promise<{ projectId: string; name: string; description: string | null }>;
+  getEnvironment(actor: LifecycleActor): Promise<EnvironmentProfile>;
+  saveEnvironment(actor: LifecycleActor, input: SaveEnvironmentInput): Promise<{ profileId: string; revision: number }>;
+  listConnections(actor: LifecycleActor): Promise<{ connections: readonly GithubConnection[] }>;
+  revokeConnection(
+    actor: LifecycleActor,
+    input: RevokeConnectionInput,
+  ): Promise<{ connectionId: string; status: string }>;
+  registerConnections(
+    actor: LifecycleActor,
+    input: RegisterConnectionsInput,
+  ): Promise<{ connectionIds: readonly string[] }>;
+  getTelemetryCorpus(actor: LifecycleActor): Promise<TelemetryCorpus>;
+  registerTelemetryFile(actor: LifecycleActor, input: RegisterTelemetryInput): Promise<{ fileId: string; name: string }>;
 }
 
 const DraftRowSchema = z.object({
@@ -191,6 +339,96 @@ const EventRowSchema = z.object({
 
 const RepoGrantRowSchema = z.object({ repository_id: z.string() });
 
+const ProjectRowSchema = z.object({
+  id: z.string(),
+  name: z.string().nullable(),
+  description: z.string().nullable().optional(),
+});
+
+const RunSummaryRowSchema = z.object({
+  id: z.string(),
+  project_id: z.string(),
+  state: z.string(),
+  created_at: z.date(),
+});
+
+const EnvRowSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  dataset: z.string().nullable(),
+  migration: z.string().nullable(),
+  revision: z.number(),
+});
+
+const ConnectionRowSchema = z.object({
+  id: z.string(),
+  repository: z.string(),
+  status: z.string(),
+  webhook_state: z.string().nullable(),
+  last_delivery_at: z.date().nullable(),
+  updated_at: z.date(),
+});
+
+const CorpusRowSchema = z.object({
+  name: z.string(),
+  kind: z.string(),
+  size_bytes: z.coerce.number(),
+  created_at: z.date(),
+});
+
+/** Pre-V12 probe databases keep working: reads treat missing tables as empty. */
+async function tableExists(client: LifecycleDbClient, table: string): Promise<boolean> {
+  const found = await client.query(`SELECT to_regclass($1) AS reg`, [`public.${table}`]);
+  return (found.rows[0] as { reg: string | null }).reg !== null;
+}
+
+async function hasColumn(client: LifecycleDbClient, table: string, column: string): Promise<boolean> {
+  const found = await client.query(
+    `SELECT 1 AS ok FROM information_schema.columns WHERE table_schema = 'public' AND table_name = $1 AND column_name = $2`,
+    [table, column],
+  );
+  return found.rows.length > 0;
+}
+
+/** Self-create the V12 workspace tables on probe databases that predate them. */
+async function ensureWorkspaceTables(client: LifecycleDbClient): Promise<void> {
+  if (
+    (await tableExists(client, 'environment_profiles')) &&
+    (await tableExists(client, 'github_connections')) &&
+    (await tableExists(client, 'telemetry_corpus'))
+  ) {
+    return;
+  }
+  try {
+    await client.query(
+      `CREATE TABLE IF NOT EXISTS environment_profiles (id TEXT PRIMARY KEY, tenant_id TEXT NOT NULL, name TEXT NOT NULL, dataset TEXT NULL, migration TEXT NULL, revision INTEGER NOT NULL CHECK (revision > 0), created_at TIMESTAMPTZ NOT NULL)`,
+    );
+    await client.query(
+      `CREATE TABLE IF NOT EXISTS github_connections (id TEXT PRIMARY KEY, tenant_id TEXT NOT NULL, repository TEXT NOT NULL, status TEXT NOT NULL CHECK (status IN ('active', 'revoked', 'expired', 'failed')), webhook_state TEXT NULL, last_delivery_at TIMESTAMPTZ NULL, created_at TIMESTAMPTZ NOT NULL, updated_at TIMESTAMPTZ NOT NULL)`,
+    );
+    await client.query(
+      `CREATE TABLE IF NOT EXISTS telemetry_corpus (id TEXT PRIMARY KEY, tenant_id TEXT NOT NULL, name TEXT NOT NULL, kind TEXT NOT NULL CHECK (kind IN ('log', 'trace', 'metric')), size_bytes BIGINT NOT NULL CHECK (size_bytes >= 0), label TEXT NULL, created_at TIMESTAMPTZ NOT NULL)`,
+    );
+  } catch (error) {
+    if (errorCode(error) === '42501') {
+      throw new ChangeProofError(
+        'Workspace tables are missing and this role cannot create them; apply infra/postgres/V12__workspace.sql.',
+      );
+    }
+    throw error;
+  }
+}
+
+const EMPTY_BOUNDARY: EnvironmentBoundary = {
+  isolation: null,
+  egress: null,
+  dependencyFetch: null,
+  mounts: null,
+  cleanup: null,
+};
+
+const EMPTY_RESOURCES: EnvironmentResources = { wallTime: null, attempts: null, creditCap: null };
+
 function randomId(prefix: string): string {
   return IdSchema.parse(`${prefix}-${randomBytes(8).toString('hex')}`);
 }
@@ -212,6 +450,15 @@ function assertCanMutate(context: TenantContext): void {
   assertServerContext(context);
   if (context.role !== 'owner' && context.role !== 'admin' && context.role !== 'member') {
     throw new ChangeProofError('This role may read but not change runs; owners, admins, and members may act.');
+  }
+}
+
+function assertCanMutateWorkspace(context: TenantContext): void {
+  assertServerContext(context);
+  if (context.role !== 'owner' && context.role !== 'admin' && context.role !== 'member') {
+    throw new ChangeProofError(
+      'This role may read but not change workspace settings; owners, admins, and members may act.',
+    );
   }
 }
 
@@ -862,6 +1109,374 @@ export function createLifecycleStore(
         throw new ChangeProofError('Artifact digest mismatch; refusing a tampered artifact (NEG3-33).');
       }
       return { digest, bytes };
+    },
+
+    async listRuns(actor, input) {
+      const context = await derive(actor);
+      const limit = input.limit === undefined ? 50 : z.number().int().min(1).max(100).parse(input.limit);
+      const rows = await inTenant(context.tenantId, async (client) => {
+        const found = await client.query(
+          'SELECT id, project_id, state, created_at FROM lifecycle_runs ORDER BY created_at DESC, id DESC LIMIT $1',
+          [limit],
+        );
+        return found.rows.map((row) => RunSummaryRowSchema.parse(row));
+      });
+      if (context.role === 'operator') {
+        const support = options.support;
+        if (support === undefined) {
+          throw new ChangeProofError('Operator accounts carry no tenant authority here (NEG3-34).');
+        }
+        const scopes = await support.listActiveScopes(context.tenantId, context.userId, actor.nowIso);
+        const visible = rows.filter((row) =>
+          scopes.some(
+            (scope) =>
+              ((scope.resourceType === 'run' || scope.resourceType === 'evidence') &&
+                scope.resourceId === row.id) ||
+              (scope.resourceType === 'project' && scope.resourceId === row.project_id),
+          ),
+        );
+        const used = new Map<string, { resourceType: string; resourceId: string }>();
+        for (const row of visible) {
+          const covering = scopes.find(
+            (scope) =>
+              ((scope.resourceType === 'run' || scope.resourceType === 'evidence') &&
+                scope.resourceId === row.id) ||
+              (scope.resourceType === 'project' && scope.resourceId === row.project_id),
+          );
+          if (covering !== undefined) {
+            used.set(covering.grantId, { resourceType: covering.resourceType, resourceId: covering.resourceId });
+          }
+        }
+        for (const [grantId, scope] of used) {
+          await support.logAccess({
+            tenantId: context.tenantId,
+            userId: context.userId,
+            grantId,
+            action: 'read:runs',
+            resourceType: scope.resourceType,
+            resourceId: scope.resourceId,
+            nowIso: actor.nowIso,
+          });
+        }
+        return {
+          runs: visible.map((row) => ({
+            runId: row.id,
+            projectId: row.project_id,
+            state: row.state,
+            createdAt: row.created_at.toISOString(),
+          })),
+        };
+      }
+      assertCanRead(context);
+      return {
+        runs: rows
+          .filter((row) => context.projectGrants.includes(row.project_id))
+          .map((row) => ({
+            runId: row.id,
+            projectId: row.project_id,
+            state: row.state,
+            createdAt: row.created_at.toISOString(),
+          })),
+      };
+    },
+
+    async getProject(actor, input) {
+      const context = await derive(actor);
+      const projectId = IdSchema.parse(input.projectId);
+      const detail = await inTenant(context.tenantId, async (client) => {
+        const described = await hasColumn(client, 'projects', 'description');
+        const found = await client.query(
+          described
+            ? 'SELECT id, name, description FROM projects WHERE id = $1'
+            : 'SELECT id, name FROM projects WHERE id = $1',
+          [projectId],
+        );
+        if (found.rows.length === 0) {
+          throw new ChangeProofError('Project is unknown or not shared with you.');
+        }
+        const row = ProjectRowSchema.parse(found.rows[0]);
+        const grants = await client.query('SELECT repository_id FROM repository_grants WHERE project_id = $1', [
+          projectId,
+        ]);
+        const statusByRepo = new Map<string, string>();
+        if (await tableExists(client, 'github_connections')) {
+          const connections = await client.query(
+            'SELECT repository, status FROM github_connections WHERE tenant_id = $1',
+            [context.tenantId],
+          );
+          for (const entry of connections.rows) {
+            const parsed = z.object({ repository: z.string(), status: z.string() }).parse(entry);
+            statusByRepo.set(parsed.repository, parsed.status);
+          }
+        }
+        const drafts = await client.query('SELECT 1 AS ok FROM draft_revisions WHERE project_id = $1 LIMIT 1', [
+          projectId,
+        ]);
+        const runs = await client.query('SELECT 1 AS ok FROM lifecycle_runs WHERE project_id = $1 LIMIT 1', [
+          projectId,
+        ]);
+        return {
+          row,
+          repositories: grants.rows.map((entry) => {
+            const repositoryId = RepoGrantRowSchema.parse(entry).repository_id;
+            return {
+              id: repositoryId,
+              name: repositoryId,
+              ownership: 'granted',
+              status: statusByRepo.get(repositoryId) ?? 'unknown',
+            };
+          }),
+          readiness: [
+            { label: 'Repository access', status: grants.rows.length > 0 ? 'ready' : 'missing' },
+            { label: 'Draft history', status: drafts.rows.length > 0 ? 'ready' : 'missing' },
+            { label: 'Run history', status: runs.rows.length > 0 ? 'ready' : 'missing' },
+          ],
+        };
+      });
+      const membership = await authorizeOperatorRead(
+        context,
+        'read:project',
+        [{ resourceType: 'project', resourceId: projectId }],
+        actor.nowIso,
+      );
+      if (membership) {
+        assertProjectGrant(context, projectId);
+      }
+      return {
+        projectId: detail.row.id,
+        name: detail.row.name ?? detail.row.id,
+        description: detail.row.description ?? null,
+        repositories: detail.repositories,
+        readiness: detail.readiness,
+        // No baseline backend exists yet: null renders as "No baseline pinned",
+        // never an invented revision.
+        baseline: null,
+      };
+    },
+
+    async updateProject(actor, input) {
+      const context = await derive(actor);
+      assertCanMutateWorkspace(context);
+      const projectId = IdSchema.parse(input.projectId);
+      const name =
+        input.name === undefined ? undefined : z.string().trim().min(1).max(200).parse(input.name);
+      const description =
+        input.description === undefined ? undefined : z.string().trim().max(2000).parse(input.description);
+      if (name === undefined && description === undefined) {
+        throw new ChangeProofError('Nothing to update; name or description is required.');
+      }
+      return inTenant(context.tenantId, async (client) => {
+        assertProjectGrant(context, projectId);
+        const found = await client.query('SELECT id FROM projects WHERE id = $1', [projectId]);
+        if (found.rows.length === 0) {
+          throw new ChangeProofError('Project is unknown or not shared with you.');
+        }
+        if (name !== undefined) {
+          await client.query('UPDATE projects SET name = $1 WHERE id = $2', [name, projectId]);
+        }
+        if (description !== undefined) {
+          if (!(await hasColumn(client, 'projects', 'description'))) {
+            throw new ChangeProofError(
+              'Project descriptions need infra/postgres/V12__workspace.sql; refusing to drop the description.',
+            );
+          }
+          await client.query('UPDATE projects SET description = $1 WHERE id = $2', [description, projectId]);
+        }
+        const reread = await client.query(
+          (await hasColumn(client, 'projects', 'description'))
+            ? 'SELECT id, name, description FROM projects WHERE id = $1'
+            : 'SELECT id, name FROM projects WHERE id = $1',
+          [projectId],
+        );
+        const row = ProjectRowSchema.parse(reread.rows[0]);
+        return { projectId: row.id, name: row.name ?? row.id, description: row.description ?? null };
+      });
+    },
+
+    async getEnvironment(actor) {
+      const context = await derive(actor);
+      assertCanRead(context);
+      const row = await inTenant(context.tenantId, async (client) => {
+        if (!(await tableExists(client, 'environment_profiles'))) return null;
+        const found = await client.query(
+          'SELECT id, name, dataset, migration, revision FROM environment_profiles WHERE tenant_id = $1 ORDER BY revision DESC, created_at DESC LIMIT 1',
+          [context.tenantId],
+        );
+        if (found.rows.length === 0) return null;
+        return EnvRowSchema.parse(found.rows[0]);
+      });
+      return {
+        profileId: row?.id ?? null,
+        name: row?.name ?? null,
+        revision: row?.revision ?? null,
+        dataset: row?.dataset ?? null,
+        migration: row?.migration ?? null,
+        // No service-mapping, journal, boundary, or resource backend exists
+        // yet: empty and nulls render as "Not reported", never invented data.
+        services: [],
+        journal: null,
+        reset: null,
+        boundary: { ...EMPTY_BOUNDARY },
+        resources: { ...EMPTY_RESOURCES },
+      };
+    },
+
+    async saveEnvironment(actor, input) {
+      const context = await derive(actor);
+      assertCanMutateWorkspace(context);
+      const name = z.string().trim().min(1).max(200).parse(input.name);
+      const dataset =
+        input.dataset === undefined || input.dataset.trim() === ''
+          ? null
+          : z.string().trim().max(500).parse(input.dataset);
+      const migration =
+        input.migration === undefined || input.migration.trim() === ''
+          ? null
+          : z.string().trim().max(500).parse(input.migration);
+      const profileId = randomId('env');
+      const revision = await inTenant(context.tenantId, async (client) => {
+        await ensureWorkspaceTables(client);
+        const current = await client.query(
+          'SELECT COALESCE(MAX(revision), 0) AS max_rev FROM environment_profiles WHERE tenant_id = $1',
+          [context.tenantId],
+        );
+        const next = Number((current.rows[0] as { max_rev: number | string }).max_rev) + 1;
+        await client.query(
+          'INSERT INTO environment_profiles (id, tenant_id, name, dataset, migration, revision, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7)',
+          [profileId, context.tenantId, name, dataset, migration, next, actor.nowIso],
+        );
+        return next;
+      });
+      return { profileId, revision };
+    },
+
+    async listConnections(actor) {
+      const context = await derive(actor);
+      assertCanRead(context);
+      const rows = await inTenant(context.tenantId, async (client) => {
+        if (!(await tableExists(client, 'github_connections'))) return [];
+        const found = await client.query(
+          'SELECT id, repository, status, webhook_state, last_delivery_at, updated_at FROM github_connections WHERE tenant_id = $1 ORDER BY updated_at DESC, id DESC',
+          [context.tenantId],
+        );
+        return found.rows.map((row) => ConnectionRowSchema.parse(row));
+      });
+      return {
+        connections: rows.map((row) => ({
+          id: row.id,
+          name: row.repository,
+          status: row.status,
+          webhookState: row.webhook_state,
+          lastDelivery: row.last_delivery_at === null ? null : row.last_delivery_at.toISOString(),
+          updatedAt: row.updated_at.toISOString(),
+        })),
+      };
+    },
+
+    async registerConnections(actor, input) {
+      const context = await derive(actor);
+      assertCanMutateWorkspace(context);
+      if (!/^[1-9][0-9]*$/.test(input.installationId)) {
+        throw new ChangeProofError('Installation id must be a positive integer; refusing.');
+      }
+      const repos = z
+        .array(z.object({ id: IdSchema, fullName: z.string().min(1).max(400) }))
+        .parse(input.repositories);
+      if (repos.length === 0) {
+        return { connectionIds: [] };
+      }
+      return inTenant(context.tenantId, async (client) => {
+        if (!(await tableExists(client, 'github_connections'))) {
+          throw new ChangeProofError('Workspace tables are missing; apply infra/postgres/V12__workspace.sql.');
+        }
+        // The id carries a tenant scope hash: without it, a second tenant
+        // connecting the same installation collides on the global PK and the
+        // upsert trips RLS on another tenant's row. Opaque by design.
+        const scope = createHash('sha256').update(context.tenantId).digest('hex').slice(0, 12);
+        const ids: string[] = [];
+        for (const repo of repos) {
+          const id = IdSchema.parse(`conn-${input.installationId}-${repo.id}-${scope}`);
+          await client.query(
+            `INSERT INTO github_connections (id, tenant_id, repository, status, webhook_state, last_delivery_at, created_at, updated_at)
+             VALUES ($1, $2, $3, 'active', NULL, NULL, $4, $4)
+             ON CONFLICT (id) DO UPDATE SET repository = EXCLUDED.repository, status = 'active', updated_at = EXCLUDED.updated_at`,
+            [id, context.tenantId, repo.fullName, actor.nowIso],
+          );
+          ids.push(id);
+        }
+        return { connectionIds: ids };
+      });
+    },
+    async revokeConnection(actor, input) {
+      const context = await derive(actor);
+      assertCanMutateWorkspace(context);
+      const connectionId = IdSchema.parse(input.connectionId);
+      return inTenant(context.tenantId, async (client) => {
+        if (!(await tableExists(client, 'github_connections'))) {
+          throw new ChangeProofError('Connection is unknown or not shared with you.');
+        }
+        const found = await client.query(
+          'SELECT id, status FROM github_connections WHERE id = $1 AND tenant_id = $2',
+          [connectionId, context.tenantId],
+        );
+        if (found.rows.length === 0) {
+          throw new ChangeProofError('Connection is unknown or not shared with you.');
+        }
+        const status = z.object({ id: z.string(), status: z.string() }).parse(found.rows[0]).status;
+        if (status !== 'revoked') {
+          await client.query('UPDATE github_connections SET status = $1, updated_at = $2 WHERE id = $3', [
+            'revoked',
+            actor.nowIso,
+            connectionId,
+          ]);
+        }
+        return { connectionId, status: 'revoked' };
+      });
+    },
+
+    async getTelemetryCorpus(actor) {
+      const context = await derive(actor);
+      assertCanRead(context);
+      const rows = await inTenant(context.tenantId, async (client) => {
+        if (!(await tableExists(client, 'telemetry_corpus'))) return [];
+        const found = await client.query(
+          'SELECT name, kind, size_bytes, created_at FROM telemetry_corpus WHERE tenant_id = $1 ORDER BY created_at ASC, id ASC',
+          [context.tenantId],
+        );
+        return found.rows.map((row) => CorpusRowSchema.parse(row));
+      });
+      return {
+        files: rows.map((row) => ({
+          name: row.name,
+          kind: row.kind,
+          sizeBytes: row.size_bytes,
+          addedAt: row.created_at.toISOString(),
+        })),
+        // No gap-analysis backend exists yet: an empty list renders as
+        // "No gap analysis reported" instead of assumed coverage.
+        gaps: [],
+      };
+    },
+
+    async registerTelemetryFile(actor, input) {
+      const context = await derive(actor);
+      assertCanMutateWorkspace(context);
+      const name = z.string().trim().min(1).max(255).parse(input.name);
+      const sizeBytes = z.number().int().min(0).max(1099511627776).parse(input.sizeBytes);
+      const kind = z.enum(['log', 'trace', 'metric']).parse(input.kind);
+      const label =
+        input.label === undefined || input.label.trim() === ''
+          ? null
+          : z.string().trim().max(200).parse(input.label);
+      const fileId = randomId('file');
+      await inTenant(context.tenantId, async (client) => {
+        await ensureWorkspaceTables(client);
+        await client.query(
+          'INSERT INTO telemetry_corpus (id, tenant_id, name, kind, size_bytes, label, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7)',
+          [fileId, context.tenantId, name, kind, sizeBytes, label, actor.nowIso],
+        );
+      });
+      return { fileId, name };
     },
   };
   return store;

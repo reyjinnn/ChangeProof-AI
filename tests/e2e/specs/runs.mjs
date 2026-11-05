@@ -6,7 +6,7 @@
 import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
 
-import { axeScan } from '../helpers.mjs';
+import { axeScan, captureVisualMatrix } from '../helpers.mjs';
 
 const require = createRequire(import.meta.url);
 const { Pool } = require('pg');
@@ -83,10 +83,14 @@ export async function spec({ base, context, rootDir, mailApi, databaseUrl }) {
 
     // Entitlement first (tenant is known); the repo grant follows the
     // project the form creates. Both are recorded backend gaps.
-    await admin.query(
-      'INSERT INTO entitlements (tenant_id, period_id, cap_amount, rate_version, created_at, superseded_at) VALUES ($1, $2, $3, $4, $5, NULL)',
-      [tenantId, 'period-1', 1000, 'test-rates-1', new Date().toISOString()],
+    // Registration auto-provisions the initial free-tier entitlement (no manual seed).
+    const entitled = await admin.query(
+      'SELECT period_id, cap_amount, rate_version FROM entitlements WHERE tenant_id = $1 AND superseded_at IS NULL',
+      [tenantId],
     );
+    assert.equal(entitled.rows.length, 1);
+    assert.equal(entitled.rows[0].period_id, 'period-free-1');
+    assert.equal(entitled.rows[0].cap_amount, 1000);
 
     // Empty lists explain the next step.
     await page.goto(`${base}/#/runs`, { waitUntil: 'networkidle' });
@@ -140,6 +144,15 @@ export async function spec({ base, context, rootDir, mailApi, databaseUrl }) {
     await page.getByText('submitted').first().waitFor();
     assert.match((await page.locator('main#outlet').textContent()) ?? '', /queued/);
     assert.deepEqual((await axeScan(page, rootDir)).map((v) => v.id), []);
+    await captureVisualMatrix(page, 'run-detail-controlled-queued', rootDir);
+    const detailUrl = page.url();
+    await page.goto(`${base}/#/runs`, { waitUntil: 'networkidle' });
+    await page.locator('#run-filter-state').selectOption('queued');
+    await page.locator('#run-filter button[type=submit]').click();
+    await page.locator('.run-search-table a').first().waitFor();
+    await captureVisualMatrix(page, 'runs-filtered-controlled-queued', rootDir);
+    await page.goto(detailUrl, { waitUntil: 'networkidle' });
+    await page.getByText('submitted').first().waitFor();
 
     // Cancel lands, then retry files a new run for the same meaning.
     await page.locator('#cancel-run').click();

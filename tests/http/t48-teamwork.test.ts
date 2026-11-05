@@ -210,6 +210,51 @@ const collaboration: CollaborationStore = {
   recordCandidateRevision: () => Promise.reject(new Error('workers only: never over HTTP')),
 };
 
+const capabilities = {
+  listRecords: () => [
+    {
+      schemaVersion: '2' as const,
+      key: {
+        ecosystem: 'typescript' as const,
+        language: 'typescript',
+        framework: 'express',
+        versionRange: '>=4.21.0 <5.0.0',
+        componentKind: 'backend' as const,
+        changeCategory: 'api-contract' as const,
+        featureRestrictions: [],
+        runnerProfile: 'node-24',
+        adapterVersion: '1.1.0',
+      },
+      targetLevel: 'L3' as const,
+      provenLevel: 'none' as const,
+      certificationStatus: 'uncertified' as const,
+      evidenceRefs: [],
+      limitations: [],
+      toolchainIdentities: {},
+    },
+    {
+      schemaVersion: '2' as const,
+      key: {
+        ecosystem: 'python' as const,
+        language: 'python',
+        framework: 'django',
+        versionRange: '>=5.0 <6.0',
+        componentKind: 'backend' as const,
+        changeCategory: 'schema' as const,
+        featureRestrictions: [],
+        runnerProfile: 'python-3.12',
+        adapterVersion: '1.0.0',
+      },
+      targetLevel: 'L2' as const,
+      provenLevel: 'none' as const,
+      certificationStatus: 'uncertified' as const,
+      evidenceRefs: [],
+      limitations: [],
+      toolchainIdentities: {},
+    },
+  ],
+};
+
 function deps(): TeamworkDeps {
   return {
     session: {
@@ -222,6 +267,7 @@ function deps(): TeamworkDeps {
     },
     support: { store: support },
     collaboration: { store: collaboration },
+    capabilities,
   };
 }
 
@@ -370,4 +416,38 @@ test('worker-only calls have no HTTP route; bare server 503s', async () => {
   expect(bareTickets.status).toBe(503);
   const bareThreads = await call('GET', '/api/threads?runId=run-1', { headers: owner, root: bareBase });
   expect(bareThreads.status).toBe(503);
+});
+
+test('capability matrix reports target next to proven, never merged', async () => {
+  const matrix = await call('GET', '/api/support/capabilities', { headers: owner });
+  expect(matrix.status).toBe(200);
+  const records = (
+    matrix.body as {
+      data: {
+        capabilities: {
+          ecosystem: string;
+          framework: string;
+          version: string;
+          feature: string;
+          changeType: string;
+          targetLevel: string;
+          provenLevel: string;
+        }[];
+      };
+    }
+  ).data.capabilities;
+  expect(records).toHaveLength(2);
+  expect(records[0]).toEqual({
+    ecosystem: 'typescript',
+    framework: 'express',
+    version: '>=4.21.0 <5.0.0',
+    feature: 'backend',
+    changeType: 'api-contract',
+    targetLevel: 'L3',
+    provenLevel: 'none',
+  });
+  const guest = await call('GET', '/api/support/capabilities');
+  expect(guest.status).toBe(401);
+  const bare = await call('GET', '/api/support/capabilities', { headers: owner, root: bareBase });
+  expect(bare.status).toBe(503);
 });

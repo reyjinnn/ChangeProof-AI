@@ -946,3 +946,344 @@ gate stay open until phase-7: pilot access, backend gaps
 execution, and whole-system qualification all remain. No
 gate passes on UI evidence alone. Next dependency-ready
 task: T-50 (phase-7, G3-01/G3-02 + qualified-guest probes).
+
+## 21. UI1–UI8 rebuild + responsive/label verification (3 Nov 2026)
+
+**Date:** 3 November 2026.
+**Scope:** full-front-end rebuild to the active
+`.modern-design` skin in `.template-ui/mockup.html`
+(UI1 tokens/components, UI2 3-mode shell, UI3 public
+site, UI4 auth/onboarding, UI5 workspace/project pages,
+UI6 runs/evidence flow, UI7 org/billing/support/operator
+pages, UI8 trace-viewer + whole-UI verification).
+Historical §§1–20 are preserved untouched; this section
+records only the rebuild and its evidence. No full WP and
+no G3 gate passes on this evidence alone.
+
+What was built:
+
+- `apps/dashboard/src/tokens.css`: one 323 KB token
+  source ported from the mockup cascade with winners
+  resolved (no layered overrides); self-hosted Inter +
+  Plus Jakarta Sans WOFF2 with SIL OFL notices under
+  `public/assets/fonts/`; light + dark palettes.
+- `apps/dashboard/src/components.ts` + new
+  `icons.ts`: 44 mockup icons, mockup-structure helpers
+  (`pillIcon`, `pageHead`, `card`, `padcard`, `table`,
+  `tabs`, `drawer`, `modal`, `toast`,
+  `enhanceCustomSelects`, `enhanceFilePickers`); all
+  dynamic text via `textContent`/`h()` (NEG3-21).
+- `shell.ts`/`routes.ts`/`main.ts`/`session.ts`:
+  3-mode shell (public/auth/workspace), 3-group sidebar
+  with plan meter + org switcher, dual-capsule topbar
+  (search palette, notifications, theme, account
+  popover), mobile off-canvas drawer with `.nav-scrim`
+  and focus trap.
+- Pages: `public.ts` (+ new `public-chrome.ts`,
+  landing hero/ghost-fibers/tech-strip/proof-story/
+  folder/pricing + 17 public pages), `auth.ts` (split
+  auth shell, full recovery set, 3-step onboarding),
+  new `workspace.ts` (overview, projects, 7 project
+  tabs), `runs.ts`/`evidence.ts`/`threads.ts`
+  (history, split builder, live progress, 7 run tabs),
+  `billing.ts`/`enterprise.ts`/`settings.ts`/
+  `support.ts`/`operator.ts`/`notifications.ts`/
+  `status.ts` (team, ledger, settings tabs,
+  support/status/evaluations/operator).
+- New `apps/trace-viewer/`: read-only evidence audit
+  UI reusing the dashboard token bundle (identical CSS
+  hash at build), self-hosted fonts, strict
+  same-origin `?src=` bundle loading, validated
+  `TraceBundle` contract (caps on arrays/strings/
+  depth, same-origin artifact hrefs), four views
+  (event timeline, hypothesis tree, trial receipts,
+  artifact digests) using only verified mockup
+  classes. `package.json` gains `test:trace`,
+  `build:trace`, and trace-viewer typecheck coverage.
+
+Verification evidence (all observed, exit 0):
+
+- `pnpm test:ui` → 0 (253/253, 20 files).
+- `pnpm test:trace` → 0 (13/13, 2 files).
+- `pnpm test` → 0 (1473/1473, 91 files).
+- `pnpm typecheck` → 0 (root + dashboard +
+  trace-viewer projects).
+- `pnpm lint` → 0 (eslint clean; depcruise 174
+  modules / 546 deps, zero violations).
+- `pnpm build:ui` → 0; `pnpm build:trace` → 0.
+- Playwright UI8 probe (system Chrome, production
+  builds, `/tmp/ui8-verify.cjs`, throwaway):
+  21 routes × 3 viewports (390×844, 768×1024,
+  1440×900) — zero horizontal overflow, zero page
+  errors; mobile shell: topbar is a fixed bottom bar
+  (bottom 832/844), sidebar off-canvas at rest
+  (x −264), menu opens drawer + `.nav-scrim`, focus
+  trap holds across 14 Tabs, Escape closes;
+  trace-viewer: all four views render, Inter loads
+  from self-hosted fonts, dark theme flips the
+  palette; FR3-40: rendered text + `document.title`
+  + aria/placeholder/title/alt attributes checked
+  against all 1,765 non-identity `englishCopy`
+  dictionary keys plus dynamic fragments — no
+  Indonesian remaining. Final: `failures=0
+  warnings=0`, exit 0.
+
+Findings fixed during verification:
+
+- FR3-40 `Detail` → `Details` (dictionary maps
+  standalone `Detail` to `Details`): billing ledger
+  header, settings member table, trace-viewer trial
+  receipts header, `/run` route title
+  (`document.title`).
+- `SCREEN_NAMES` covered only exact slugs: the
+  `#/billing` alias fell through to a hardcoded
+  `Run detail` topbar label. Added the 12 missing
+  alias/section names and a section-segment fallback
+  ending in `Workspace` (dictionary-clean).
+- `pnpm lint` started at 50 errors in UI files
+  (void-expression shorthands, `ReadonlyArray`,
+  unnecessary conditions/assertions): 39 via
+  `eslint --fix`, 11 by hand, including one the
+  fixer introduced (bare reflow read → explicit
+  `getBoundingClientRect()` call).
+
+Limitations / not claimed:
+
+- The UI8 probe stubs `/api/*` (authed session +
+  empty manifests; everything else 500), so it
+  proves layout, shell mechanics, and copy — not
+  backend wiring. Several page endpoints have no
+  server route yet and pages fail closed with
+  Retry; backend gaps stay phase-7 work.
+- `tests/e2e/run.mjs` (real server + disposable
+  Postgres) was not rerun after the rebuild; the
+  eight green specs in §§2–19 stand on the
+  pre-rebuild tree. Whole-system E2E over the new
+  UI is phase-7 scope (T-50).
+- No G3 gate passes on this section alone.
+
+## 22. Workspace backend-gap closure + DOM alignment (3 Nov 2026)
+
+Task ID / parent WP: T6-UI-backend-gap (phase-6 closure; WP3-21/24/25/29/30/32).
+Requirement IDs: FR3-24/29/31/34/35/40, NEG3-21/32/34, NFR3-14.
+User-visible outcome: every workspace page reads real APIs; honest empty
+states; no dummy data; DOM structure aligned to the mockup per page.
+Prerequisite evidence: §21 (UI8 rebuild + stubbed probe).
+
+### 22.1 New HTTP contracts (all behind current grants + RLS)
+
+| Endpoint | Store | Dashboard consumer |
+| --- | --- | --- |
+| `GET /api/runs` | `LifecycleStore.listRuns` | overview, recent runs |
+| `GET /api/projects/:id`, `PATCH /api/projects/:id` | `getProject`, `updateProject` (+ `description`, V12) | project detail/settings, search snippet |
+| `GET /api/support/capabilities` | 14 `CapabilityRecord` via `AdapterRegistry` | capabilities matrix (target/proven split) |
+| `GET /api/environments`, `POST /api/environments` | environment profile revisions (V12) | environments page + drawer |
+| `GET /api/github/connections`, `POST …/:id/revoke` | github connections (V12; empty until WP3-22) | repositories page |
+| `GET /api/telemetry/corpus`, `POST /api/telemetry/corpus` | telemetry metadata (V12; gaps `[]`) | telemetry page |
+| `GET /api/billing/summary`, `GET /api/billing/ledger?limit=50` | `readBalances`, `listLedger` | overview credits, usage ledger |
+| `GET /api/team/members` | `IdentityStore.listMembers` (grant/status detail; no email column exists) | team table |
+| `GET /api/audit/entries?limit=50` | `QueriesStore.exportAudit` (receipt `runId:seq`) | audit log |
+
+Conventions kept: `isXPath` + `handleXApi` (503 without DB),
+`actingContext`, `orMapped` (runs/teamwork/enterprise mappings per brief;
+auth maps operator refusal to 403), `z.strictObject` bodies, cursor
+polling only (no SSE added). Unknown IDs 404 without disclosure
+(NEG3-21); empty data returns empty lists, never 404.
+
+### 22.2 Migration + compatibility
+
+- `infra/postgres/V12__workspace.sql`: `projects.description`,
+  `environment_profiles`, `github_connections`, `telemetry_corpus`
+  (RLS + `app_user` grants; explicit `tenant_id` predicates in every
+  query, same rule as V11).
+- Pre-V12 databases keep working unchanged: reads treat missing
+  tables/columns as empty (`to_regclass` / `information_schema`);
+  writes fail closed naming V12. E2E specs still apply V1–V11 only.
+- CRLF preserved in `lifecycle/store.ts`, `usage/store.ts`,
+  `routes-enterprise.ts`, `routes-teamwork.ts`, `start.ts`, V12,
+  `t48/t49`, native teamwork/enterprise suites (verified pure-CRLF).
+
+### 22.3 Proof (mock vs native reported separately)
+
+Mock suite: `pnpm test` → 91 files / 1483 tests green, exit 0.
+Includes new `tests/http` cases in t45/t48/t49 (404/403/400/401/503,
+empty lists, CSRF marker). One environmental fix: the two type-aware
+ESLint negatives in `tests/architecture/import-boundaries.test.ts`
+went 15s → 60s wall-clock (6.3s solo, >15s under parallel workers;
+assertions untouched) after 3/3 full-suite timeouts at 15s.
+UI suite: `pnpm test:ui` → 20 files / 258 tests green, exit 0
+(includes 3 select idempotency/scroll tests, ledger empty/error
+split, team empty case, and singular/empty-connections tests).
+Native suite (disposable PostgreSQL 16, `DATABASE_URL=…@55433`):
+4/4 files green — runs-http 17/17, teamwork-http 9/9,
+enterprise-http 9/9, auth-http 7/7 (exit 0 each), covering V12
+round-trips, cross-tenant fencing (404/empty), viewer 403, operator
+403, and the 14-record capability matrix (explicit ranges, proven ≤
+target).
+Gates: `pnpm typecheck` exit 0 (root + dashboard + trace-viewer),
+`pnpm lint` exit 0 (eslint clean; depcruise 174 modules / 548
+dependencies, zero violations), `pnpm build` + `pnpm build:ui` exit 0.
+
+### 22.4 Real-browser DOM probe (replaces the stubbed UI8 probe)
+
+Throwaway `/tmp/domprobe.mjs`: migrates V1–V12, starts `dist`
+as `app_user` (RLS active), seeds over real HTTP
+(register→verify→claim→login→project→PATCH→grant→entitlement→
+draft→submit→environment→telemetry→invite→accept), then drives
+system Chrome over 12 workspace routes × 390/768/1440 × light/dark
+(72 checks) + a keyboard select interaction. Result: **73/73 green**,
+zero page errors, zero overflow, English-only markers clean.
+Geometry matches the mockup exactly: `main` margin-left 284px /
+content left 300px at 1440 (mockup ground truth measured the same).
+Screenshots: `/tmp/domprobe-shots/` (72 + interaction).
+
+### 22.5 Defects found by the probe and fixed
+
+- **Observer infinite loop (critical):** `syncCustomSelect` rebuilt
+  the trigger on every pass; the shell MutationObserver refired
+  forever on any page with an inline select (`#/team` hung: goto
+  timeout, then evaluate stall). Fix: signature-idempotent sync +
+  invariant comment; regression tests in `components.test.ts`.
+- **Sidebar overlap (critical):** outlet was `main#content`, so
+  `#content{margin:auto}` cancelled the `main` sidebar offset at
+  761–1599px. Fix: mockup nesting `main > div#content` (shell.ts +
+  test).
+- **Scroll-listener throw:** document-level scroll has
+  `target=document` (no `closest`). Guarded; regression test.
+- **Honesty/grammar:** empty connections no longer claim “active”;
+  singular run/connection copy; audit-ledger-member fallbacks
+  rewritten for the now-real endpoints; plan meter spacing; org
+  subtitle shows the session role.
+- **Impact tab:** the mockup project-level `impact` tab is run
+  content in the dashboard (`#/impact?run=`, Dependency graph under
+  run tabs); project tabs keep the workspace-plan family
+  (capabilities + characterization added). No decorative tab added.
+
+### 22.6 E2E status: blocked on T-50 (phase-7), with evidence
+
+- Run 1: a leaked `node -e …startInfra` process from an earlier
+  session held port 4179 (EADDRINUSE); killed after proving idle
+  lineage (3.5s CPU in ~3h).
+- Run 2 (free port, server listening): 8/8 specs fail only on stale
+  `main#outlet` selectors — the UI8 rebuild renamed the outlet to
+  `#content` (HEAD still has `#outlet`; predates this task).
+- Run 3 (bounded experiment, then fully reverted): after a
+  mechanical `#outlet`→`#content` swap, specs fail deeper on the old
+  auth flow (`#/check-email` navigation), Primary-nav labeling, and
+  an axe `heading-order` finding on public pages. Specs restored
+  byte-identical (`git checkout -- tests/e2e/specs/`).
+- Whole-system E2E over the new UI stays T-50. The §22.4 probe and
+  §22.3 native suites are this task's whole-system evidence instead.
+
+### 22.7 Remaining honest gaps (backend-owned, nothing faked)
+
+Baseline (`null` → “No baseline pinned”), environment
+services/journal/boundary/resources (`[]`/`null`), telemetry gaps
+(`[]`), GitHub connections (empty until the WP3-22 installation
+flow), audit export + invitation listing + org-profile writes
+(absent endpoints, pages say so), characterization inputs (no
+assessment backend), review aggregation (exact state + raw events
+only). No verdict is computed in the UI; no mock/replay backs any
+claim above.
+Next dependency-ready task: T-50 (E2E over the new UI, phase-7).
+
+## 23. Auth modals + public nav + hero headline (3 Nov 2026)
+
+### 23.1 Scope
+
+Login, register, forgot-password, and check-email render as labelled
+signin dialogs over the remembered public backdrop (mockup
+`modalAuthRoutes`/`signin-overlay`, incl. Escape/backdrop-press close,
+focus trap, inert outlet, `body.signin-modal-route`); check-email is
+modal per product request, the mockup keeps it split-screen. Public
+nav is exactly Product / Pricing / Documentation + theme toggle +
+Sign in + "Get started free" (mockup 2452, English). Landing hero
+headline is now "Every change. / One proof." (pill on "proof.") per
+supplied artwork; hero CTA aligned to "Get started free".
+
+### 23.2 Deliberate honest deviations (mockup vs real backend)
+
+- Password minimum stays 10-128 (`modules/identity` `[DERIVED]`
+  policy); the mockup/reference says 8. Client help text and error
+  copy use the true range.
+- "Continue with GitHub" appears only when `/api/auth/providers`
+  advertises it; otherwise an honest note names the missing
+  authorized App. No dead button, no faked handshake.
+- Register drops confirm-password (mockup has none; the server body
+  is email+password only) and links terms to the real `#/terms` +
+  `#/privacy` routes (the old `#/p/terms` links resolved nowhere).
+- Login keeps its hidden organization field for multi-org accounts.
+- All Indonesian reference copy ships in English (FR3-40).
+
+### 23.3 Implementation
+
+- `routes.ts`: new `renderStandalone` (backdrop render without
+  nav/focus side effects). `components.ts`: `field()` placeholder
+  option, `logoMarkSvg` (mockup C-mark, used by signin + public
+  brand). `auth.ts`: backdrop memory via hashchange, `mountAuthModal`,
+  delegated Escape/Tab-trap/backdrop-press handling.
+- **Race fix (real-browser):** `githubSection` used to fire before
+  the mount, so the providers response landed on a detached host and
+  was dropped (`isConnected` false). It now fires after the mount;
+  regression test pins a slow backdrop (`/landing` gate) with the
+  note still rendering.
+
+### 23.4 Proof
+
+- `pnpm test:ui` -> 20 files / 262 tests green, exit 0 (auth modal
+  structure/close/backdrop/race, nav labels, hero copy).
+- `pnpm typecheck` exit 0, `pnpm lint` exit 0 (depcruise 174
+  modules / 549 dependencies, zero violations), `pnpm build:ui`
+  exit 0 (CSS minify warnings pre-existing, tokens.css untouched).
+- Throwaway `/tmp/authprobe.mjs` (real `dist` + PostgreSQL 16 +
+  system Chrome, logged out): nav + 4 modals x 390/1440 x
+  light/dark + backdrop-memory/close/empty-submit interactions =
+  **21/21 green**, zero page errors, zero overflow, English-only
+  markers clean, GitHub note asserted present. Screenshots:
+  `/tmp/authprobe-shots/`. Hero pill computed
+  `rgb(201,228,255)/rgb(32,91,152)/999px` (light),
+  `rgb(145,202,255)/rgb(8,39,69)/999px` (dark).
+- Probe container `cp-authprobe-pg` removed after the run; no
+  backend files changed by this task (server `dist` predates it).
+
+### 23.5 Dialog readability surface (same day, product request)
+
+The extracted `.signin-dialog` shipped no background, so busy
+backdrops bled through and washed out form text. Added a near-opaque
+themed surface (`--paper` 92% light / 90% dark + 22px frosted blur),
+form text in `--ink`, secondary copy (hints, terms) in `--muted`,
+dialog links in `--blue` (`tokens.css`, no `!important`). Contrast
+checker: light ink 15.57 / muted 5.70 / blue 8.81, dark ink 16.99 /
+muted 10.56 / blue 9.51 — all pass AA normal text. Re-ran
+`/tmp/authprobe.mjs`: **21/21 green**; screenshots confirm solid
+dialogs in both themes.
+
+### 23.6 Technology marquee: real logos, Java removed (same day)
+
+The strip used short text codes (GH, JV, ...). It now renders the
+pinned Devicon data-URI artwork from the mockup itself (1997):
+new `pages/tech-logos.ts` (8 URIs, ~55KB, self-hosted, `<img>`
+context only, empty alt + aria-hidden parent), per-kind
+`cp-tech-*` classes (GitHub inverts in dark mode via the existing
+rule; Go/.NET keep their wide marks). Java removed per product
+request. Tests: 16 marks, every `img` a data URI, Java absent.
+Browser: 8/8 images loaded light+dark, authprobe still 21/21.
+
+### 23.7 Sidebar meter + product mark (same day)
+
+- Removed the "Manage usage →" link from all three plan-meter
+  states (usage stays one click away via nav); fixed the fused
+  "UsageUnavailable"/"UsageLoading…" words with proper spacing.
+- Meter legibility: themed box (`--surface`), text (`--ink` /
+  `--muted`), track (`--line`), fill (`--blue`) — the old
+  white-on-white fill and faint foot tones vanished on light
+  sidebars. Computed pairs match the §23.5 AA checks.
+- New `changeproofMarkSvg()` inlines
+  `public/assets/changeproof-mark.svg` (also the favicon);
+  replaces the shield brand marks in the sidebar, the landing
+  workflow logo, and the product preview brand, plus removes the
+  now-unused `brandMarkSvg`. Feature/nav shield icons untouched.
+- Tests: 264/264 UI green; `brandprobe.mjs` (seeded login,
+  entitlement, both themes): mark viewBox/sizing, meter text, no
+  manage link, no page errors — all green; screenshots in
+  `/tmp/brandprobe-shots/`.

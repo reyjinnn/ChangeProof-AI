@@ -2,10 +2,12 @@
  * target inspect/drain/quarantine, and the operator-action audit. The
  * route refuses non-operator roles before any data fetch; every write
  * below is refused again by the server for owners (NEG3-34, proven
- * natively). Epochs come from inspect, never from memory. */
+ * natively). Epochs come from inspect, never from memory. Worker
+ * lifecycle rows are absent: the backend exposes no worker endpoint,
+ * so the table says so instead of faking workers. */
 
 import { apiGet, apiPost, ApiRequestError } from '../api.js';
-import { badge, emptyState, errorState, h } from '../components.js';
+import { badge, emptyState, errorState, h, head, padcard, pillIcon, staticBadge, table } from '../components.js';
 import { registerRoute } from '../routes.js';
 
 import { expired } from './support.js';
@@ -90,6 +92,33 @@ async function renderOperator(outlet: HTMLElement): Promise<void> {
     return;
   }
 
+  const openCount = h('div', { class: 'value' }, ['…']);
+  const totalCount = h('div', { class: 'value' }, ['…']);
+  const actionCount = h('div', { class: 'value' }, ['…']);
+  const epochValue = h('div', { class: 'value' }, ['—']);
+  const stats = h('div', { class: 'stats' }, [
+    h('section', { class: 'card stat' }, [
+      h('div', { class: 'stat-top' }, [h('span', { class: 'label' }, ['Open incidents']), pillIcon('alert')]),
+      openCount,
+      h('div', { class: 'help' }, ['Awaiting mitigation']),
+    ]),
+    h('section', { class: 'card stat' }, [
+      h('div', { class: 'stat-top' }, [h('span', { class: 'label' }, ['Incidents listed']), pillIcon('cloud')]),
+      totalCount,
+      h('div', { class: 'help' }, ['Current page from the service']),
+    ]),
+    h('section', { class: 'card stat' }, [
+      h('div', { class: 'stat-top' }, [h('span', { class: 'label' }, ['Recorded actions']), pillIcon('shield')]),
+      actionCount,
+      h('div', { class: 'help' }, ['Audited drain / quarantine receipts']),
+    ]),
+    h('section', { class: 'card stat' }, [
+      h('div', { class: 'stat-top' }, [h('span', { class: 'label' }, ['Inspected epoch']), pillIcon('key')]),
+      epochValue,
+      h('div', { class: 'help' }, ['From inspect, never from memory']),
+    ]),
+  ]);
+
   const incidentNote = h('p', { 'aria-live': 'polite' }, []);
   const incidentList = h('div', {}, []);
   const component = h('input', { type: 'text', id: 'incident-component', maxlength: '120' });
@@ -111,10 +140,26 @@ async function renderOperator(outlet: HTMLElement): Promise<void> {
   const actionList = h('div', {}, []);
 
   outlet.replaceChildren(
+    head(
+      'Operator console',
+      'Incidents, fenced targets, and the action audit. Drain and quarantine run at the epoch inspect just returned; a moved lease refuses instead of guessing.',
+    ),
+    stats,
     h('section', { class: 'card' }, [
-      h('h1', {}, ['Operator console']),
-      h('p', { class: 'muted' }, [
-        'Incidents, fenced targets, and the action audit. Drain and quarantine run at the epoch inspect just returned; a moved lease refuses instead of guessing.',
+      h('div', { class: 'card-head' }, [
+        h('div', {}, [
+          h('h2', {}, ['Worker lifecycle']),
+          h('div', { class: 'help' }, ['A stale fencing epoch cannot write checkpoints, results, or publications.']),
+        ]),
+      ]),
+      h('div', { class: 'pad' }, [
+        table(
+          ['Worker', 'State', 'Lease', 'Cleanup', 'Action'],
+          [['No workers listed', staticBadge('unavailable', ''), '—', '—', '—']],
+        ),
+        h('p', { class: 'help' }, [
+          'The service exposes no worker-lifecycle endpoint, so this table stays empty. Drain and quarantine run through Fenced targets below.',
+        ]),
       ]),
     ]),
     h('section', { class: 'card' }, [
@@ -136,11 +181,35 @@ async function renderOperator(outlet: HTMLElement): Promise<void> {
       targetNote,
     ]),
     h('section', { class: 'card' }, [h('h2', {}, ['Operator actions']), actionList]),
+    h('div', { class: 'grid2' }, [
+      padcard(
+        'Release & recovery',
+        h('div', {}, [
+          h('div', { class: 'listrow' }, [h('span', {}, ['Hosted build / source']), h('span', {}, ['No release reported'])]),
+          h('div', { class: 'listrow' }, [h('span', {}, ['License / notices']), h('span', {}, ['Not reported by the service'])]),
+          h('div', { class: 'listrow' }, [h('span', {}, ['Capacity / SLO profile']), h('span', {}, ['Awaiting calibration'])]),
+          h('div', { class: 'listrow' }, [h('span', {}, ['Deletion replay']), h('span', {}, ['Required before restore access'])]),
+        ]),
+      ),
+      padcard(
+        'Admission & fairness',
+        h('div', {}, [
+          h('p', { class: 'help' }, [
+            'Per-tenant concurrency and finite caps limit enqueue. A lost lease withholds effects; unknown publications reconcile before retry.',
+          ]),
+          h('p', {}, [h('a', { class: 'button full', href: '#/service-status' }, ['View customer-facing status'])]),
+        ]),
+      ),
+    ]),
   );
 
   const refreshIncidents = async (): Promise<void> => {
     try {
       const page = await apiGet<IncidentPage>(`/api/support/incidents?limit=${String(PAGE_LIMIT)}`);
+      totalCount.replaceChildren(document.createTextNode(String(page.items.length)));
+      openCount.replaceChildren(
+        document.createTextNode(String(page.items.filter((item) => item.status !== 'resolved' && item.status !== 'closed').length)),
+      );
       if (page.items.length === 0) {
         incidentList.replaceChildren(emptyState('No incidents', 'Report the first one below.'));
         return;
@@ -186,13 +255,13 @@ async function renderOperator(outlet: HTMLElement): Promise<void> {
   };
 
   report.addEventListener('click', () => {
-    const componentText = (component).value.trim();
-    const summaryText = (summary).value.trim();
+    const componentText = component.value.trim();
+    const summaryText = summary.value.trim();
     if (componentText === '' || summaryText === '') {
       incidentNote.replaceChildren(h('span', { class: 'error-text', role: 'alert' }, ['Component and summary are both required.']));
       return;
     }
-    (report).disabled = true;
+    report.disabled = true;
     void apiPost<Incident>('/api/operator/incidents', { component: componentText, summary: summaryText })
       .then((filed) => {
         incidentNote.replaceChildren(document.createTextNode(`Incident ${filed.incidentId} reported as ${filed.status}.`));
@@ -206,14 +275,14 @@ async function renderOperator(outlet: HTMLElement): Promise<void> {
         incidentNote.replaceChildren(h('span', { class: 'error-text', role: 'alert' }, [asErrorMessage(error)]));
       })
       .finally(() => {
-        (report).disabled = false;
+        report.disabled = false;
       });
   });
 
   let inspectedEpoch = 0;
   inspect.addEventListener('click', () => {
-    const tenantId = (tenant).value.trim();
-    const jobId = (job).value.trim();
+    const tenantId = tenant.value.trim();
+    const jobId = job.value.trim();
     if (tenantId === '' || jobId === '') {
       targetNote.replaceChildren(h('span', { class: 'error-text', role: 'alert' }, ['Tenant and job are both required.']));
       return;
@@ -221,6 +290,7 @@ async function renderOperator(outlet: HTMLElement): Promise<void> {
     void apiPost<{ tenantId: string; state: string; epoch: number }>('/api/operator/targets/inspect', { tenantId, jobId })
       .then((found) => {
         inspectedEpoch = found.epoch;
+        epochValue.replaceChildren(document.createTextNode(String(found.epoch)));
         targetNote.replaceChildren(
           document.createTextNode(`${found.tenantId} / ${jobId}: ${found.state} at epoch ${String(found.epoch)}.`),
         );
@@ -235,9 +305,9 @@ async function renderOperator(outlet: HTMLElement): Promise<void> {
   });
 
   const fenced = (kind: 'drain' | 'quarantine'): void => {
-    const tenantId = (tenant).value.trim();
-    const jobId = (job).value.trim();
-    const reasonText = (reason).value.trim();
+    const tenantId = tenant.value.trim();
+    const jobId = job.value.trim();
+    const reasonText = reason.value.trim();
     if (tenantId === '' || jobId === '' || reasonText === '') {
       targetNote.replaceChildren(h('span', { class: 'error-text', role: 'alert' }, ['Tenant, job, and reason are all required.']));
       return;
@@ -257,6 +327,7 @@ async function renderOperator(outlet: HTMLElement): Promise<void> {
           document.createTextNode(`${done.kind} ${done.actionId} recorded at epoch ${String(done.leaseEpoch)}.`),
         );
         inspectedEpoch = 0;
+        epochValue.replaceChildren(document.createTextNode('—'));
         return refreshActions();
       })
       .catch((error: unknown) => {
@@ -265,6 +336,7 @@ async function renderOperator(outlet: HTMLElement): Promise<void> {
           return;
         }
         inspectedEpoch = 0;
+        epochValue.replaceChildren(document.createTextNode('—'));
         targetNote.replaceChildren(h('span', { class: 'error-text', role: 'alert' }, [asErrorMessage(error)]));
       });
   };
@@ -274,6 +346,7 @@ async function renderOperator(outlet: HTMLElement): Promise<void> {
   const refreshActions = async (): Promise<void> => {
     try {
       const page = await apiGet<ActionPage>(`/api/operator/actions?limit=${String(PAGE_LIMIT)}`);
+      actionCount.replaceChildren(document.createTextNode(String(page.items.length)));
       if (page.items.length === 0) {
         actionList.replaceChildren(emptyState('No actions', 'Fenced actions will be audited here.'));
         return;
@@ -308,5 +381,6 @@ async function renderOperator(outlet: HTMLElement): Promise<void> {
 }
 
 export function registerOperatorPages(): void {
+  registerRoute({ path: '/operations', title: 'Operator console', render: renderOperator });
   registerRoute({ path: '/operator', title: 'Operator console', render: renderOperator });
 }

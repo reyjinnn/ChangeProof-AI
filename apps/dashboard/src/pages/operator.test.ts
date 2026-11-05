@@ -163,3 +163,41 @@ test('operators inspect then drain under the lease fence; stale refuses', async 
   required(outlet.querySelector<HTMLButtonElement>('#target-drain'), 'drain button').click();
   await settle(outlet, 'act-1');
 });
+
+test('operations alias renders the same console', async () => {
+  stubFetch(operatorStubs());
+  const outlet = boot();
+  await renderRoute(outlet, '#/operations');
+  await settle(outlet, 'Backlog growing');
+  expect(outlet.querySelectorAll('.stats .stat').length).toBe(4);
+  expect(outlet.textContent).toContain('Worker lifecycle');
+  expect(outlet.textContent).toContain('Operator actions');
+});
+
+test('worker lifecycle is honest without an endpoint', async () => {
+  stubFetch(operatorStubs());
+  const outlet = boot();
+  await renderRoute(outlet, '#/operator');
+  await settle(outlet, 'Worker lifecycle');
+  expect(outlet.textContent).toContain('no worker-lifecycle endpoint');
+});
+
+test('console stats count incidents and actions from the service', async () => {
+  stubFetch(operatorStubs());
+  const outlet = boot();
+  await renderRoute(outlet, '#/operator');
+  await settle(outlet, 'Backlog growing');
+  await settle(outlet, 'act-1');
+  const values = [...outlet.querySelectorAll('.stats .value')].map((node) => node.textContent);
+  expect(values).toEqual(['1', '1', '1', '—']);
+});
+
+test('release and admission cards link to the customer-facing status', async () => {
+  stubFetch(operatorStubs());
+  const outlet = boot();
+  await renderRoute(outlet, '#/operator');
+  await settle(outlet, 'Backlog growing');
+  expect(outlet.textContent).toContain('Release & recovery');
+  expect(outlet.textContent).toContain('Admission & fairness');
+  expect(outlet.querySelector('a[href="#/service-status"]')).not.toBeNull();
+});

@@ -24,8 +24,14 @@ export class ApiRequestError extends Error {
 }
 
 function envelopeOf(value: unknown): ApiEnvelope | undefined {
-  if (typeof value !== 'object' || value === null || !('ok' in value)) return undefined;
-  return value as ApiEnvelope;
+  if (typeof value !== 'object' || value === null) return undefined;
+  if ('ok' in value && value.ok === true && 'data' in value) return value as ApiEnvelope;
+  if ('ok' in value && value.ok === false && 'error' in value) {
+    const error = value.error;
+    if (typeof error === 'object' && error !== null && 'code' in error && 'message' in error &&
+        typeof error.code === 'string' && typeof error.message === 'string') return value as ApiEnvelope;
+  }
+  return undefined;
 }
 
 async function request<T>(path: string, init: RequestInit, extraHeaders: Record<string, string> = {}): Promise<T> {
@@ -45,7 +51,7 @@ async function request<T>(path: string, init: RequestInit, extraHeaders: Record<
   }
   const body: unknown = await response.json().catch(() => undefined);
   const envelope = envelopeOf(body);
-  if (envelope?.ok === true) return envelope.data as T;
+  if (response.ok && envelope?.ok === true) return envelope.data as T;
   if (envelope?.ok === false) {
     const raw = body as Record<string, unknown>;
     const detail: Record<string, unknown> = {};

@@ -12,16 +12,20 @@ export async function spec({ base, context, rootDir }) {
   });
 
   const page = await context.newPage({ viewport: { width: 1440, height: 900 } });
-  await page.goto(`${base}/`, { waitUntil: 'networkidle' });
+  await page.goto(`${base}/#/`, { waitUntil: 'networkidle' });
 
   // Shell lands on live status, with landmarks and a skip link.
   assert.equal(await page.locator('.skip-link').getAttribute('href'), '#outlet');
   assert.ok(await page.locator('nav[aria-label="Primary"]').isVisible());
-  assert.equal(await page.locator('main#outlet h1').textContent(), 'Service status');
+  assert.equal(await page.locator('main#outlet h1').textContent(), 'Workspace overview');
   assert.match((await page.locator('main#outlet .badge').textContent()) ?? '', /ok: ok/);
 
-  // First Tab reaches the skip link; Enter moves focus into the outlet.
-  await page.keyboard.press('Tab');
+  // Route focus starts at the heading. New overview actions participate in
+  // the tab order; the skip link must still be reachable on the next cycle.
+  for (let attempt = 0; attempt < 40; attempt += 1) {
+    await page.keyboard.press('Tab');
+    if (await page.evaluate(() => document.activeElement?.className === 'skip-link')) break;
+  }
   assert.equal(await page.evaluate(() => document.activeElement?.className), 'skip-link');
   await page.keyboard.press('Enter');
   assert.equal(await page.evaluate(() => document.activeElement?.id), 'outlet');
@@ -42,6 +46,9 @@ export async function spec({ base, context, rootDir }) {
     }
     await page.locator('main#outlet h1').waitFor();
     const violations = await axeScan(page, rootDir);
+    if (violations.length > 0) console.error(JSON.stringify(violations.map(v => ({
+      id: v.id, nodes: v.nodes.map(node => ({ target: node.target, reason: node.failureSummary })),
+    }))));
     assert.deepEqual(
       violations.map((v) => v.id),
       [],

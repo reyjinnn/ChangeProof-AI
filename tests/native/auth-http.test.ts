@@ -7,7 +7,7 @@ import { afterAll, beforeAll, expect, test } from 'vitest';
 
 import type { EmailDeliveryReceipt, EmailMessage } from '../../src/core/index.js';
 import { createHttpServer, type HttpHandle } from '../../src/http/index.js';
-import { composeEmailIdentity, composeIdentityStore } from '../../src/orchestrator/index.js';
+import { composeEmailIdentity, composeIdentityStore, composeUsage } from '../../src/orchestrator/index.js';
 import { createMapSecretBroker } from '../../src/modules/github/broker.js';
 
 import { databaseUrlFor, resetProbeDatabase } from './db.js';
@@ -17,7 +17,7 @@ import { databaseUrlFor, resetProbeDatabase } from './db.js';
  * server (FR3-29/38, NEG3-21/29/30).
  *
  * Native check, reported separately: run with `DATABASE_URL=…` against a
- * disposable PostgreSQL 16 container. Applies V1 + V2 + V5 + V10 into
+ * disposable PostgreSQL 16 container. Applies V1 + V2 + V4 + V5 + V10 into
  * its own `t_authhttp` database (V10 carries memberships.status, which
  * deriveContext reads). Delivery is an in-memory recorder at the port
  * boundary (real SMTP delivery is proven by E2E Mailpit runs, and the
@@ -113,8 +113,10 @@ beforeAll(async () => {
   await resetProbeDatabase(databaseUrl, 't_authhttp');
   await admin.query(migration('V1__identity_tenancy.sql'));
   await admin.query(migration('V2__identity_services.sql'));
+  await admin.query(migration('V4__usage.sql'));
   await admin.query(migration('V5__email_identity.sql'));
   await admin.query(migration('V10__enterprise.sql'));
+  await admin.query(migration('V12__workspace.sql'));
   const { composePublicSite } = await import('../../src/orchestrator/index.js');
   handle = createHttpServer({
     publicSite: composePublicSite(),
@@ -122,6 +124,7 @@ beforeAll(async () => {
     auth: {
       identity: composeIdentityStore(appPool),
       email: composeEmailIdentity(appPool, { delivery, secrets, challengeSecretRef: 'email-challenge-secret' }),
+      usage: { store: composeUsage(appPool).store },
     },
   });
   await new Promise<void>((resolve) => handle?.server.listen(0, '127.0.0.1', resolve));
@@ -146,6 +149,15 @@ test('register → verify → claim → login → session reads back', async () 
   const session = await call('GET', '/api/auth/session', undefined, cookie);
   expect(session.status).toBe(200);
   expect(session.body).toMatchObject({ ok: true, data: { authenticated: true, tenantId: 'acme-http', role: 'owner' } });
+});
+
+test('claiming a tenant provisions the initial free-tier entitlement', async () => {
+  await registerVerifyClaim(uniqueEmail(), 'correct-horse-42', 'acme-entitle');
+  const entitlement = await admin.query(
+    `SELECT period_id, cap_amount, rate_version FROM entitlements WHERE tenant_id = $1 AND superseded_at IS NULL`,
+    ['acme-entitle'],
+  );
+  expect(entitlement.rows).toEqual([{ period_id: 'period-free-1', cap_amount: 1000, rate_version: 'default-rates-1' }]);
 });
 
 test('wrong password and unknown user share one message (NEG3-30)', async () => {
@@ -300,6 +312,38 @@ test('member role change and removal work over the API', async () => {
   expect(promoted.status).toBe(200);
   const removed = await call('DELETE', `/api/orgs/acme-roles/members/${memberId}`, undefined, ownerCookie);
   expect(removed.status).toBe(200);
+});
+
+test('team members list the tenant roster; operators refused, tenants fenced', async () => {
+  const ownerEmail = uniqueEmail();
+  await registerVerifyClaim(ownerEmail, 'correct-horse-42', 'acme-team');
+  const ownerCookie = cookieOf(await login(ownerEmail, 'correct-horse-42'));
+  const invited = await call('POST', '/api/orgs/acme-team/invitations', { role: 'member' }, ownerCookie);
+  expect(invited.status).toBe(201);
+  const token = (invited.body as { data: { token: string } }).data.token;
+  const memberEmail = uniqueEmail();
+  await registerVerifyClaim(memberEmail, 'correct-horse-42', 'acme-team-home');
+  const memberHomeCookie = cookieOf(await login(memberEmail, 'correct-horse-42'));
+  const accepted = await call('POST', '/api/invitations/accept', { token }, memberHomeCookie);
+  expect(accepted.status).toBe(200);
+  const memberCookie = cookieOf(await login(memberEmail, 'correct-horse-42', { tenantId: 'acme-team' }));
+  const listed = await call('GET', '/api/team/members', undefined, ownerCookie);
+  expect(listed.status).toBe(200);
+  const members = (listed.body as { data: { userId: string; role: string; detail: string }[] }).data;
+  expect(members.map((member) => member.role).sort()).toEqual(['member', 'owner']);
+  expect(members.every((member) => member.userId.length > 0 && member.detail.length > 0)).toBe(true);
+  const memberListed = await call('GET', '/api/team/members', undefined, memberCookie);
+  expect(memberListed.status).toBe(200);
+  const strangerEmail = uniqueEmail();
+  await registerVerifyClaim(strangerEmail, 'correct-horse-42', 'acme-stranger');
+  const strangerCookie = cookieOf(await login(strangerEmail, 'correct-horse-42'));
+  const fenced = await call('GET', '/api/team/members', undefined, strangerCookie);
+  expect((fenced.body as { data: unknown[] }).data).toHaveLength(1);
+  await admin.query("UPDATE memberships SET role = 'operator' WHERE tenant_id = 'acme-stranger'");
+  const refused = await call('GET', '/api/team/members', undefined, strangerCookie);
+  expect(refused.status).toBe(403);
+  const guest = await call('GET', '/api/team/members');
+  expect(guest.status).toBe(401);
 });
 
 test('servers without a database refuse account calls explicitly', async () => {

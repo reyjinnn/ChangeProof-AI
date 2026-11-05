@@ -176,11 +176,11 @@ function refuse(operation: string, error: unknown): never {
 }
 
 /** Production transport: one Octokit per call, auth from the broker token. */
-export function octokitTransport(token: string): GitHubApi {
+export function octokitTransport(token: string, fetchImpl?: typeof fetch): GitHubApi {
   if (token.length === 0) {
     throw new ChangeProofError('GitHub transport needs a broker token; refusing anonymous calls.');
   }
-  const octokit = new Octokit({ auth: token });
+  const octokit = new Octokit({ auth: token, ...(fetchImpl === undefined ? {} : { request: { fetch: fetchImpl } }) });
   return {
     getCommit: async (input): Promise<CommitSnapshot> => {
       const response = await octokit.rest.repos.getCommit({

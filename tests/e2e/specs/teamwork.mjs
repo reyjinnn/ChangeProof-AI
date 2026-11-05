@@ -119,10 +119,14 @@ export async function spec({ base, browser, context, rootDir, mailApi, databaseU
     assert.equal(await page.locator('main#outlet h1').textContent(), 'Support needs a login');
 
     await registerOrgLogin(page, email, tenantId);
-    await admin.query(
-      'INSERT INTO entitlements (tenant_id, period_id, cap_amount, rate_version, created_at, superseded_at) VALUES ($1, $2, $3, $4, $5, NULL)',
-      [tenantId, 'period-1', 1000, 'test-rates-1', new Date().toISOString()],
+    // Registration auto-provisions the initial free-tier entitlement (no manual seed).
+    const entitled = await admin.query(
+      'SELECT period_id, cap_amount, rate_version FROM entitlements WHERE tenant_id = $1 AND superseded_at IS NULL',
+      [tenantId],
     );
+    assert.equal(entitled.rows.length, 1);
+    assert.equal(entitled.rows[0].period_id, 'period-free-1');
+    assert.equal(entitled.rows[0].cap_amount, 1000);
 
     // Owner files a ticket and walks it to closed.
     await page.goto(`${base}/#/support`, { waitUntil: 'networkidle' });

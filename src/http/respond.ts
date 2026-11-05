@@ -35,6 +35,28 @@ export function sendBytes(response: ServerResponse, bytes: Uint8Array, digest: s
   response.end(bytes);
 }
 
+/**
+ * External-flow redirect (OAuth start/callback). The target allowlist is
+ * enforced here so a caller bug can never become an open redirect: either
+ * the GitHub authorize endpoint or an absolute in-app path/hash.
+ */
+export function sendRedirect(response: ServerResponse, location: string): void {
+  const inApp = location.startsWith('/') && !location.startsWith('//') && !location.includes('\\');
+  const authorize = location.startsWith('https://github.com/login/oauth/authorize?');
+  if (!inApp && !authorize) {
+    sendFail(response, 500, 'internal', 'Refusing an unsafe redirect target.');
+    return;
+  }
+  response.writeHead(302, {
+    Location: location,
+    'Content-Length': 0,
+    'X-Content-Type-Options': 'nosniff',
+    'X-Frame-Options': 'DENY',
+    'Referrer-Policy': 'same-origin',
+  });
+  response.end();
+}
+
 export function sendFail(
   response: ServerResponse,
   status: number,

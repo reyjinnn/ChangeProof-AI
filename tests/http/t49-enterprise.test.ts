@@ -93,6 +93,10 @@ const usage: UsageStore = {
   settleReservation: () => Promise.reject(new Error('workers only: never over HTTP')),
   recordPaymentEvent: () => Promise.reject(new Error('webhooks only: never over HTTP')),
   readBalances: () => Promise.resolve(balances),
+  listLedger: () =>
+    Promise.resolve({
+      entries: [{ entryId: 'eff-1', kind: 'consume', amount: 12, runId: 'run-1', occurredAt: NOW_ISO }],
+    }),
 };
 
 const byok: ByokStore = {
@@ -269,4 +273,23 @@ test('no-deps server answers 503 on enterprise paths', async () => {
   expect(read.status).toBe(503);
   const minted = await call('POST', '/api/enterprise/scim/tokens', { headers: owner, body: {}, root: bareBase });
   expect(minted.status).toBe(503);
+});
+
+test('billing summary and ledger read settled usage; empty stays empty', async () => {
+  const summary = await call('GET', '/api/billing/summary', { headers: owner });
+  expect(summary.status).toBe(200);
+  expect(summary.body).toEqual({ ok: true, data: { used: 120, limit: 1000 } });
+  const ledger = await call('GET', '/api/billing/ledger?limit=50', { headers: owner });
+  expect(ledger.status).toBe(200);
+  const items = (ledger.body as { data: { items: { entryId: string; kind: string; amount: number; detail: string }[] } })
+    .data.items;
+  expect(items).toEqual([{ entryId: 'eff-1', kind: 'consume', amount: 12, detail: 'run-1' }]);
+  const bad = await call('GET', '/api/billing/ledger?limit=500', { headers: owner });
+  expect(bad.status).toBe(400);
+  const guest = await call('GET', '/api/billing/summary');
+  expect(guest.status).toBe(401);
+  const bareSummary = await call('GET', '/api/billing/summary', { headers: owner, root: bareBase });
+  expect(bareSummary.status).toBe(503);
+  const bareLedger = await call('GET', '/api/billing/ledger?limit=50', { headers: owner, root: bareBase });
+  expect(bareLedger.status).toBe(503);
 });
