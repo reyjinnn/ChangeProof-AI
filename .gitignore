@@ -78,3 +78,8 @@ secrets/
 test-results/
 playwright-report/
 playwright/.cache/
+
+# FOLDER DEV
+docs/*
+phases/*
+.prepare/*
