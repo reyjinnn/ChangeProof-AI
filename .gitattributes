@@ -1,0 +1,3 @@
+# Enforce LF for files executed inside Linux containers (CRLF breaks shebangs).
+*.sh text eol=lf
+*.sql text eol=lf
