@@ -18,6 +18,7 @@ import {
   composePublicSite,
   composeQueries,
   composeUsage,
+  type InstallationConnectComposition,
   type JobsComposition,
   type LifecycleComposition,
   type UsageComposition,
@@ -112,6 +113,14 @@ async function callBytes(
   const response = await fetch(`${base}${path}`, { method, headers });
   return { status: response.status, text: await response.text(), contentType: response.headers.get('content-type') };
 }
+
+const githubConnect: InstallationConnectComposition = {
+  connect: (installationId: string) =>
+    Promise.resolve({
+      installationId,
+      repositories: [{ id: '9001', fullName: 'acme/probe', isPrivate: false }],
+    }),
+};
 
 function cookieOf(callResult: Call): string {
   const first = callResult.setCookie[0];
@@ -217,6 +226,7 @@ beforeAll(async () => {
     'V6__lifecycle.sql',
     'V7__engagement.sql',
     'V10__enterprise.sql',
+    'V12__workspace.sql',
   ]) {
     await admin.query(migration(name));
   }
@@ -244,6 +254,7 @@ beforeAll(async () => {
     runs: {
       session: { deriveContext: (input) => identity.store.deriveContext(input) },
       lifecycle,
+      githubConnect,
       queries,
     },
   });
@@ -497,6 +508,219 @@ test('viewers read runs but cannot submit (denied, not silent)', async () => {
   );
   expect(denied.status).toBe(403);
   expect((denied.body as { error: { message: string } }).error.message).toMatch(/may read but not change/);
+});
+
+test('runs list mirrors submitted runs inside the tenant fence', async () => {
+  const fixture = await seedFixture('list');
+  const empty = await call('GET', '/api/runs', undefined, fixture.cookie);
+  expect(empty.status).toBe(200);
+  expect((empty.body as { data: { runs: unknown[] } }).data.runs).toEqual([]);
+  const draft = await saveDraft(fixture, 'restore checkout');
+  const submitted = await call('POST', '/api/runs', submitBody(fixture, draft, `list-${fixture.tenantId}`), fixture.cookie);
+  const runId = (submitted.body as { data: { runId: string } }).data.runId;
+  const listed = await call('GET', '/api/runs', undefined, fixture.cookie);
+  const runs = (listed.body as { data: { runs: { runId: string; title: string; state: string; updatedAt: string }[] } })
+    .data.runs;
+  expect(runs).toHaveLength(1);
+  expect(runs[0]).toMatchObject({ runId, state: 'queued' });
+  expect(typeof runs[0]?.title).toBe('string');
+  expect(typeof runs[0]?.updatedAt).toBe('string');
+  const other = await seedFixture('list-other');
+  const fenced = await call('GET', '/api/runs', undefined, other.cookie);
+  expect((fenced.body as { data: { runs: { runId: string }[] } }).data.runs.map((run) => run.runId)).not.toContain(
+    runId,
+  );
+});
+
+test('projects read topology and patch name/description; foreigners 404 quietly', async () => {
+  const fixture = await seedFixture('project');
+  const read = await call('GET', `/api/projects/${fixture.projectId}`, undefined, fixture.cookie);
+  expect(read.status).toBe(200);
+  const detail = (
+    read.body as {
+      data: {
+        name: string;
+        description: string | null;
+        repositories: { id: string; ownership: string; status: string }[];
+        readiness: { label: string; status: string }[];
+        baseline: null;
+      };
+    }
+  ).data;
+  expect(detail.name).toBe('project project');
+  expect(detail.description).toBeNull();
+  expect(detail.repositories.map((repo) => repo.id)).toContain(fixture.repositoryId);
+  expect(detail.readiness.length).toBeGreaterThan(0);
+  expect(detail.baseline).toBeNull();
+  const patched = await call(
+    'PATCH',
+    `/api/projects/${fixture.projectId}`,
+    { name: 'renamed', description: 'Restores checkout.' },
+    fixture.cookie,
+  );
+  expect(patched.status).toBe(200);
+  expect(patched.body).toMatchObject({ data: { name: 'renamed', description: 'Restores checkout.' } });
+  const reread = await call('GET', `/api/projects/${fixture.projectId}`, undefined, fixture.cookie);
+  expect((reread.body as { data: { description: string } }).data.description).toBe('Restores checkout.');
+  const searched = await call(
+    'POST',
+    '/api/search',
+    { schemaVersion: '1', scope: 'projects', limit: 20 },
+    fixture.cookie,
+  );
+  expect((searched.body as { data: { hits: { snippet: string }[] } }).data.hits[0]?.snippet).toBe(
+    'Restores checkout.',
+  );
+  const other = await seedFixture('project-other');
+  const foreign = await call('GET', `/api/projects/${fixture.projectId}`, undefined, other.cookie);
+  expect(foreign.status).toBe(404);
+  const message = (foreign.body as { error: { message: string } }).error.message;
+  expect(message).not.toContain(fixture.tenantId);
+  expect(message).not.toContain(fixture.projectId);
+  const emptyPatch = await call('PATCH', `/api/projects/${fixture.projectId}`, {}, fixture.cookie);
+  expect(emptyPatch.status).toBe(400);
+});
+
+test('viewers read projects but cannot patch them', async () => {
+  const fixture = await seedFixture('projviewer');
+  counter += 1;
+  const viewerEmail = `runshttp-projviewer-${String(counter)}@example.com`;
+  const viewerTenant = `runshttp-projviewerhome-${String(counter)}`;
+  await registerVerifyClaim(viewerEmail, 'correct-horse-42', viewerTenant);
+  const viewerCookie = await login(viewerEmail, 'correct-horse-42');
+  const invited = await call('POST', `/api/orgs/${fixture.tenantId}/invitations`, { role: 'viewer' }, fixture.cookie);
+  expect(invited.status).toBe(201);
+  const token = (invited.body as { data: { token: string } }).data.token;
+  const accepted = await call('POST', '/api/invitations/accept', { token }, viewerCookie);
+  expect(accepted.status).toBe(200);
+  const viewerCookieOnTenant = cookieOf(
+    await call('POST', '/api/auth/login', { email: viewerEmail, password: 'correct-horse-42', rememberMe: false, tenantId: fixture.tenantId }),
+  );
+  const read = await call('GET', `/api/projects/${fixture.projectId}`, undefined, viewerCookieOnTenant);
+  expect(read.status).toBe(200);
+  const denied = await call('PATCH', `/api/projects/${fixture.projectId}`, { name: 'x' }, viewerCookieOnTenant);
+  expect(denied.status).toBe(403);
+  expect((denied.body as { error: { message: string } }).error.message).toMatch(/may read but not change/);
+});
+
+test('environment profiles save revisions per tenant', async () => {
+  const fixture = await seedFixture('env');
+  const empty = await call('GET', '/api/environments', undefined, fixture.cookie);
+  expect(empty.status).toBe(200);
+  expect((empty.body as { data: { profileId: null; services: unknown[]; dataset: null } }).data).toMatchObject({
+    profileId: null,
+    services: [],
+    dataset: null,
+  });
+  const saved = await call(
+    'POST',
+    '/api/environments',
+    { name: 'staging', dataset: 'ds-1', migration: 'mig-1' },
+    fixture.cookie,
+  );
+  expect(saved.status).toBe(201);
+  expect((saved.body as { data: { revision: number } }).data.revision).toBe(1);
+  const read = await call('GET', '/api/environments', undefined, fixture.cookie);
+  expect((read.body as { data: { dataset: string; migration: string; revision: number } }).data).toMatchObject({
+    dataset: 'ds-1',
+    migration: 'mig-1',
+    revision: 1,
+  });
+  const again = await call('POST', '/api/environments', { name: 'staging', dataset: 'ds-2' }, fixture.cookie);
+  expect((again.body as { data: { revision: number } }).data.revision).toBe(2);
+  const other = await seedFixture('env-other');
+  const fenced = await call('GET', '/api/environments', undefined, other.cookie);
+  expect((fenced.body as { data: { profileId: null } }).data.profileId).toBeNull();
+  const bad = await call('POST', '/api/environments', { name: '' }, fixture.cookie);
+  expect(bad.status).toBe(400);
+});
+
+test('github connections stay honestly empty; unknown revocations 404 quietly', async () => {
+  const fixture = await seedFixture('conns');
+  const listed = await call('GET', '/api/github/connections', undefined, fixture.cookie);
+  expect(listed.status).toBe(200);
+  expect((listed.body as { data: { connections: unknown[] } }).data.connections).toEqual([]);
+  const missing = await call('POST', '/api/github/connections/conn-nope/revoke', {}, fixture.cookie);
+  expect(missing.status).toBe(404);
+  const message = (missing.body as { error: { message: string } }).error.message;
+  expect(message).not.toContain(fixture.tenantId);
+});
+
+test('connecting an installation stores one verified row per repo', async () => {
+  const fixture = await seedFixture('connect');
+  const done = await call('POST', '/api/github/connections', { installationId: '178697398' }, fixture.cookie);
+  expect(done.status).toBe(201);
+  const scope = createHash('sha256').update(fixture.tenantId).digest('hex').slice(0, 12);
+  expect((done.body as { data: { connectionIds: string[] } }).data.connectionIds).toEqual([
+    `conn-178697398-9001-${scope}`,
+  ]);
+  const listed = await call('GET', '/api/github/connections', undefined, fixture.cookie);
+  const connections = (listed.body as { data: { connections: { name: string; status: string }[] } }).data.connections;
+  expect(connections).toHaveLength(1);
+  expect(connections[0]).toMatchObject({ name: 'acme/probe', status: 'active' });
+});
+
+test('two tenants connecting one installation get disjoint rows', async () => {
+  const first = await seedFixture('connect-a');
+  const second = await seedFixture('connect-b');
+  const one = await call('POST', '/api/github/connections', { installationId: '178697398' }, first.cookie);
+  expect(one.status).toBe(201);
+  const two = await call('POST', '/api/github/connections', { installationId: '178697398' }, second.cookie);
+  expect(two.status).toBe(201);
+  const idsOne = (one.body as { data: { connectionIds: string[] } }).data.connectionIds;
+  const idsTwo = (two.body as { data: { connectionIds: string[] } }).data.connectionIds;
+  expect(idsOne).toHaveLength(1);
+  expect(idsTwo).toHaveLength(1);
+  expect(idsOne[0]).not.toBe(idsTwo[0]);
+  const relisted = await call('GET', '/api/github/connections', undefined, first.cookie);
+  const connections = (relisted.body as { data: { connections: { id: string }[] } }).data.connections;
+  expect(connections.map((connection) => connection.id)).toEqual(idsOne);
+});
+
+test('telemetry corpus registers file metadata per tenant', async () => {
+  const fixture = await seedFixture('corpus');
+  const empty = await call('GET', '/api/telemetry/corpus', undefined, fixture.cookie);
+  expect(empty.status).toBe(200);
+  expect((empty.body as { data: { files: unknown[]; gaps: unknown[] } }).data).toEqual({ files: [], gaps: [] });
+  const registered = await call(
+    'POST',
+    '/api/telemetry/corpus',
+    { name: 'app.log', sizeBytes: 1024, kind: 'log', label: 'api' },
+    fixture.cookie,
+  );
+  expect(registered.status).toBe(201);
+  const read = await call('GET', '/api/telemetry/corpus', undefined, fixture.cookie);
+  const files = (
+    read.body as { data: { files: { name: string; kind: string; sizeBytes: number; addedAt: string }[] } }
+  ).data.files;
+  expect(files).toEqual([{ name: 'app.log', kind: 'log', sizeBytes: 1024, addedAt: files[0]?.addedAt }]);
+  const other = await seedFixture('corpus-other');
+  const fenced = await call('GET', '/api/telemetry/corpus', undefined, other.cookie);
+  expect((fenced.body as { data: { files: unknown[] } }).data.files).toEqual([]);
+  const badKind = await call(
+    'POST',
+    '/api/telemetry/corpus',
+    { name: 'app.log', sizeBytes: 1, kind: 'screenshot' },
+    fixture.cookie,
+  );
+  expect(badKind.status).toBe(400);
+});
+
+test('audit entries expose the run event history with receipts', async () => {
+  const fixture = await seedFixture('audit');
+  const draft = await saveDraft(fixture, 'restore checkout');
+  const submitted = await call('POST', '/api/runs', submitBody(fixture, draft, `audit-${fixture.tenantId}`), fixture.cookie);
+  const runId = (submitted.body as { data: { runId: string } }).data.runId;
+  const listed = await call('GET', '/api/audit/entries?limit=50', undefined, fixture.cookie);
+  expect(listed.status).toBe(200);
+  const items = (
+    listed.body as { data: { items: { time: string; actor: string; event: string; scope: string; receipt: string }[] } }
+  ).data.items;
+  expect(items).toHaveLength(1);
+  expect(items[0]).toMatchObject({ event: 'submitted', scope: runId, receipt: `${runId}:1` });
+  expect(typeof items[0]?.time).toBe('string');
+  const bad = await call('GET', '/api/audit/entries?limit=500', undefined, fixture.cookie);
+  expect(bad.status).toBe(400);
 });
 
 test('guests get 401 on every runs path they touch', async () => {

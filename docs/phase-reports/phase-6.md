@@ -947,451 +947,343 @@ execution, and whole-system qualification all remain. No
 gate passes on UI evidence alone. Next dependency-ready
 task: T-50 (phase-7, G3-01/G3-02 + qualified-guest probes).
 
-## 21. UI demo-readiness follow-up — 3 November 2026
+## 21. UI1–UI8 rebuild + responsive/label verification (3 Nov 2026)
 
-Plan revision 2. User authorized UI ownership and bounded local integration
-repairs after T-55; this is not an invocation of another acceptance phase.
-Historical results above remain historical, not fresh qualification claims.
+**Date:** 3 November 2026.
+**Scope:** full-front-end rebuild to the active
+`.modern-design` skin in `.template-ui/mockup.html`
+(UI1 tokens/components, UI2 3-mode shell, UI3 public
+site, UI4 auth/onboarding, UI5 workspace/project pages,
+UI6 runs/evidence flow, UI7 org/billing/support/operator
+pages, UI8 trace-viewer + whole-UI verification).
+Historical §§1–20 are preserved untouched; this section
+records only the rebuild and its evidence. No full WP and
+no G3 gate passes on this evidence alone.
 
-```text
-Team assignment ID / task ID / parent WP: UI demo-readiness follow-up / T6-1..T6-8 / WP3-27,25,29
-Owner: Hoang (user-authorized UI ownership)
-Requirement IDs: BR3-10/14/17; FR3-31/37/38/39/40; NFR3-08/10/14; relevant NEG3-21/29/33
-User-visible or system outcome: Mockup-aligned public/auth/workspace UI, usable compact/mobile navigation, real API errors and honest sample/readiness labels.
-Prerequisite evidence and identities: Clean feature branch from origin/development 1977172; T-40..55 reports inspected. Windows x64; Node 26.12.1, pnpm 12.5.1, TS 5.9.3, Vite 7.1.7. Task intake preserved before implementation in the external evidence directory.
-Allowed source/config changes: apps/dashboard, related tests/e2e specs, frontend README/coverage/report. No backend policy, contract, worker or security-boundary changes.
-Input snapshot and intended intervention: Mockup SHA256 39E85A9C708EE313FCC42E5ABF4B6C43532D256D0E98D4BE2FA0E2E01B92FBE8. Extract final visual tokens, preserve framework/assets, fix demonstrated UI/proxy failures.
-Acceptance checks (positive, negative, native): Real public entry/API navigation; keyboard/theme/mobile; delayed responses; account/health/error handling; real dev-proxy POST and cross-origin refusal; existing account/run/evidence/team/billing E2E.
-Protected oracle / proof scope: Existing assertions/authorization retained; synthetic reports remain labeled; no model, guest, publication or organic-impact proof. No schema/policy/contract versions changed.
-Artifacts expected: UI changes, regression tests, screenshots, command receipts, baseline failure comparison, PR draft.
-Actual commands + exit codes: See table below and external *.command.json receipts.
-Mock/replay result: UI components 143/143 pass (baseline 132/132); failure-path tests were red first. These use happy-dom/stubbed fetch and do not qualify real services.
-Native/real-runtime result: Real Edge 156.0.4314.58, local HTTP/PostgreSQL 16/Mailpit; final combined E2E result recorded below. Screenshot capture: 11 states, zero axe violations, horizontal overflow or page errors. Existing E2E seeds test grants/entitlements; this does not prove a live AI workflow.
-Missing checks / blockers: Semgrep binary/approved ruleset/version/setup and named specialist skills unavailable; no claimed scan/skill pass. Full suite has 31 reproduced baseline failures. Muse transport/worker and qualified Modal execution are not wired into HTTP startup. No deployment, paid provider calls or credentials used.
-Allocated task status: in_progress (review and missing checks)
-Full-WP status (separate): No full WP or G3 gate closed by this follow-up.
-Next dependency-ready task: Reyn review of this UI slice and provider/worker/qualified-runner decisions; no other engineering task started.
-Reviewer: Reyn
-```
+What was built:
 
-### Changes and interface-quality review
+- `apps/dashboard/src/tokens.css`: one 323 KB token
+  source ported from the mockup cascade with winners
+  resolved (no layered overrides); self-hosted Inter +
+  Plus Jakarta Sans WOFF2 with SIL OFL notices under
+  `public/assets/fonts/`; light + dark palettes.
+- `apps/dashboard/src/components.ts` + new
+  `icons.ts`: 44 mockup icons, mockup-structure helpers
+  (`pillIcon`, `pageHead`, `card`, `padcard`, `table`,
+  `tabs`, `drawer`, `modal`, `toast`,
+  `enhanceCustomSelects`, `enhanceFilePickers`); all
+  dynamic text via `textContent`/`h()` (NEG3-21).
+- `shell.ts`/`routes.ts`/`main.ts`/`session.ts`:
+  3-mode shell (public/auth/workspace), 3-group sidebar
+  with plan meter + org switcher, dual-capsule topbar
+  (search palette, notifications, theme, account
+  popover), mobile off-canvas drawer with `.nav-scrim`
+  and focus trap.
+- Pages: `public.ts` (+ new `public-chrome.ts`,
+  landing hero/ghost-fibers/tech-strip/proof-story/
+  folder/pricing + 17 public pages), `auth.ts` (split
+  auth shell, full recovery set, 3-step onboarding),
+  new `workspace.ts` (overview, projects, 7 project
+  tabs), `runs.ts`/`evidence.ts`/`threads.ts`
+  (history, split builder, live progress, 7 run tabs),
+  `billing.ts`/`enterprise.ts`/`settings.ts`/
+  `support.ts`/`operator.ts`/`notifications.ts`/
+  `status.ts` (team, ledger, settings tabs,
+  support/status/evaluations/operator).
+- New `apps/trace-viewer/`: read-only evidence audit
+  UI reusing the dashboard token bundle (identical CSS
+  hash at build), self-hosted fonts, strict
+  same-origin `?src=` bundle loading, validated
+  `TraceBundle` contract (caps on arrays/strings/
+  depth, same-origin artifact hrefs), four views
+  (event timeline, hypothesis tree, trial receipts,
+  artifact digests) using only verified mockup
+  classes. `package.json` gains `test:trace`,
+  `build:trace`, and trace-viewer typecheck coverage.
 
-- Final neutral/navy mockup tokens, frosted shell, self-hosted fonts and compact
-  SVGs; public/auth headers, responsive hero/footer and mobile navigation.
-- Public default entry with explicit workspace route, accessible architecture
-  tabs, safe query parsing, route-epoch guards and loading/error/retry states.
-- Overview separates live API/account facts from unassessed repair readiness.
-  Existing samples remain synthetic; queued never means repaired.
-- Strict API-envelope handling and a local Vite API proxy. A real failing
-  same-origin POST demonstrated Vite shorthand rewrites Host; explicit
-  `changeOrigin: false` fixes it while foreign Origin still returns 403.
-- Mockup inspected across all style/script/asset sections without printing font
-  data. Its original JavaScript has syntax errors (`Unexpected token 'class'`,
-  then missing route/auth globals), so exact live-page comparison is unavailable.
-  Original mockup untouched. Visual comparison used its final computed tokens
-  and static layouts, plus before/after screenshots; no pixel-perfect claim.
-- Real browser gate: keyboard focus/skip link, Escape, mobile menu, light/dark,
-  1440/768/390/375px, axe, overflow, local assets and error/recovery. Transient
-  theme contrast failures found and fixed by removing color transitions on the
-  affected navigation/action surfaces. No arbitrary animation redesign.
-- Required specialist skills are absent from this environment. Manual review and
-  axe do not substitute for those missing checks or Semgrep qualification.
-- Supplementary references requested during review: Dribbble's SaaS dashboard
-  gallery and React Bits. Consulted without copying assets/code, adding React or
-  introducing dependencies. The repository mockup remains the governing design.
-- An additional drawer regression initially assumed the Resources summary was
-  the final focusable item; actual account links follow it. That incorrect test
-  assumption was corrected, the unnecessary implementation experiment removed,
-  and the actual first/final-link focus loop verified in the final green run.
+Verification evidence (all observed, exit 0):
 
-### Actual verification
+- `pnpm test:ui` → 0 (253/253, 20 files).
+- `pnpm test:trace` → 0 (13/13, 2 files).
+- `pnpm test` → 0 (1473/1473, 91 files).
+- `pnpm typecheck` → 0 (root + dashboard +
+  trace-viewer projects).
+- `pnpm lint` → 0 (eslint clean; depcruise 174
+  modules / 546 deps, zero violations).
+- `pnpm build:ui` → 0; `pnpm build:trace` → 0.
+- Playwright UI8 probe (system Chrome, production
+  builds, `/tmp/ui8-verify.cjs`, throwaway):
+  21 routes × 3 viewports (390×844, 768×1024,
+  1440×900) — zero horizontal overflow, zero page
+  errors; mobile shell: topbar is a fixed bottom bar
+  (bottom 832/844), sidebar off-canvas at rest
+  (x −264), menu opens drawer + `.nav-scrim`, focus
+  trap holds across 14 Tabs, Escape closes;
+  trace-viewer: all four views render, Inter loads
+  from self-hosted fonts, dark theme flips the
+  palette; FR3-40: rendered text + `document.title`
+  + aria/placeholder/title/alt attributes checked
+  against all 1,765 non-identity `englishCopy`
+  dictionary keys plus dynamic fragments — no
+  Indonesian remaining. Final: `failures=0
+  warnings=0`, exit 0.
 
-All pnpm entries below used the isolated Node 26.12.1 and pnpm 12.5.1 with
-`--config.verify-deps-before-run=false --config.offline=true run` before the
-script name. Exact argument arrays and logs are in
-`D:/20261/.changeproof-review/UI-1793683235015/` (outside the repository).
+Findings fixed during verification:
 
-| Command | Exit | Actual result |
+- FR3-40 `Detail` → `Details` (dictionary maps
+  standalone `Detail` to `Details`): billing ledger
+  header, settings member table, trace-viewer trial
+  receipts header, `/run` route title
+  (`document.title`).
+- `SCREEN_NAMES` covered only exact slugs: the
+  `#/billing` alias fell through to a hardcoded
+  `Run detail` topbar label. Added the 12 missing
+  alias/section names and a section-segment fallback
+  ending in `Workspace` (dictionary-clean).
+- `pnpm lint` started at 50 errors in UI files
+  (void-expression shorthands, `ReadonlyArray`,
+  unnecessary conditions/assertions): 39 via
+  `eslint --fix`, 11 by hand, including one the
+  fixer introduced (bare reflow read → explicit
+  `getBoundingClientRect()` call).
+
+Limitations / not claimed:
+
+- The UI8 probe stubs `/api/*` (authed session +
+  empty manifests; everything else 500), so it
+  proves layout, shell mechanics, and copy — not
+  backend wiring. Several page endpoints have no
+  server route yet and pages fail closed with
+  Retry; backend gaps stay phase-7 work.
+- `tests/e2e/run.mjs` (real server + disposable
+  Postgres) was not rerun after the rebuild; the
+  eight green specs in §§2–19 stand on the
+  pre-rebuild tree. Whole-system E2E over the new
+  UI is phase-7 scope (T-50).
+- No G3 gate passes on this section alone.
+
+## 22. Workspace backend-gap closure + DOM alignment (3 Nov 2026)
+
+Task ID / parent WP: T6-UI-backend-gap (phase-6 closure; WP3-21/24/25/29/30/32).
+Requirement IDs: FR3-24/29/31/34/35/40, NEG3-21/32/34, NFR3-14.
+User-visible outcome: every workspace page reads real APIs; honest empty
+states; no dummy data; DOM structure aligned to the mockup per page.
+Prerequisite evidence: §21 (UI8 rebuild + stubbed probe).
+
+### 22.1 New HTTP contracts (all behind current grants + RLS)
+
+| Endpoint | Store | Dashboard consumer |
 | --- | --- | --- |
-| `pnpm test:ui` | 0 | 143/143, 20 files; baseline 132/132 |
-| `pnpm typecheck` | 0 | Backend and dashboard strict check |
-| `pnpm lint` | 0 | ESLint + src/apps boundaries, 168 modules/530 deps |
-| `pnpm lint:boundaries` | 0 | src boundaries, 147 modules/455 deps |
-| `pnpm build` | 0 | Backend build |
-| `pnpm build:ui` | 0 | Production dashboard bundle |
-| `CP_PORT=4181 pnpm test:e2e` | 0 | 10 suites: auth, demo, dev-proxy, enterprise, evidence, inbox, public, runs, shell, teamwork |
-| `pnpm test --maxWorkers=2 --reporter=json --outputFile=<evidence>/feature-full.json` | 1 | 1442 pass / 31 fail / 0 skipped |
-| Same full command on archived unmodified 1977172 baseline | 1 | 1442 pass / 31 fail / 0 skipped; same failing identities, zero new/resolved failures |
-| `pnpm test:runner-security:native --dry-run` | 2 | Project .venv missing; no Modal execution attempted |
-| External final screenshot capture | 0 | 11 screenshots, real Edge; zero axe/overflow/page errors |
-| `git diff --check` | 0 | No whitespace errors |
-
-The full-suite failures are not assumed harmless: native TS fixture harness
-cannot find its hard-coded pnpm shim; Python fixture import/framework paths,
-offline Go framework dependencies and Windows temporary-path/architecture
-cases also fail. They occur in both identical-toolchain trees (including
-NEG-suite imports of those same cases); their qualification needs separate
-work. Root `pnpm test` excludes dashboard components, hence the separate UI run.
-
-Dependency restoration used the unchanged frozen lockfile with `--ignore-scripts`;
-offline attempt exited 1 (uncached metadata), frozen registry restore exited 0.
-No new dependency, build approval, registry/PATH or repository package-config
-change. Existing Docker Desktop was started for local disposable services.
-
-Muse: the injected ModelTransport/broker and composeAgent exist, but no concrete
-Muse HTTP transport or repair-worker composition exists in HTTP startup. Modal:
-qualification tooling exists, not a wired product runner; missing .venv prevents
-even dry-run setup. Credentials alone do not close either integration. Reyn
-must approve/provide provider identity/access and qualified worker/guest wiring.
-Do not showcase a completed AI repair while those are unavailable.
-
-Local review preview: `http://127.0.0.1:4183/`; captured mail only at
-`http://127.0.0.1:18026/`. Disposable PostgreSQL/Mailpit, no customer source or
-model/runner, no seeded preview users. E2E uses a separate disposable stack.
-Demo: public landing -> templates/help -> clearly synthetic report -> workspace
-overview; optionally local email registration/verification with Mailpit. This
-proves UI/account mechanics only. Repository grants/entitlement provisioning,
-live model/sandbox/worker and real publication remain separate prerequisites.
-The redundant public-only server on 4179 and Vite server on 5173 were stopped
-after verification; only the database-backed preview on 4183 and its owned
-PostgreSQL/Mailpit services remain for local review. No other process stopped.
-
-## 22. Focused visual-polish and final review — 3 November 2026
-
-Continuation of §21's user-authorized UI scope and intake, not a new task or
-gate. Reviewed the complete 21-file working diff, the original mockup and fresh
-native captures. Preserved existing source work; before-polish diff/hashes are
-saved in the external evidence directory under `polish/`.
-
-Changes in this pass: compact two-column mobile overview cards (one column below
-350px), aligned mobile overview heading, auth form before supporting copy on
-narrow screens, explicit Muse/Modal names in the existing unconfirmed-readiness
-notice, and vertical ARIA tab semantics with Up/Down/Home/End keyboard support
-(existing Left/Right retained). Six existing source/test files plus this report
-and the coverage record changed; total working-tree file set remains 21.
-
-Dribbble SaaS references informed restrained hierarchy/card density; React Bits
-was inspected as optional inspiration. No third-party code/assets copied, no
-React migration, dependency/license addition or new animation. Existing fonts,
-navy identity and mockup tokens preserved. Full diff review found no unrelated
-changes or suspected credentials; this manual review is not a secret-scanner or
-Semgrep qualification. Package/lockfiles, backend/contracts and mockup untouched.
-
-Tests-first evidence: status-copy check exited 1 (1 fail/2 pass) and vertical-tab
-check exited 1 (1 fail/7 pass) before the corresponding changes. The first new
-canvas check exposed ignored options passed to BrowserContext.newPage; fixed
-the test to use explicit setViewportSize/emulateMedia, not the animation code.
-The canvas then stayed identical across native frames with reduced motion. An
-initial login test selector assumed an unused CSS class; corrected to the real
-auth card. Intermediate ESLint errors for the browser RAF global were corrected
-with explicit window qualification. These intermediate failures remain recorded.
-
-Fresh Windows x64 verification, isolated Node 26.12.1/pnpm 12.5.1:
-
-| Command | Exit | Result |
-| --- | --- | --- |
-| `pnpm test:ui` | 0 | 143/143, 20 files |
-| `pnpm typecheck` | 0 | Strict backend/dashboard |
-| `pnpm lint` | 0 | ESLint + boundaries, 168 modules/530 dependencies |
-| `pnpm lint:boundaries` | 0 | 147 modules/455 dependencies |
-| `pnpm build` / `pnpm build:ui` | 0 / 0 | Production builds |
-| `CP_PORT=4181 pnpm test:e2e` | 0 | All 10 suites; explicit viewport/media, mobile layout and native keyboard/motion assertions |
-| `pnpm test --maxWorkers=2 --reporter=json --outputFile=<evidence>/polish-full.json` | 1 | 1442 pass/31 fail/0 skipped; identical failing identities to unmodified 1977172 baseline; zero new/resolved failures |
-| External `polish/capture.mjs` | 0 | 14 captures, real Edge 156.0.4314.58, zero axe/overflow/page errors; failure/retry included |
-| `git diff --check` | 0 | Clean |
-
-Same pnpm flags/environment as §21; exact receipts use `polish-*` names in
-`D:/20261/.changeproof-review/UI-1793683235015/`. Component tests remain
-happy-dom/stubbed fetch. Native browser checks use real local HTTP/PG/Mailpit;
-no Muse, Modal, customer repair, Linux or live deployment proof. Capture covers
-home/overview/login at 1440/390 in both themes, plus light desktop/dark mobile
-network-failure states; demo E2E also checks 768/375. Original mockup opened in
-Edge again: its three JS errors still prevent populated route/pixel comparison;
-static layouts and final computed light/dark tokens are the available reference.
-
-Status: `in_progress`, bounded UI demo ready for review. Missing Semgrep/approved
-ruleset/version/setup and specialist skills, Muse transport/repair-worker and
-qualified Modal runner remain §21 blockers. The same 31 baseline failures remain
-separate from this green UI pass. No full WP/G3 status changed. Next: Reyn review
-and missing verification/integration decisions; no new assignment started.
-
-## 23. Landing reconstruction — user-corrected visual source
-
-The user rejected the earlier interpretation and explicitly designated root
-`mockup.html`, **not** `.template-ui/mockup.html`, as the authoritative visual
-input. SHA256: `6998e21248e413013b555eb6a04ffffe4ef3f6e385a71ae574998ba51051bf8f`.
-The root file opens directly in Edge with zero JavaScript errors. The syntax
-errors/repair discussed in §§21–22 concerned the wrong reference and are **not**
-a blocker for this input. Neither reference file was modified. The untracked
-root input is user-owned and excluded from implementation diff artifacts.
-
-Scope continues the UI follow-up intake in §21, limited to landing reconstruction
-and its tests/assets/report. No other page redesign, provider work, policy,
-contract, package or security-boundary change. The original 21 changed files were
-snapshotted byte-for-byte before reconstruction under the external `landing/before`
-directory so the rejected implementation remains recoverable.
-
-Concrete prior gaps: full-width centered composition became a two-column white
-card; 108px Inter headline/highlight became a smaller brand heading; the dense
-particle wave became four faint strokes; floating nav became two navigation
-rows; two pill CTAs became three rectangular actions; ecosystem logos became
-internal-pipeline labels; mobile hero extended far below the intended viewport.
-These were implementation choices, not backend constraints.
-
-Changes: landing-only DOM component and scoped consolidated CSS, exact original
-WebGL shader/particle equations and native 2D fallback ported to strict TS, nine
-unchanged embedded SVG marks with their Devicon MIT notice, actual existing route
-links and theme control. Timers/observers stop on route departure; reduced motion,
-hidden/offscreen pause and theme/resize redraw retained from the reference. The
-existing interactive walkthrough is retained below the reconstructed hero/strip;
-the full lower-page folders/pricing composition is not claimed reproduced yet.
-
-Intentional differences: no false GitHub-connected/evidence-collected status in
-the release pill/caption; Muse/Modal unavailable and illustrative-preview notice;
-slightly darker small-text colors for AA contrast. Root mockup typography is
-used on this landing under the user's explicit faithful-reconstruction direction.
-Other pages retain their existing typography/design and behavior.
-
-Native comparison: original root file and app captured directly at **1440×900**
-and **390×844**, same Edge 156.0.4314.58, light theme and reduced-motion freeze.
-Side-by-side comparison images are actual screenshots, not generated renders.
-Hero/nav/headline/subtitle/CTA-row/technology-strip bounds agree in those captures;
-the changed disclosure text has a slightly different pill width. Largest visible
-differences (CTA width, extra strip border, logo size) were corrected after the
-first comparison. Final light captures: zero axe violations, overflow/page errors.
-Dark browser checks also passed; do not call the entire full landing pixel-identical.
-
-Fresh commands with the same pinned environment/flags as §21:
-
-| Command | Exit | Actual result |
-| --- | --- | --- |
-| `pnpm test:ui src/pages/public.test.ts` (red first) | 1 | Required hero structure absent: 1 fail/8 pass |
-| `pnpm test:ui` | 0 | 144/144, 20 files |
-| `pnpm typecheck` | 0 | Strict backend + dashboard |
-| `pnpm lint` | 0 | ESLint/boundaries, 171 modules/534 dependencies |
-| `pnpm build:ui` | 0 | Production bundle, no dependency changes |
-| `CP_PORT=4181 pnpm test:e2e` | 0 | 11 suites, including native WebGL/2D/motion cleanup; all existing flows retained |
-| `pnpm test --maxWorkers=2 --reporter=json --outputFile=<evidence>/landing-full.json` | 1 | 1442 pass/31 fail/0 skipped; same identities as unmodified 1977172 baseline, zero new/resolved failures |
-| `landing/capture-comparison.mjs` | 0 | Original/app desktop/mobile captures + side-by-side artifacts |
-| `git diff --check` | 0 | Clean |
-
-Early TS/nullability/unused-source-variable, native contrast, browser test-global
-and registration-heading selector failures were corrected, not suppressed; all
-intermediate receipts remain. Unit tests are mocked/happy-dom. Native UI checks
-use real Edge/HTTP/local PG/Mailpit, not model or qualified guest execution.
-
-Evidence: `D:/20261/.changeproof-review/UI-1793683235015/landing/` contains root
-reference identity, before snapshots, comparison PNG/HTML/JSON, asset hashes,
-landing-only/full implementation diffs and baseline comparison. Command receipts
-use `landing-*` names in the parent directory. Existing Semgrep/specialist-skill,
-Muse/worker/Modal and 31 baseline blockers remain; no full WP/G3 status promoted.
-Status `in_progress`, awaiting the user's visual approval of the landing before
-any further page design work. No commit/push/PR/merge/deploy performed.
-
-
-## 24. Root mockup full frontend port — 4 November 2026
-
-Plan revision 2; session-authorized UI follow-up across the existing T6-1..T6-8 allocation. This record supersedes the previous landing-only approval stop; historical evidence above is unchanged. User explicitly selected ROOT mockup.html, not .template-ui/mockup.html.
-
-Task / requirement scope: FR3-31/37/38/40, NFR3-14/15; public/auth/workspace presentation and existing HTTP flows. Allowed changes: dashboard source/tests/styles, native browser checks, feature/report docs. No backend/core/policy/contract/spec/package/lockfile changes. Prerequisites: HEAD1977172 on feat/ui-demo-ready; root reference SHA2566998e21248e413013b555eb6a04ffffe4ef3f6e385a71ae574998ba51051bf8f; recoverable complete workspace backup plus source-before.tar containing approved Register.
-
-All62 root screens inventoried and mapped. Seventeen public layouts directly ported; Landing contains hero/canvas/technology strip, three-step preview, four-area capability folder, inline pricing, closing CTA/footer. Product/Pricing keep dedicated original compositions. How it works is an explicit Verification alias. Public errors return to public landing; back/forward/refresh regressions pass. Auth retains approved Register and real password10–128/confirmation/non-enumerating recovery/server return-target rules. Original standalone/modal patterns used for other account states, with English copy. Workspace shell, projects/drafts, usage/account/settings and existing run/evidence controls retain real APIs. Actual null billing period/cap from new organizations is now a tested empty state.
-
-Sixteen workspace screens have source-specific structural layouts with disabled controls and explicit missing HTTP integration reasons (workspace.ts); rich graphs/campaigns/investigation/publication/outcome/audit/evaluations/provider access remain unavailable. No mockup tenant/count/verdict is presented as real. The public product diagram is explicitly illustrative. Legal/pricing/service commitments remain drafts/unqualified. Full functional or pixel parity is not claimed.
-
-Final commands used existing isolated Node26.12.1/pnpm12.5.1 and process-local offline flags: pnpm --config.verify-deps-before-run=false --config.offline=true run <script>.
-
-| Script / check | Exit | Actual result |
-| --- | --- | --- |
-| test:ui | 0 | 162/162,21 files; mock/happy-dom |
-| typecheck | 0 | strict server/dashboard |
-| lint | 0 | ESLint+boundaries,183 modules/556 dependencies |
-| build | 0 | backend tsc |
-| build:ui | 0 | production UI |
-| CP_PORT=4181 test:e2e | 0 | all12 native browser specs, actual HTTP/PG/Mailpit |
-| test:e2e public demo | 0 | explicit public 404/How it works/history/refresh and visual bounds |
-| test:e2e demo enterprise | 0 | workspace/mobile/theme/billing checks |
-| test (feature and unmodified development1977172) | 1 /1 | identical31 full failure identities;1442pass,31fail,0skip; zero new/resolved |
-| native screen capture / navigation / image composition | 0 | 62 screens ×2versions ×2sizes;44 discovered internal destinations, no404 |
-
-Failure-first Billing shape test:1fail/3pass ->4pass; null-entitlement failure:1fail/4pass ->5pass. Earlier auth/layout/contrast/selector failures were corrected rather than filtered; all raw logs retained. Native keyboard activation opens capability areas in original/app. The original's sheet centers can be occluded; no forced click is used as interaction proof.
-
-Actual visual evidence: same Edge156.0.4314.58,1440x900 and390x844,DPR1/light/reduced-motion;496individual full/viewport screenshots plus248side-by-side images. Source original check/reset/verify scripts emit invalid '.' selector errors (reference unchanged); final app124captures have no JS error, overflow, missing H1 or404. Capture-only content-visibility override exposes off-screen original sections in both versions. Modal viewport captures are primary auth comparison because app correctly locks its inert background. These observations are not a pixel-parity claim.
-
-Native real-service journey: public preview -> email registration -> local Mailpit verification -> organization/login -> project -> versioned draft/save/refresh -> honest unconfigured usage. Docker Desktop recovered using installed engine/cached images, unique preview containers; existing baseline4184 unchanged. Current preview4183 has real local DB/email. No Muse/Modal/worker execution, sandbox qualification, paid call, real billing or publication was performed.
-
-Artifacts: D:/20261/.changeproof-review/frontend-port-20261103-232653/index.html (all screen comparisons),final-report.md,route-inventory.json,navigation-inventory.json,final-screen-capture.json,verification.json,regression-comparison.json,review.diff,changed-files.json and command logs. No source changes in isolated baseline.
-
-Missing checks/blockers: Semgrep has no approved scanner/version/ruleset/setup available; mandatory UI/security specialist skills absent from catalog. Provider/worker authorization, sixteen workspace HTTP surfaces, production profile/pricing/legal and full system acceptance remain open. Engineering status in_progress; every full WP/G3 status unchanged. Next: user visual review and Reyn's explicit missing integration contracts; no automatic unrelated task. No commit,push,PR,merge or deploy.
-
-
-## 25. UI PR review remediation — 4 November 2026
-
-Scope: the three user-approved review findings only; existing feat/ui-demo-ready work and root reference preserved. Source before remediation is archived with hashes at D:\20261\.changeproof-review\ui-pr-remediation-20261104-111613/source-before.tar. No design, backend, API contract, policy, dependency or runtime configuration change.
-
-- P2: authorized() now receives its caller's frozen route epoch and checks it before returning authorization or writing a guest state. Project creation captures the same epoch and withholds stale failure rendering. Existing project-search/layout import guards remain. Current401 errors, login links and retry behavior are preserved.
-- P3: README uses PORT for HTTP startup, explains CP_PORT belongs to the E2E harness, identifies the local root mockup and committed font notices. The root reference remains outside the implementation commit.
-- P3: the Landing test compares the complete ordered sequence of its four required sections with toEqual, retaining existing workflow/folder/footer assertions.
-
-Tests first: workspace tests exited1 with8fail/14pass before implementation. Focused workspace/public tests then exited0 with35pass. Fifteen delayed-session cases cover guest/authenticated/401/503/network failure across projects/new-project/impact, plus active expiry/retry and stale project-search coverage. Full UI is now181/181 (21files). Initial lint exited1 for deferred<void> in the test helper; changed to deferred<undefined> without changing behavior/assertions, final lint0.
-
-Native: all12E2E suites exit0, including actual200session responses held and delivered after rapid navigation away from each of the three workspace routes. Those tests delay a real response; they do not fabricate authentication. Auth/reset/return-target and existing service error tests remain green.
-
-Origin: exact new workspace module/routes do not exist in unmodified development1977172, so that implementation defect belongs to this feature. A similar existing Settings race is also reproduced on the unchanged baseline preview4184: actual503session response delayed until Pricing is visible then replaces Pricing with Settings unavailable, while URL stays Pricing. This is a separately recorded pre-existing UI defect, outside this bounded workspace fix; it is not one of the31root-suite failures and not a new regression introduced here. Initial diagnostic expected a guest login card, but the real public-only baseline returns503; the corrected probe asserts its actual error state and exits0. Baseline source remains clean.
-
-Fresh pinned Windows verification, same process-local Node26.12.1/pnpm12.5.1/offline flags as §24:
-
-| Command | Exit | Actual result |
-| --- | --- | --- |
-| test:ui workspace.test.ts public.test.ts | 0 | 35pass |
-| test:ui | 0 | 181pass /21files |
-| typecheck | 0 | strict server/dashboard |
-| lint | 0 | ESLint +183modules/556dependencies, no violations |
-| build / build:ui | 0 /0 | fresh backend/UI bundles |
-| CP_PORT=4181 test:e2e | 0 | all12specs |
-| test, feature / clean development1977172 | 1 /1 | both1442pass/31fail; identical full failure identities, zero new/resolved |
-| native baseline delayed-response probe | 0 | analogous Settings race reproduced, source unmodified |
-
-Artifact directory: D:\20261\.changeproof-review\ui-pr-remediation-20261104-111613/ contains exact command receipts/logs, regression-comparison.json, baseline-race.json, final report, PR draft, source hashes and staging manifest. Historical screenshot captures in §24 remain visual evidence; this remediation changes no UI geometry/CSS.
-
-Statusin_progress for frontend/WPs: the three scoped fixes are verified;16workspace integrations, Muse/Modal/worker/GitHub access, approved Semgrep and full-system evidence remain open. No complete frontend, global async-race elimination, AI repair or sandbox qualification claim. Next: user/Reyn review; baseline Settings race requires its own bounded follow-up. No staging,commit,push,merge,deployment or PR creation performed.
-
-## 26. UI visual-polish pilot — Landing and Workspace Overview (2026-11-04)
-
-User-authorized scope only: Landing, Workspace Overview and minimal shared tokens/original SVG diagrams. Based on approved UI commit `667803844c0da8aa887223f4145bb65331685810`, on separate local `feat/ui-visual-polish-pilot` with no upstream. The baseline UI PR remains separate and unmerged into recorded development `19771728312981a2737fee5eb4b8f0cc6ea29d58`. Root `mockup.html` is preserved/untracked; its external backup matches SHA256 `6998e21248e413013b555eb6a04ffffe4ef3f6e385a71ae574998ba51051bf8f`.
-
-Requirements: FR3-31/37 and NFR3-14; preserve FR3-40 navigation/search behavior. No contract, policy, security, dependency or support-level changes. Product, Pricing, Auth and other workspace pages are excluded from redesign. Landing's existing inline pricing, capability folders and footer remain present; the dedicated Pricing route is unchanged.
-
-Landing gains a scoped charcoal/blue and coherent light palette, Jakarta hierarchy, quieter controls/surfaces, a three-tab change explorer with an explicitly illustrative original relationship diagram, and mobile public navigation. Existing particle canvas, all sections, folder interactions and destinations remain. Overview replaces repeated summary/status cards with a factual service strip, auth-aware next action, original illustrative change/evidence map, linked action rows and explicit prerequisites/unavailable states. Only health/session endpoints are requested; no run statistics or integration success is fabricated. API health is separate from repair readiness. Unknown account service stays Unavailable, and health failure stays an actionable retry. Existing route-epoch guard is retained.
-
-Tests-first: initial focused command exit1 (3 new failures,16 pass); after implementation exit0 (19 pass). Final verification uses isolated Windows Node26.12.1 / pnpm12.5.1 with process-local toolchain PATH, `--config.verify-deps-before-run=false --config.offline=true`. No packages installed or external providers called.
-
-| Actual pnpm run command (same offline prefix) | Exit | Result |
-| --- | --- | --- |
-| test:ui apps/dashboard/src/status.test.ts apps/dashboard/src/pages/public.test.ts | 0 | 19 pass after red phase |
-| test:ui | 0 | final184 pass /21files |
-| typecheck | 0 | strict server + dashboard |
-| lint | 0 | ESLint +187modules/563dependencies, no boundary violations |
-| build | 0 | backend output generated; backend source unchanged |
-| build:ui | 0 | final pilot bundle generated |
-| test:e2e | 0 | all12nativebrowser suites |
-| test --reporter=json --outputFile=<external feature JSON> | 1 | 1442pass/31fail |
-| same full test in clean development1977172 | 1 | 1442pass/31fail; exact failure identities match, zero new/resolved |
-
-The first native E2E pass exit1 exposed new contrast and definition-list markup issues; both were fixed. Focused rerun exit1 then exposed an incorrect new test locator assuming a summary button role; changed to the actual native summary and verified keyboard Enter/Escape without changing semantics. Final complete12suite run exit0, including axe scans, mobile drawer/menu keyboard, reduced-motion canvas, HTTP failures/retry, existing public/auth/navigation checks and actual email-verified account -> authenticated Overview -> project -> saved revision journey. Synthetic UI tests are not native proof; browser/HTTP/Postgres/Mailpit evidence is local real-runtime proof only, not live Muse/Modal/GitHub/worker or customer repair qualification.
-
-Visual evidence: same real Edge156.0.4314.58, deviceScaleFactor1, reduced-motion,1440x900desktop and390x844mobile.12before +12after states, each full-page and viewport; includes dark/light Landing, guest Overview and genuinely authenticated Overview. All24capture states report no horizontal overflow or page errors. Auth uses a real local email-verified fixture/session; session cookies/passwords remain memory-only, not screenshot artifacts.24side-by-side images label BEFORE left and AFTER right. Screenshot helper exits0. Images show the actual rendered result; user visual approval remains pending. SVG mobile layout preserves the two evidence paths rather than shrinking desktop labels. No external fonts/assets/dependencies introduced; original SVG code and existing self-hosted licensed fonts/icons only.
-
-Artifacts: `D:\20261\.changeproof-review\ui-polish-pilot-20261104-120559` contains `index.html` comparison gallery, individual PNGs,24comparison PNGs, source hashes, exact command receipts/logs, regression-comparison.json, task intake, final report and full §5 draft. Screenshots/backups/root mockup are not commit candidates.
-
-Missing checks/limitations: approved Semgrep setup remains absent;31root-suite failures remain reproducible on clean development. Existing16incomplete workspace integrations and Muse/Modal/GitHub/worker readiness are not solved by this visual pilot. Browser evidence is Windows Edge/local services; no new Linux/production/isolation/customer-impact qualification is claimed. Readiness diagram is explanatory, never execution evidence. Full frontend/full WP status remains `in_progress`; scoped pilot status `in_progress` pending visual approval. Next action: user approves/rejects these two pilots; no other page implementation authorized. No staging,commit,push,merge,deployment or PR creation performed.
-
-## 27. Pilot defect remediation — no expansion (2026-11-04)
-
-Scope remains only Landing, Workspace Overview and their necessary scoped styles/tests. All earlier pilot changes and root mockup were preserved in an external recoverable backup before editing. Branch `feat/ui-visual-polish-pilot` and both UI branch refs remain at approved6678038; no staging/commit/push/merge/PR.
-
-Tests-first: two added public UI regressions failed initially (exit1:2fail/19pass), then passed (exit0:21pass). Verification checks now form a semantic ordered list with neutral, consistently centered01/02/03 badges. The03 row has a separate amber Incomplete label; no check is presented as having passed. Browser regression also exposed inherited green surfaces on nested divs, which are now reset only within this illustrative list. Actual badge glyph/row centering is measured natively, not inferred from CSS names.
-
-Landing now exposes Open workspace in the first hero viewport and mobile menu, using existing `#/` Overview. Guest Overview still offers the existing sign-in form; authenticated Overview offers Prepare a change. Existing pricing/register links remain. Native tests cover keyboard activation, actual server sessions, Back/Forward, refresh and the corresponding primary action without redirect loops. Public link inventory now explicitly verifies this workspace destination rather than treating it as an external URL.
-
-Whole-page sweep: fixed unreadable dark-mode folder step labels on white paper, overlapping mobile folder hit areas, and the selected folder control becoming invisible. All four areas now accept normal pointer clicks and keyboard activation; no forced clicks. Kept the folder visual and content. Fixed the Overview toolbar's horizontal alignment when sidebar is collapsed, and preserved collapsed navigation text for screen readers (visually hidden instead of display:none). These are pilot-only changes; other pages/backend/auth/contracts are unchanged.
-
-Final local Windows Node26.12.1/pnpm12.5.1 verification (same process-local offline flags as section26):
-
-| Command | Exit | Result |
-| --- | --- | --- |
-| test:ui apps/dashboard/src/status.test.ts apps/dashboard/src/pages/public.test.ts | 0 | 21pass after red phase |
-| test:ui | 0 | 186pass /21files |
-| typecheck | 0 | strict server/dashboard |
-| lint | 0 | ESLint +187modules/563dependencies; no violations |
-| build | 0 | backend source unchanged |
-| build:ui | 0 | final pilot bundle |
-| test:e2e | 0 | final all12native suites |
-| native screenshot/sweep helper | 0 | 24full-page+24viewport states,4panel crops; axe/overflow/page-error checks pass |
-| collapsed Overview probe | 0 | dark/light, toolbar and headingx92, axe clean |
-| git diff --check | 0 | clean |
-
-Earlier native runs exposed the inherited success surface, folder contrast/hit-area problems, missing screen-reader names when collapsed, a new test's stale scroll-position assumption and the public inventory's unrecognized new `#/` destination. All scoped defects/test assumptions were corrected before final full native exit0. Lint initially rejected unqualified browser globals in the new Node-side Playwright helper; browser callbacks now use window explicitly. Checks are real local Edge156.0.4314.58/HTTP/Postgres/Mailpit; UI unit tests remain synthetic. No live Muse/Modal/GitHub/worker or customer repair qualification is claimed.
-
-Newly exercised integration limitation, kept separate: entering the run form in a fresh empty workspace performs a project search; creating a project afterwards may still return cached empty results. A real HTTP probe reproduced search200/count0 -> create201/id returned -> same search200/count0. No fabricated responses. That broader sequence initially failed the draft journey after the additional navigation test. Navigation assertions were retained and run after the original project/draft setup, where the real workflow passes. The failing empty-search-before-create sequence is still explicitly unverified/defective and not hidden by claiming universal E2E coverage. Queries store/routes source matches recorded development after CRLF normalization, but this specific native probe was not separately run on an unmodified development server. It is not classified as one of the prior31failures and was not fixed outside this pilot's backend boundary.
-
-Full root suite was not rerun in this bounded remediation. The preceding section26 comparison remains historical evidence of1442pass/31identicalfail on pilot/development; no new root-suite pass claim. Approved Semgrep and existing integration blockers remain missing. Scoped status `in_progress` pending user visual review; no other page polish authorized.
-
-Artifacts: `C:\Users\Admin\AppData\Local\ChangeProof-AI\review\ui-pilot-remediation-20261104-143405` — gallery index.html, individual full/viewport PNGs, panel crops, screenshots.json, exact command receipts/logs, source/remediation diff, backup, cache diagnostic and source comparison. D: filled during screenshot writing (ENOSPC); only this session's generated review artifacts were moved to C:. The preceding pilot artifact directory was also moved with a junction preserving its existing D: links; file inventory/lengths were verified. No source, dependencies or original mockup was deleted; D: still has only about70MB free and needs owner attention before broader work. Incomplete captures/failed scans were not counted as final evidence.
-
-## 28. Remaining frontend visual polish and cache origin investigation (2026-11-04)
-
-User authorized all remaining frontend groups on `feat/ui-visual-polish-pilot`, preserving approved Landing/Overview and original UI branch6678038. Before work, D: had5696540672bytes free; before later builds/browser passes it remained above5GB decimal. At final verification it had about5093257216bytes free. No existing source file or backup was moved or deleted in this continuation; no manual disk cleanup was performed. Existing tracked/untracked work was copied into a new recoverable external backup; root mockup SHA256 remains6998e21248e413013b555eb6a04ffffe4ef3f6e385a71ae574998ba51051bf8f. Source/API/auth/policy/security/dependency authority is unchanged; no package or tool installation.
-
-Scope/requirements: user-approved visual-polish continuation, existing phase-6 frontend allocation; FR3-31/37/40 and NFR3-14, preserving existing FR3-29/30/38 account behavior. No new numbered engineering assignment or full-WP completion claim.
-
-**Cache finding:** direct backend4183 HTTP, bypassing Vite and all frontend fetch wrappers, reproduces search200/count0 -> create201/new ID -> identical search200/count0. A different valid query(limit19) returns200/count1 and the created project. The frontend does not cache these search results. Queries store caches by tenant,user,grant version/epoch and query, including empty results; createProject/POST route does not invalidate or change that cache identity. Backend change is needed; none was made. Diagnostic limit19 is not a production workaround. Cache fix must preserve tenant/current-grant isolation and invalidate/version data consistently after successful mutations. See external cache-finding.md and direct-backend-cache.json. This observed defect is separate from31baseline test failures; exact native reproduction on an unmodified development server was not performed.
-
-**Group1:** Product now uses a numbered feature index and an original contract/proof split illustration, replacing live-looking example run IDs/timings in its product preview. All four feature areas/headings remain. Pricing retains its asymmetric Free-tier/three-step composition with an amount-free conceptual budget lifecycle. Verification has an explicit agent/verifier/policy boundary plus its full five-step process. Sample Reports uses a responsive outcome table with prominent illustrative/synthetic labels and preserved API provenance, including source/dataset/capture identity. Public content, approved prices/readiness/legal statements and links are retained. Product/diagram states never claim a real execution or repaired target.
-
-**Group2:** Projects uses identity/action rows; actual Runs search records are semantic responsive tables with unchanged queries/links/filter behavior. Real server counts are presented as search facts, never invented activity. Run Details has the actual event timeline and readable immutable identity metadata; Evidence has artifact/hash action rows, text preview and export boundaries. Native fixtures cover authenticated project creation, saved draft, actual queued run, cancel/retry and real seeded artifact bytes/integrity failure. A queued job is not worker/model repair proof. The populated Runs capture uses the real Queued filter; it does not establish the unfiltered cached search is fresh.
-
-**Group3:** Auth uses the same palette, visible modal heading, readable forms and retained password/return-target/session rules. Help/search, documentation indexes, legal prose, release notes and roadmap retain their distinct structures and dynamic API content. Settings sections are separated by hierarchy/dividers; destructive action has a distinct danger treatment without changing its validation/confirmation. Shared navigation, mobile toolbar, focus and reduced motion apply across existing routes.
-
-The16workspace routes lacking backend integration now show their actual feature-specific blocker, a conceptual missing-connection path, and real next links. The original inactive layout remains recoverable in an expandable, inert, aria-hidden design reference. This prevents dead controls/placeholder layouts from masquerading as a functional workspace. The heading, actual reason and next actions remain accessible; no axe rules were disabled. Native checks exercise opening that reference with keyboard. No original functional backend behavior was removed or replaced with fabricated success.
-
-Tests-first per group: Group1 exit1(2fail/16pass), then0(18pass); Group2 exit1(1fail/57pass), then0(58pass); Group3 exit1(1fail/27pass), then0(46pass including public tests). A separate unavailable-state landmark regression failed1 before its semantic fix, then passed. Full UI final0:189pass/21files. The browser sweep caught and corrected sample-provenance mobile overflow, light-mode auth contrast, auth footer heading order, duplicate landmarks/invalid status landmark, inactive preview semantics, mobile table caption wrapping, and inherited pastel fact-strip styles. Earlier findings are retained in logs; only final records qualify the final claims.
-
-Pinned Windows Node26.12.1 / pnpm12.5.1, process-local PATH and offline flags; exact receipts in the external artifact directory. Commands below use `pnpm --config.verify-deps-before-run=false --config.offline=true run` prefix:
-
-| Actual task/script | Exit | Result |
-| --- | --- | --- |
-| test:ui | 0 | final189pass /21files |
-| typecheck | 0 | strict server/dashboard |
-| lint | 0 | ESLint +191modules/569dependencies, no violations |
-| build | 0 | backend source unchanged |
-| build:ui | 0 | final bundle363–365KB CSS /408KB JS before gzip; exact output in final-facts-build.log |
-| test:e2e demo-flow runs evidence | 0 | first native group pass |
-| test:e2e | 0 | complete12native suites, including per-fixture visual matrices |
-| test:e2e public runs | 0 | after final sample/caption adjustments |
-| test:e2e runs | 0 | after final fact-strip cascade correction |
-| test --reporter=json --outputFile=<external feature JSON> | 1 | final1442pass/31fail |
-| same full test in clean development1977172 | 1 | 1442pass/31fail; exact identities match, zero new/resolved |
-| direct backend cache diagnostic | 0 | diagnostic completed; cache behavior is a reproduced failure, not a pass |
-| final consolidated visual route matrix | 0 | 67routes×4profiles=268states; no overflow,page errors or axe violations |
-| git diff --check | 0 | no whitespace errors |
-
-Native browser evidence: real Windows Edge156.0.4314.58,1xdevice scale,1440x900desktop/390x844mobile,dark/light,reduced motion. The full route pass was followed by recapture of affected routes after scoped final changes. Eleven populated/valid-ticket local fixture profiles provide44additional native screenshots: registration/login, reset with valid ticket, authenticated settings/projects, actual queued run, filtered run table and real seeded artifact library/viewer, plus unavailable Impact. Standalone run/evidence/token links without required context show their true error state; those are not claimed as populated acceptance. Modal color variants use the real stored theme preference because their background controls are inert. Public/workspace theme interaction is separately exercised by native UI clicks. Unit/happy-dom checks are synthetic, distinct from native HTTP/Postgres/Mailpit/browser checks; neither proves live Muse/Modal/GitHub/worker or organic impact.
-
-Artifacts: `C:\Users\Admin\AppData\Local\ChangeProof-AI\review\ui-polish-expansion-20261104-174433` contains gallery index.html,67route checklist,16before/after full-page comparisons for the first public group,268route images, populated native fixture images, task header, source hashes/diff, cache finding, exact command receipts/logs, baseline comparison and §5 draft. Generated files/backups/root mockup are not commit candidates. No backend/core/config/lockfile/package changes. All changes remain uncommitted; no staging,push,merge,deploy or PR creation.
-
-Limitations: the cache defect needs backend work;16workspace integrations remain unavailable; Muse/Modal/GitHub/worker readiness and approved Semgrep remain missing;31root failures remain unresolved despite exact baseline reproduction. No production/Linux-browser/new sandbox/live-model/release qualification claim. Allocated polish status `in_progress` pending user final visual approval; full-WP/frontend release status separately `in_progress`. Next action: user review, then separately authorized backend cache remediation/integration review; no next task started automatically.
-
-## 29. Bounded composition correction and route audit (2026-11-04)
-
-Plan revision 2; user-directed review of the already-polished frontend, not a new backend task. FR3-31/37/40 and NFR3-14; branch `feat/ui-visual-polish-pilot`, baseline UI commit `667803844c0da8aa887223f4145bb65331685810`. Before editing, copied every modified/untracked file into the external review backup. D: had 4,012,748,800 bytes free before builds/browser checks; no existing files/backups moved or deleted. Root `mockup.html` remains untracked and SHA256 `6998e21248e413013b555eb6a04ffffe4ef3f6e385a71ae574998ba51051bf8f` is unchanged.
-
-**Extent correction:** 67 registered routes are not 67 bespoke designs. Source inspection classified 15 route/alias entries as page-specific (Landing, Overview/service-status, Product, Pricing, Verification/How it works, sample report/detail, Projects/project, Runs, Run Details and Evidence/library viewer). Eighteen have family/component refinement (auth, settings, help, legal, releases and roadmap); 16 share an unavailable-state composition; 18 inherit shared styling and retain their previous structure. Aliases and reused templates are explicit in the external per-route checklist. No new page-specific redesign is claimed for those shared-only routes.
-
-**Confirmed corrections:** Product feature ordinals are real DOM labels, readable and baseline-aligned in four editorial columns; mobile descriptions/actions align beneath their titles. Its illustrative type change now has a contained diff header, not-executed status, type-boundary label, numbered lines, removed/added highlighting and context, connected to the required-evidence diagram. It is neither executed code nor a verified result. Pricing publication metadata is separated from the conceptual budget flow. Verification boundary numbers/titles share an aligned row. Published sample entries group provenance/title/summary/action; template definition lists pair labels with their explanations. Workspace empty-state art is anchored beside the message rather than floating above it; Run action rows and Evidence artifact controls have explicit wrapping/gaps. Standalone auth navigation hides the visual-only theme label while preserving the accessible button name. API handlers/auth rules/backend/security/contracts/pricing semantics remain unchanged. Approved Landing/Overview and other satisfactory compositions were not redesigned.
-
-**Tests and native evidence:** extended the existing Product regression first: initial focused `pnpm test:ui apps/dashboard/src/pages/public.test.ts` exited 1 (17 pass, 1 fail), then exited 0 (18/18). Native public checks additionally measure ordinal/title/description/action geometry at 1440px/390px and verify added/removed lines and no fabricated execution claims. Final `pnpm test:ui` exited 0 (189/189, 21 files); `pnpm typecheck` 0; `pnpm lint` 0 (191 modules/569 dependencies, no boundary violations); `pnpm build` 0; `pnpm build:ui` 0; `pnpm test:e2e` 0 (all 12 specs); subsequent `pnpm test:e2e public` 0 on the final E2E test spelling. An intermediate lint run exited 1 on two unqualified browser globals in the new E2E assertion; fixed to `window.*`, then reran successfully. This was an introduced test lint defect, not a baseline failure. All package commands used pinned Node26.12.1/pnpm12.5.1 with process-local toolchains and `--config.verify-deps-before-run=false --config.offline=true run`.
-
-Final `pnpm test --reporter=json --outputFile=<review>/full-suite.json` exited 1: 1,442 pass, 31 fail. Fresh equivalent unmodified development worktree `19771728312981a2737fee5eb4b8f0cc6ea29d58` exited 1: 1,442 pass, 31 fail, identical failing test identities, zero new/resolved failures. Baseline worktree remained clean. Reproduction does not waive or fix those failures.
-
-Native visual matrix: same installed Edge156.0.4314.58, 1x scale, reduced motion, desktop1440x900/mobile390x844, dark/light; 268 full-page route captures plus 44 populated native-fixture captures (11 profiles), zero recorded JS/axe/overflow findings. Owner session was established through real registration/email verification/organization/login; fixtures use actual local HTTP/Postgres/Mailpit and actual queued run/artifact bytes. Missing-ID pages in the broad route matrix are error-state evidence, not populated acceptance. Before screenshots are the preceding polish snapshot, verified against all32 candidate file hashes before edits; not the root mockup. IDs/timestamps legitimately differ between native fixture runs. Human review used before/after full-page contact sheets for all67routes and enlarged priority/fixture images; automated results alone do not establish visual quality or user approval.
-
-Artifacts: `C:\Users\Admin\AppData\Local\ChangeProof-AI\review\ui-composition-review-20261104-202448` contains `index.html` (all-route before/after gallery), 88 full-resolution comparison PNGs, individual screenshots, per-route classification, annotated visual audit, backup, task header, command receipts/logs, failure identity comparison, diff and source hashes. Only seven pre-existing candidate files changed during this correction: public-refinement.ts/css, public.test.ts, auth-refinement.css, workspace-refinement.css, public E2E spec and this report. All previous work/untracked files preserved, no staging/commit/push/merge/PR.
-
-Allocated task and full-WP status remain `in_progress` pending user visual approval. Missing: approved Semgrep scan, production/Linux-browser qualification, 16 unavailable workspace integrations and live Muse/Modal/GitHub/worker evidence. Previously reproduced project-search cache defect needs separate backend remediation; no backend edit or workaround was introduced. No new provider/security decision made. Next action is user review of the screenshots; no next task automatically started.
-
-## 30. Systematic two-pass site-wide composition QA (2026-11-04)
-
-Plan revision 2; user-directed bounded frontend QA, FR3-31/37/40 and NFR3-14. Branch `feat/ui-visual-polish-pilot`, original UI commit `667803844c0da8aa887223f4145bb65331685810`. Copied every current modified/untracked file, including root `mockup.html`, into the external backup before edits. D: free4,012,630,016bytes at intake and4,006,838,272bytes before the final UI build. No files/backups deleted or moved; no Git publication/mutation.
-
-Pass1 freshly captured all67registered routes in dark/light at1440x900/390x844 with the same Edge156,1xscale,reduced motion. Real owner context came from actual local registration/email verification/org/login. Reviewed full-page contact sheets for every route, enlarged priority/fix images and measured component geometry/cascade. Pass2 used a separate browser process/new contexts/new actual owner session to recapture all268views on corrected UI. Its visual review additionally caught a tiny inline primary Log in anchor in the expired-session state; corrected auth-scoped button geometry, added a native size/click regression and recaptured the six affected auth routes (24views) within pass2. Original pass2captures remain intact; final-screens.json selects the corrected auth images. No open-ended redesign or third site-wide pass.
-
-Six confirmed defect families across17routes: (1) Product horizontal padding0 placed ordinals at rectangle edges, now28px desktop/20px mobile across all four rows; (2) Changelog inherited190px/1fr grid auto-placement, now a single vertical column with consistent marker/time/title/body; design notes and releases remain separate; (3) legacy ID+content selector kept glass rectangles behind zero-padding editorial rows, fixed at the component specificity for Guides/Roadmap/Templates/Help/Privacy/Impact overview/Evidence overview/Collaboration; (4) reset .card padding plus surviving glass frame crowded both API template details, now properly grouped prose/requirements sections; (5) redundant unpadded card inside the already padded standalone auth surface, flattened visually for five status routes; (6) reset button geometry left auth recovery anchors tiny, now scoped inline-flex/padding, with expired-session primary CTA measured>=44px and clicked on desktop/mobile. No global padding workaround, new feature, backend/API/auth/security/contract/pricing/provider change. Other satisfactory compositions retained, including approved Landing/Overview and Register/Login.
-
-Focused Changelog unit regression before implementation exited1(18pass/1fail); after exited0(19/19), preserving title/body/date and empty-release separation. Native measurements/assertions exited1before and0after; Product insets0to28/20px and Changelog headings395px/165px to one shared content start. Geometry candidates18to0 refer to two repeated defect types across variants, not18distinct defects. Other findings came from visual/cascade inspection. Final UI190/190 in21files(exit0); strict typecheck0; lint0(ESLint+boundaries,191modules/569dependencies); backend build0; final UI build0; final native E2E12/12specs(exit0), including padding/timeline/auth CTA regressions and all previous route/history/auth/run/evidence behavior. Intermediate lint1 was a new non-null assertion in the test, corrected and rerun; not a baseline defect. All package invocations used pinned Node26.12.1/pnpm12.5.1, process-local toolchains and offline/verify-deps-before-run flags; exact command receipts/logs retained.
-
-Fresh full root test exited1:1442pass/31fail of1473. Equivalent clean development worktree19771728312981a2737fee5eb4b8f0cc6ea29d58 exited1 with the identical31failure identities,0new/0resolved; worktree remained clean. This does not waive those failures or prove each is environmental. Final route matrix268views plus44actual populated/valid-state native fixture views had0recorded JS/axe/overflow findings. These functional/machine checks are not a visual perfection certificate. Native fixtures use actual local HTTP/Postgres/Mailpit and queued runs/artifact bytes, not live model/customer repair evidence. Missing-ID/expired/owner-denied/unavailable states and unqualified operator/provider/data variants are explicit in the checklist. Accessibility heading-focus outlines retained.
-
-Artifacts: `C:\Users\Admin\AppData\Local\ChangeProof-AI\review\ui-sitewide-qa-20261104-214252` contains the small eight-representative `index.html` gallery with theme/device controls, `all-routes.html`, route-by-route reviewed checklist, root-cause QA report,536initial route screenshots+24final auth replacements,44final native views,68significant-fix comparison PNGs, geometry/cascade data, task intake/report, command receipts/baseline identities, backup/diff/hashes. Source changes this task are six existing candidates only: public.ts, public-refinement.css, auth-refinement.css, public.test.ts, public E2E spec and this report. Previous32polish candidates/root mockup remain intact. No staging/commit/push/merge/PR/deployment.
-
-Allocated QA/full-WP status `in_progress` pending review, not visual perfection/release acceptance. Remaining: approved Semgrep scan,31root baseline failures,16unavailable workspace service integrations,live Muse/Modal/GitHub/worker qualification and previously reproduced backend search-cache defect. No backend fix performed. Next action: user reviews the eight representative pages; no automatic next task.
+| `GET /api/runs` | `LifecycleStore.listRuns` | overview, recent runs |
+| `GET /api/projects/:id`, `PATCH /api/projects/:id` | `getProject`, `updateProject` (+ `description`, V12) | project detail/settings, search snippet |
+| `GET /api/support/capabilities` | 14 `CapabilityRecord` via `AdapterRegistry` | capabilities matrix (target/proven split) |
+| `GET /api/environments`, `POST /api/environments` | environment profile revisions (V12) | environments page + drawer |
+| `GET /api/github/connections`, `POST …/:id/revoke` | github connections (V12; empty until WP3-22) | repositories page |
+| `GET /api/telemetry/corpus`, `POST /api/telemetry/corpus` | telemetry metadata (V12; gaps `[]`) | telemetry page |
+| `GET /api/billing/summary`, `GET /api/billing/ledger?limit=50` | `readBalances`, `listLedger` | overview credits, usage ledger |
+| `GET /api/team/members` | `IdentityStore.listMembers` (grant/status detail; no email column exists) | team table |
+| `GET /api/audit/entries?limit=50` | `QueriesStore.exportAudit` (receipt `runId:seq`) | audit log |
+
+Conventions kept: `isXPath` + `handleXApi` (503 without DB),
+`actingContext`, `orMapped` (runs/teamwork/enterprise mappings per brief;
+auth maps operator refusal to 403), `z.strictObject` bodies, cursor
+polling only (no SSE added). Unknown IDs 404 without disclosure
+(NEG3-21); empty data returns empty lists, never 404.
+
+### 22.2 Migration + compatibility
+
+- `infra/postgres/V12__workspace.sql`: `projects.description`,
+  `environment_profiles`, `github_connections`, `telemetry_corpus`
+  (RLS + `app_user` grants; explicit `tenant_id` predicates in every
+  query, same rule as V11).
+- Pre-V12 databases keep working unchanged: reads treat missing
+  tables/columns as empty (`to_regclass` / `information_schema`);
+  writes fail closed naming V12. E2E specs still apply V1–V11 only.
+- CRLF preserved in `lifecycle/store.ts`, `usage/store.ts`,
+  `routes-enterprise.ts`, `routes-teamwork.ts`, `start.ts`, V12,
+  `t48/t49`, native teamwork/enterprise suites (verified pure-CRLF).
+
+### 22.3 Proof (mock vs native reported separately)
+
+Mock suite: `pnpm test` → 91 files / 1483 tests green, exit 0.
+Includes new `tests/http` cases in t45/t48/t49 (404/403/400/401/503,
+empty lists, CSRF marker). One environmental fix: the two type-aware
+ESLint negatives in `tests/architecture/import-boundaries.test.ts`
+went 15s → 60s wall-clock (6.3s solo, >15s under parallel workers;
+assertions untouched) after 3/3 full-suite timeouts at 15s.
+UI suite: `pnpm test:ui` → 20 files / 258 tests green, exit 0
+(includes 3 select idempotency/scroll tests, ledger empty/error
+split, team empty case, and singular/empty-connections tests).
+Native suite (disposable PostgreSQL 16, `DATABASE_URL=…@55433`):
+4/4 files green — runs-http 17/17, teamwork-http 9/9,
+enterprise-http 9/9, auth-http 7/7 (exit 0 each), covering V12
+round-trips, cross-tenant fencing (404/empty), viewer 403, operator
+403, and the 14-record capability matrix (explicit ranges, proven ≤
+target).
+Gates: `pnpm typecheck` exit 0 (root + dashboard + trace-viewer),
+`pnpm lint` exit 0 (eslint clean; depcruise 174 modules / 548
+dependencies, zero violations), `pnpm build` + `pnpm build:ui` exit 0.
+
+### 22.4 Real-browser DOM probe (replaces the stubbed UI8 probe)
+
+Throwaway `/tmp/domprobe.mjs`: migrates V1–V12, starts `dist`
+as `app_user` (RLS active), seeds over real HTTP
+(register→verify→claim→login→project→PATCH→grant→entitlement→
+draft→submit→environment→telemetry→invite→accept), then drives
+system Chrome over 12 workspace routes × 390/768/1440 × light/dark
+(72 checks) + a keyboard select interaction. Result: **73/73 green**,
+zero page errors, zero overflow, English-only markers clean.
+Geometry matches the mockup exactly: `main` margin-left 284px /
+content left 300px at 1440 (mockup ground truth measured the same).
+Screenshots: `/tmp/domprobe-shots/` (72 + interaction).
+
+### 22.5 Defects found by the probe and fixed
+
+- **Observer infinite loop (critical):** `syncCustomSelect` rebuilt
+  the trigger on every pass; the shell MutationObserver refired
+  forever on any page with an inline select (`#/team` hung: goto
+  timeout, then evaluate stall). Fix: signature-idempotent sync +
+  invariant comment; regression tests in `components.test.ts`.
+- **Sidebar overlap (critical):** outlet was `main#content`, so
+  `#content{margin:auto}` cancelled the `main` sidebar offset at
+  761–1599px. Fix: mockup nesting `main > div#content` (shell.ts +
+  test).
+- **Scroll-listener throw:** document-level scroll has
+  `target=document` (no `closest`). Guarded; regression test.
+- **Honesty/grammar:** empty connections no longer claim “active”;
+  singular run/connection copy; audit-ledger-member fallbacks
+  rewritten for the now-real endpoints; plan meter spacing; org
+  subtitle shows the session role.
+- **Impact tab:** the mockup project-level `impact` tab is run
+  content in the dashboard (`#/impact?run=`, Dependency graph under
+  run tabs); project tabs keep the workspace-plan family
+  (capabilities + characterization added). No decorative tab added.
+
+### 22.6 E2E status: blocked on T-50 (phase-7), with evidence
+
+- Run 1: a leaked `node -e …startInfra` process from an earlier
+  session held port 4179 (EADDRINUSE); killed after proving idle
+  lineage (3.5s CPU in ~3h).
+- Run 2 (free port, server listening): 8/8 specs fail only on stale
+  `main#outlet` selectors — the UI8 rebuild renamed the outlet to
+  `#content` (HEAD still has `#outlet`; predates this task).
+- Run 3 (bounded experiment, then fully reverted): after a
+  mechanical `#outlet`→`#content` swap, specs fail deeper on the old
+  auth flow (`#/check-email` navigation), Primary-nav labeling, and
+  an axe `heading-order` finding on public pages. Specs restored
+  byte-identical (`git checkout -- tests/e2e/specs/`).
+- Whole-system E2E over the new UI stays T-50. The §22.4 probe and
+  §22.3 native suites are this task's whole-system evidence instead.
+
+### 22.7 Remaining honest gaps (backend-owned, nothing faked)
+
+Baseline (`null` → “No baseline pinned”), environment
+services/journal/boundary/resources (`[]`/`null`), telemetry gaps
+(`[]`), GitHub connections (empty until the WP3-22 installation
+flow), audit export + invitation listing + org-profile writes
+(absent endpoints, pages say so), characterization inputs (no
+assessment backend), review aggregation (exact state + raw events
+only). No verdict is computed in the UI; no mock/replay backs any
+claim above.
+Next dependency-ready task: T-50 (E2E over the new UI, phase-7).
+
+## 23. Auth modals + public nav + hero headline (3 Nov 2026)
+
+### 23.1 Scope
+
+Login, register, forgot-password, and check-email render as labelled
+signin dialogs over the remembered public backdrop (mockup
+`modalAuthRoutes`/`signin-overlay`, incl. Escape/backdrop-press close,
+focus trap, inert outlet, `body.signin-modal-route`); check-email is
+modal per product request, the mockup keeps it split-screen. Public
+nav is exactly Product / Pricing / Documentation + theme toggle +
+Sign in + "Get started free" (mockup 2452, English). Landing hero
+headline is now "Every change. / One proof." (pill on "proof.") per
+supplied artwork; hero CTA aligned to "Get started free".
+
+### 23.2 Deliberate honest deviations (mockup vs real backend)
+
+- Password minimum stays 10-128 (`modules/identity` `[DERIVED]`
+  policy); the mockup/reference says 8. Client help text and error
+  copy use the true range.
+- "Continue with GitHub" appears only when `/api/auth/providers`
+  advertises it; otherwise an honest note names the missing
+  authorized App. No dead button, no faked handshake.
+- Register drops confirm-password (mockup has none; the server body
+  is email+password only) and links terms to the real `#/terms` +
+  `#/privacy` routes (the old `#/p/terms` links resolved nowhere).
+- Login keeps its hidden organization field for multi-org accounts.
+- All Indonesian reference copy ships in English (FR3-40).
+
+### 23.3 Implementation
+
+- `routes.ts`: new `renderStandalone` (backdrop render without
+  nav/focus side effects). `components.ts`: `field()` placeholder
+  option, `logoMarkSvg` (mockup C-mark, used by signin + public
+  brand). `auth.ts`: backdrop memory via hashchange, `mountAuthModal`,
+  delegated Escape/Tab-trap/backdrop-press handling.
+- **Race fix (real-browser):** `githubSection` used to fire before
+  the mount, so the providers response landed on a detached host and
+  was dropped (`isConnected` false). It now fires after the mount;
+  regression test pins a slow backdrop (`/landing` gate) with the
+  note still rendering.
+
+### 23.4 Proof
+
+- `pnpm test:ui` -> 20 files / 262 tests green, exit 0 (auth modal
+  structure/close/backdrop/race, nav labels, hero copy).
+- `pnpm typecheck` exit 0, `pnpm lint` exit 0 (depcruise 174
+  modules / 549 dependencies, zero violations), `pnpm build:ui`
+  exit 0 (CSS minify warnings pre-existing, tokens.css untouched).
+- Throwaway `/tmp/authprobe.mjs` (real `dist` + PostgreSQL 16 +
+  system Chrome, logged out): nav + 4 modals x 390/1440 x
+  light/dark + backdrop-memory/close/empty-submit interactions =
+  **21/21 green**, zero page errors, zero overflow, English-only
+  markers clean, GitHub note asserted present. Screenshots:
+  `/tmp/authprobe-shots/`. Hero pill computed
+  `rgb(201,228,255)/rgb(32,91,152)/999px` (light),
+  `rgb(145,202,255)/rgb(8,39,69)/999px` (dark).
+- Probe container `cp-authprobe-pg` removed after the run; no
+  backend files changed by this task (server `dist` predates it).
+
+### 23.5 Dialog readability surface (same day, product request)
+
+The extracted `.signin-dialog` shipped no background, so busy
+backdrops bled through and washed out form text. Added a near-opaque
+themed surface (`--paper` 92% light / 90% dark + 22px frosted blur),
+form text in `--ink`, secondary copy (hints, terms) in `--muted`,
+dialog links in `--blue` (`tokens.css`, no `!important`). Contrast
+checker: light ink 15.57 / muted 5.70 / blue 8.81, dark ink 16.99 /
+muted 10.56 / blue 9.51 — all pass AA normal text. Re-ran
+`/tmp/authprobe.mjs`: **21/21 green**; screenshots confirm solid
+dialogs in both themes.
+
+### 23.6 Technology marquee: real logos, Java removed (same day)
+
+The strip used short text codes (GH, JV, ...). It now renders the
+pinned Devicon data-URI artwork from the mockup itself (1997):
+new `pages/tech-logos.ts` (8 URIs, ~55KB, self-hosted, `<img>`
+context only, empty alt + aria-hidden parent), per-kind
+`cp-tech-*` classes (GitHub inverts in dark mode via the existing
+rule; Go/.NET keep their wide marks). Java removed per product
+request. Tests: 16 marks, every `img` a data URI, Java absent.
+Browser: 8/8 images loaded light+dark, authprobe still 21/21.
+
+### 23.7 Sidebar meter + product mark (same day)
+
+- Removed the "Manage usage →" link from all three plan-meter
+  states (usage stays one click away via nav); fixed the fused
+  "UsageUnavailable"/"UsageLoading…" words with proper spacing.
+- Meter legibility: themed box (`--surface`), text (`--ink` /
+  `--muted`), track (`--line`), fill (`--blue`) — the old
+  white-on-white fill and faint foot tones vanished on light
+  sidebars. Computed pairs match the §23.5 AA checks.
+- New `changeproofMarkSvg()` inlines
+  `public/assets/changeproof-mark.svg` (also the favicon);
+  replaces the shield brand marks in the sidebar, the landing
+  workflow logo, and the product preview brand, plus removes the
+  now-unused `brandMarkSvg`. Feature/nav shield icons untouched.
+- Tests: 264/264 UI green; `brandprobe.mjs` (seeded login,
+  entitlement, both themes): mark viewBox/sizing, meter text, no
+  manage link, no page errors — all green; screenshots in
+  `/tmp/brandprobe-shots/`.

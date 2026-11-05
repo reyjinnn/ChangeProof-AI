@@ -50,6 +50,15 @@ const SamlProvisionBody = z.strictObject({
 });
 const SamlRotateBody = z.strictObject({ certPem: NonEmptyStringSchema });
 const SamlLinkBody = z.strictObject({ subject: NonEmptyStringSchema, userId: IdSchema });
+const LedgerQuery = z.strictObject({ limit: z.coerce.number().int().min(1).max(50) });
+
+function queryParams(url: URL): Record<string, string> {
+  const params: Record<string, string> = {};
+  url.searchParams.forEach((value, key) => {
+    params[key] = value;
+  });
+  return params;
+}
 
 /** Store refusals map to status without leaking which tenant owns what. */
 async function orMapped<T>(work: Promise<T>): Promise<T> {
@@ -101,6 +110,26 @@ export async function handleEnterpriseApi(
     const ctx = await actingContext(deps.session, request, nowIso);
     const balances = await orMapped(deps.usage.store.readBalances({ tenantId: ctx.tenantId }));
     sendOk(response, balances);
+    return;
+  }
+  if (method === 'GET' && pathname === '/api/billing/summary') {
+    const ctx = await actingContext(deps.session, request, nowIso);
+    const balances = await orMapped(deps.usage.store.readBalances({ tenantId: ctx.tenantId }));
+    sendOk(response, { used: balances.consumed, limit: balances.cap });
+    return;
+  }
+  if (method === 'GET' && pathname === '/api/billing/ledger') {
+    const ctx = await actingContext(deps.session, request, nowIso);
+    const query = LedgerQuery.parse(queryParams(url));
+    const ledger = await orMapped(deps.usage.store.listLedger({ tenantId: ctx.tenantId, limit: query.limit }));
+    sendOk(response, {
+      items: ledger.entries.map((entry) => ({
+        entryId: entry.entryId,
+        kind: entry.kind,
+        amount: entry.amount,
+        detail: entry.runId,
+      })),
+    });
     return;
   }
   if (method === 'POST' && pathname === '/api/byok/credentials') {

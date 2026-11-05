@@ -2,23 +2,30 @@ import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 
 import type { PublicRoute } from '../../../../src/core/contracts/schemas/publicsite.js';
 
-import { renderRoute, registerRoute } from '../routes.js';
+import { renderRoute, registerRoute, routePaths } from '../routes.js';
 import { renderShell } from '../shell.js';
+import { renderPublicChrome } from './public-chrome.js';
 import { classifyDestination, registerPublicPages, validateReturnTarget } from './public.js';
 
 const realFetch = globalThis.fetch;
 const seen: string[] = [];
+const posted: { url: string; body: unknown }[] = [];
 
 function stubFetch(routes: Record<string, { status: number; json: unknown }>): void {
   seen.length = 0;
-  globalThis.fetch = vi.fn((input: unknown) => {
+  posted.length = 0;
+  globalThis.fetch = vi.fn((input: unknown, init?: { body?: unknown; method?: string }) => {
     const url = String(input);
     seen.push(url);
     const path = url.startsWith('http') ? new URL(url).pathname + new URL(url).search : url;
+    if (init?.method === 'POST') {
+      if (typeof init.body !== 'string') throw new Error('Stub fetch expects string bodies.');
+      posted.push({ url: path, body: JSON.parse(init.body) as unknown });
+    }
     const hit = routes[path];
     if (hit === undefined) return Promise.resolve(new Response(JSON.stringify({ ok: false }), { status: 404 }));
     return Promise.resolve(
-      new Response(JSON.stringify(hit.status === 200 ? { ok: true, data: hit.json } : hit.json), {
+      new Response(JSON.stringify(hit.status === 200 || hit.status === 201 ? { ok: true, data: hit.json } : hit.json), {
         status: hit.status,
       }),
     );
@@ -78,7 +85,14 @@ function boot(): HTMLElement {
   return renderShell(app).outlet;
 }
 
-test('the pricing composition has working original CTA destinations', async () => {
+function bootFixed(): HTMLElement {
+  registerPublicPages([], [], []);
+  const app = document.createElement('div');
+  document.body.appendChild(app);
+  return renderShell(app).outlet;
+}
+
+test('generic page renders title, summary, and working CTA hrefs', async () => {
   stubFetch({ '/api/site/routes?path=%2Fpricing': { status: 200, json: PRICING } });
   const outlet = boot();
   await renderRoute(outlet, '#/p/pricing');
@@ -121,17 +135,15 @@ test('template apply refusal lands on the login notice with its return', async (
   expect(window.location.hash).toBe('#/login?return=%2Fapp%2Fprojects%2Fnew%3Ftemplate%3Dbugfix-run');
 });
 
-test('login notice echoes validated destinations as text, never links', async () => {
+test('public module does not own /login (auth does)', async () => {
+  stubFetch({});
   registerPublicPages([], [], []);
+  expect(routePaths()).not.toContain('/login');
   const app = document.createElement('div');
   document.body.appendChild(app);
   const { outlet } = renderShell(app);
-  await renderRoute(outlet, '#/login?return=%2Fapp%2Fx');
-  expect(outlet.textContent).toContain('/app/x');
-  expect(outlet.querySelector('a[href="/app/x"]')).toBeNull();
-  await renderRoute(outlet, '#/login?return=https%3A%2F%2Fevil.example%2F');
-  expect(outlet.textContent).not.toContain('evil.example');
-  expect(outlet.textContent).toContain('This step needs a login.');
+  await renderRoute(outlet, '#/login');
+  expect(outlet.textContent).toContain('Page not found');
 });
 
 test('empty FAQ search fails on the field without a request', async () => {
@@ -154,200 +166,412 @@ test('empty FAQ search fails on the field without a request', async () => {
   expect(seen.some((url) => url.includes('/api/site/faq?'))).toBe(false);
 });
 
-test('a late public content response cannot replace the page the user navigated to', async () => {
-  let release!: (value: Response) => void;
-  globalThis.fetch = vi.fn(() => new Promise<Response>((resolve) => { release = resolve; }));
-  const outlet = boot();
-  const pending = renderRoute(outlet, '#/p/pricing');
-  registerRoute({ path: '/newer-ui', title: 'Newer', render: (host) => { host.textContent = 'Newer page'; } });
-  await renderRoute(outlet, '#/newer-ui');
-  release(new Response(JSON.stringify({ ok: true, data: PRICING }), { status: 200 }));
-  await pending;
-  expect(outlet.textContent).toBe('Newer page');
-});
+/* --- Public chrome (Progress UI 3). --- */
 
-test('the architecture walkthrough supports arrow-key tab navigation', async () => {
-  const home: PublicRoute = { path: '/', title: 'ChangeProof AI', summary: 'Product preview.', section: 'product', ctas: [] };
-  stubFetch({ '/api/site/routes?path=%2F': { status: 200, json: home } });
-  registerPublicPages([home], [], []);
-  const outlet = boot();
-  await renderRoute(outlet, '#/p/');
-  const tabs = [...outlet.querySelectorAll<HTMLButtonElement>('[role="tab"]')];
-  tabs[0]?.focus();
-  tabs[0]?.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true, cancelable: true }));
-  expect(tabs[1]?.getAttribute('aria-selected')).toBe('true');
-  expect(tabs[1]?.tabIndex).toBe(0);
-  expect(tabs[0]?.tabIndex).toBe(-1);
-  expect(document.activeElement).toBe(tabs[1]);
-  expect(outlet.querySelector('[role="tablist"]')?.getAttribute('aria-orientation')).toBe('vertical');
-  tabs[1]?.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, cancelable: true }));
-  expect(document.activeElement).toBe(tabs[2]);
-  tabs[2]?.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowUp', bubbles: true, cancelable: true }));
-  expect(document.activeElement).toBe(tabs[1]);
-  tabs[1]?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Home', bubbles: true, cancelable: true }));
-  expect(document.activeElement).toBe(tabs[0]);
-  tabs[0]?.dispatchEvent(new KeyboardEvent('keydown', { key: 'End', bubbles: true, cancelable: true }));
-  expect(document.activeElement).toBe(tabs.at(-1));
-});
+const FIXED_PATHS = [
+  '/',
+  '/landing',
+  '/product',
+  '/how-it-works',
+  '/pricing',
+  '/documentation',
+  '/security',
+  '/enterprise',
+  '/self-hosted',
+  '/templates',
+  '/integrations',
+  '/sample-report',
+  '/status',
+  '/changelog',
+  '/roadmap',
+  '/about',
+  '/contact',
+  '/privacy',
+  '/terms',
+];
 
-test('the landing keeps the reference hero, two real CTAs and technology identities without claiming a live connection', async () => {
-  const home: PublicRoute = { path: '/', title: 'ChangeProof AI', summary: 'Product preview.', section: 'product', ctas: [] };
-  stubFetch({ '/api/site/routes?path=%2F': { status: 200, json: home } });
-  registerPublicPages([home], [], []);
-  const outlet = boot();
-  await renderRoute(outlet, '#/p/');
-  expect(outlet.querySelector('h1')?.textContent).toBe('Every change.One proof.');
-  expect(outlet.querySelector('h1 mark')?.textContent).toBe('proof.');
-  expect(outlet.querySelector('.reyn-design .public-nav')).not.toBeNull();
-  expect([...outlet.querySelectorAll('.cp-identity-hero .modern-cta-pair a')].map(a => a.getAttribute('href'))).toEqual(['#/p/pricing', '#/register']);
-  expect(outlet.querySelectorAll('.cp-tech-group:not([aria-hidden]) img')).toHaveLength(9);
-  expect(outlet.textContent).not.toContain('GitHub connected. Evidence collected.');
-  expect(outlet.textContent).toContain('Muse and Modal are unavailable in this demo');
-});
-
-test('How it works has a registered public deep link with the intended verification content', async () => {
-  stubFetch({ '/api/site/routes?path=%2Fverification': { status: 200, json: { path: '/verification', title: 'Verification', summary: 'Independent checks.', section: 'product', ctas: [] } } });
+test('all fixed public routes are registered', () => {
+  stubFetch({});
   registerPublicPages([], [], []);
-  const outlet = boot();
-  await renderRoute(outlet, '#/p/how-it-works');
-  expect(outlet.textContent).not.toContain('Page not found');
-  expect(outlet.textContent).toContain('Check independently');
+  for (const path of FIXED_PATHS) expect(routePaths(), path).toContain(path);
 });
 
-test('the landing contains every original section in order and exactly three workflow steps', async () => {
-  const home: PublicRoute = { path: '/', title: 'ChangeProof AI', summary: 'Preview.', section: 'product', ctas: [] };
-  stubFetch({ '/api/site/routes?path=%2F': { status: 200, json: home } });
-  registerPublicPages([home], [], []);
-  const outlet = boot();
-  await renderRoute(outlet, '#/p/');
-  expect(outlet.querySelectorAll('[role="tab"]')).toHaveLength(3);
-  const sections = [...outlet.querySelectorAll('.proof-story, .cp-capabilities, .pricing-section, .final-cta')];
-  expect(sections.map(section => section.querySelector('h2')?.textContent.replace(/\s+/g, ' '))).toEqual([
-    'Follow the change.See the proof.',
-    'A workflow worthopening up.',
-    'Start small.Stay in control.',
-    'Ready to verifyyour changes?',
-  ]);
-  expect(outlet.querySelector('.cp-workflow-front')).not.toBeNull();
-  const folder = outlet.querySelector<HTMLButtonElement>('.cp-workflow-front');
-  folder?.click();
-  expect(folder?.getAttribute('aria-expanded')).toBe('true');
-  outlet.querySelector<HTMLButtonElement>('[data-cp-area="0"]')?.click();
-  expect(outlet.querySelector<HTMLElement>('#cp-workflow-area-0')?.hidden).toBe(false);
-  expect(outlet.querySelector('.footer-col')).not.toBeNull();
-  for (const link of outlet.querySelectorAll('a[href^="#"]')) expect(link.getAttribute('href')).toMatch(/^#\//);
+test('chrome fills public nav and footer on public routes', async () => {
+  stubFetch({});
+  const outlet = bootFixed();
+  await renderRoute(outlet, '#/product');
+  const nav = document.getElementById('publicNav');
+  expect(nav?.querySelector('.public-brand')?.textContent).toContain('ChangeProof');
+  const labels = [...(nav?.querySelectorAll('.public-links a') ?? [])].map((a) => a.textContent);
+  expect(labels).toEqual(['Product', 'Pricing', 'Documentation', 'Sign in', 'Get started free']);
+  expect(nav?.querySelector('.nav-product')?.getAttribute('href')).toBe('#/product');
+  expect(nav?.querySelector('.nav-price')?.getAttribute('href')).toBe('#/pricing');
+  expect(nav?.querySelector('.nav-documentation')?.getAttribute('href')).toBe('#/guides');
+  expect(nav?.querySelector('.public-brand svg')).not.toBeNull();
+  expect(nav?.querySelector('.public-login')?.getAttribute('href')).toBe('#/login');
+  expect(nav?.querySelector('.public-links .primary')?.getAttribute('href')).toBe('#/register');
+  expect(nav?.querySelector('.public-links .primary svg')).not.toBeNull();
+  expect(outlet.querySelector('.preview-brand svg')?.getAttribute('viewBox')).toBe('0 0 64 64');
+  expect(nav?.querySelector('[data-evidence="theme"]')).not.toBeNull();
+  const footer = document.getElementById('publicFooter');
+  expect(footer?.querySelectorAll('.footer-col').length).toBe(4);
+  expect(footer?.querySelector('.footer-follow')).not.toBeNull();
+  expect(footer?.querySelector('.footer-legal')?.textContent).toContain('© 2026 ChangeProof AI');
+  expect(footer?.querySelector('.footer-wordmark')?.textContent).toBe('ChangeProof');
+  for (const anchor of footer?.querySelectorAll('.footer-col a') ?? []) {
+    expect(anchor.getAttribute('href')).toMatch(/^#\//);
+  }
 });
 
-test('Product retains its four feature areas and dedicated preview', async () => {
-  const product: PublicRoute = { path: '/product', title: 'Product', summary: 'Product.', section: 'product', ctas: [] };
-  stubFetch({ '/api/site/routes?path=%2Fproduct': { status: 200, json: product } });
-  registerPublicPages([product], [], []);
-  const outlet = boot();
-  await renderRoute(outlet, '#/p/product');
-  expect(outlet.querySelector('h1')?.textContent).toBe('Clear changes. Confident decisions.');
-  expect(outlet.querySelector('.landing-pilot')).toBeNull();
-  for (const title of ['Understand the impact', 'Check the candidate', 'Review the evidence', 'Bring context to your team', 'Evidence at every step.']) expect(outlet.textContent).toContain(title);
+test('theme toggle flips dataset theme and persists the choice', async () => {
+  stubFetch({});
+  const outlet = bootFixed();
+  await renderRoute(outlet, '#/product');
+  renderPublicChrome();
+  document.documentElement.dataset['theme'] = 'light';
+  renderPublicChrome();
+  const toggle = document.querySelector('#publicNav [data-evidence="theme"]');
+  if (!(toggle instanceof HTMLButtonElement)) throw new Error('Theme toggle is missing.');
+  toggle.click();
+  expect(document.documentElement.dataset['theme']).toBe('dark');
+  expect(window.localStorage.getItem('changeproof-modern-theme')).toBe('dark');
+  expect(toggle.getAttribute('aria-pressed')).toBe('true');
 });
 
-test('the Landing pilot keeps its graph explicitly illustrative and its original workflow controls', async () => {
-  const home: PublicRoute = { path: '/', title: 'ChangeProof AI', summary: 'Preview.', section: 'product', ctas: [] };
-  stubFetch({ '/api/site/routes?path=%2F': { status: 200, json: home } });
-  registerPublicPages([home], [], []);
-  const outlet = boot();
-  await renderRoute(outlet, '#/p/');
-  expect(outlet.querySelector('.landing-pilot')).not.toBeNull();
-  expect(outlet.querySelector('[data-pilot-graph]')?.textContent).toContain('Illustrative');
-  expect(outlet.querySelectorAll('[role="tab"]')).toHaveLength(3);
-  expect(outlet.textContent).toContain('An unresolved edge stays visible');
-  expect(outlet.textContent).toContain('Muse and Modal are unavailable');
+/* --- Landing page. --- */
+
+const PRICING_SNAPSHOT = {
+  pricingVersion: '2026-11-01',
+  currency: 'USD',
+  tiers: [
+    { id: 'free', name: 'Free capped tier', notes: 'Start with visible limits.' },
+    { id: 'team', name: 'Team', notes: 'Shared budgets and review.' },
+  ],
+};
+
+test('landing renders hero, orbits, tech strip, and final CTA', async () => {
+  stubFetch({ '/api/site/pricing': { status: 200, json: PRICING_SNAPSHOT } });
+  const outlet = bootFixed();
+  await renderRoute(outlet, '#/');
+  const hero = outlet.querySelector('.cp-identity-hero');
+  expect(hero).not.toBeNull();
+  expect(hero?.querySelector('canvas.cp-ghost-fibers')).not.toBeNull();
+  expect(hero?.querySelector('.cp-ghost-shade')).not.toBeNull();
+  expect(hero?.querySelectorAll('.hero-orbit').length).toBe(2);
+  expect(hero?.querySelector('.modern-release')).not.toBeNull();
+  expect(hero?.querySelector('h1')?.textContent).toContain('Every change.');
+  expect(hero?.querySelector('h1')?.textContent).toContain('One proof.');
+  expect(hero?.querySelectorAll('h1 mark').length).toBe(1);
+  expect(hero?.querySelector('h1 mark')?.textContent).toBe('proof.');
+  expect(hero?.querySelector('.modern-cta-pair .primary')?.textContent).toBe('Get started free');
+  expect(hero?.querySelector('.modern-hero-sub')).not.toBeNull();
+  const ctaHrefs = [...(hero?.querySelectorAll('.modern-cta-pair a') ?? [])].map((a) => a.getAttribute('href'));
+  expect(ctaHrefs).toEqual(['#/dashboard', '#/register']);
+  expect(outlet.querySelector('.cp-workflow-logo svg')?.getAttribute('viewBox')).toBe('0 0 64 64');
+  const logos = outlet.querySelectorAll('.cp-tech-strip .cp-tech-logo');
+  expect(logos.length).toBe(16);
+  const names = [...logos].map((logo) => logo.textContent);
+  expect(names).not.toContain('Java');
+  for (const logo of logos) {
+    const img = logo.querySelector('.cp-tech-mark img');
+    expect(img?.getAttribute('src')).toMatch(/^data:image\/svg\+xml;base64,/);
+    expect(img?.getAttribute('alt')).toBe('');
+  }
+  expect(outlet.querySelector('.cp-tech-mark.cp-tech-github img')).not.toBeNull();
+  expect(outlet.querySelector('.final-cta')).not.toBeNull();
+  expect(outlet.querySelector('.final-cta .modern-cta-pair .primary')?.getAttribute('href')).toBe('#/register');
 });
 
-test('the illustrative verification panel numbers every check and separates incomplete proof from its step', async () => {
-  const home: PublicRoute = { path: '/', title: 'ChangeProof AI', summary: 'Preview.', section: 'product', ctas: [] };
-  stubFetch({ '/api/site/routes?path=%2F': { status: 200, json: home } });
-  registerPublicPages([home], [], []);
-  const outlet = boot();
-  await renderRoute(outlet, '#/p/');
-  const rows = [...outlet.querySelectorAll('.pilot-evidence-row')];
-  expect(rows.map(row => row.querySelector('.pilot-evidence-step')?.textContent)).toEqual(['01', '02', '03']);
-  expect(rows[2]?.querySelector('.pilot-evidence-state')?.textContent).toContain('Incomplete');
-  expect(rows[2]?.getAttribute('data-proof-state')).toBe('incomplete');
-  expect(rows.slice(0, 2).every(row => row.getAttribute('data-proof-state') === 'required')).toBe(true);
-  expect(rows.map(row => row.textContent).join(' ')).not.toMatch(/passed|verified successfully/i);
-  expect(outlet.querySelector('.pilot-evidence-checks')?.tagName).toBe('OL');
-  expect(outlet.textContent).toContain('not live AI repair evidence');
+test('#/landing renders the same landing page', async () => {
+  stubFetch({ '/api/site/pricing': { status: 200, json: PRICING_SNAPSHOT } });
+  const outlet = bootFixed();
+  await renderRoute(outlet, '#/landing');
+  expect(outlet.querySelector('.cp-identity-hero')).not.toBeNull();
+  expect(outlet.querySelector('.proof-story')).not.toBeNull();
+  expect(outlet.querySelector('#capability-folders')).not.toBeNull();
 });
 
-test('Landing exposes the real Workspace Overview route without guessing authentication or replacing existing CTAs', async () => {
-  const home: PublicRoute = { path: '/', title: 'ChangeProof AI', summary: 'Preview.', section: 'product', ctas: [] };
-  stubFetch({ '/api/site/routes?path=%2F': { status: 200, json: home } });
-  registerPublicPages([home], [], []);
-  const outlet = boot();
-  await renderRoute(outlet, '#/p/');
-  const entry = outlet.querySelector<HTMLAnchorElement>('.cp-identity-hero [data-open-workspace]');
-  expect(entry?.textContent).toContain('Open workspace');
-  expect(entry?.getAttribute('href')).toBe('#/');
-  expect(outlet.querySelector('.pilot-public-menu a[href="#/"]')?.textContent).toBe('Open workspace');
-  expect(outlet.querySelector('.cp-identity-hero a[href="#/register"]')).not.toBeNull();
-  expect(outlet.querySelector('.cp-identity-hero a[href="#/p/pricing"]')).not.toBeNull();
-  expect(seen.some(url => url.includes('/api/auth'))).toBe(false);
+test('proof story tabs switch panels with click and arrow keys', async () => {
+  stubFetch({ '/api/site/pricing': { status: 200, json: PRICING_SNAPSHOT } });
+  const outlet = bootFixed();
+  await renderRoute(outlet, '#/landing');
+  const tabs = [...outlet.querySelectorAll('[data-proof-tab]')];
+  expect(tabs.length).toBe(3);
+  const candidate = outlet.querySelector('[data-proof-tab="candidate"]');
+  if (!(candidate instanceof HTMLButtonElement)) throw new Error('Candidate tab is missing.');
+  candidate.click();
+  expect(candidate.getAttribute('aria-selected')).toBe('true');
+  expect(outlet.querySelector('[data-proof-panel="candidate"]')?.hasAttribute('hidden')).toBe(false);
+  expect(outlet.querySelector('[data-proof-panel="impact"]')?.hasAttribute('hidden')).toBe(true);
+  candidate.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+  expect(outlet.querySelector('[data-proof-tab="evidence"]')?.getAttribute('aria-selected')).toBe('true');
+  expect(outlet.querySelector('[data-proof-panel="evidence"]')?.hasAttribute('hidden')).toBe(false);
 });
 
-test('Pricing keeps the original free card, budget explanation and three numbered steps without inventing prices', async () => {
-  stubFetch({ '/api/site/routes?path=%2Fpricing': { status: 200, json: PRICING } });
-  const outlet = boot();
-  await renderRoute(outlet, '#/p/pricing');
-  expect(outlet.querySelector('h1')?.textContent).toBe('Start small. Stay in control.');
-  expect(outlet.textContent).toContain('Free capped tier.');
-  expect(outlet.querySelectorAll('.public-steps li')).toHaveLength(3);
-  expect(outlet.textContent).toContain('Your budget stays in your control.');
-  expect(outlet.textContent).not.toMatch(/\$\d/);
+test('capability folder sheets open areas and Escape closes', async () => {
+  stubFetch({ '/api/site/pricing': { status: 200, json: PRICING_SNAPSHOT } });
+  const outlet = bootFixed();
+  await renderRoute(outlet, '#/landing');
+  const folder = outlet.querySelector('.cp-workflow-folder');
+  expect(folder).not.toBeNull();
+  expect(outlet.querySelectorAll('[data-cp-area]').length).toBe(4);
+  const sheet = outlet.querySelector('[data-cp-area="1"]');
+  if (!(sheet instanceof HTMLButtonElement)) throw new Error('Repair sheet is missing.');
+  sheet.click();
+  expect(folder?.classList.contains('is-open')).toBe(true);
+  expect(outlet.querySelector('#cp-workflow-area-1')?.hasAttribute('hidden')).toBe(false);
+  expect(outlet.querySelector('#cp-workflow-area-0')?.hasAttribute('hidden')).toBe(true);
+  expect(outlet.querySelector('.cp-capability-flap')?.getAttribute('aria-label')).toContain('REPAIR');
+  sheet.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+  expect(folder?.classList.contains('is-open')).toBe(false);
 });
 
-test('Product polish keeps feature content but labels its explanatory illustration without fabricated run receipts', async () => {
-  stubFetch({ '/api/site/routes?path=%2Fproduct': { status: 200, json: { path: '/product', title: 'Product', summary: 'Product.', section: 'product', ctas: [] } } });
-  registerPublicPages([], [], []);
-  const outlet = boot(); await renderRoute(outlet, '#/p/product');
-  expect(outlet.querySelector('.public-refined')).not.toBeNull();
-  expect(outlet.querySelectorAll('[data-feature-index]')).toHaveLength(4);
-  const features = [...outlet.querySelectorAll('[data-feature-index]')];
-  expect(features.map(feature => feature.querySelector('.feature-number')?.textContent)).toEqual(['01', '02', '03', '04']);
-  expect(features.every(feature => feature.querySelector('h2') !== null && feature.querySelector('p') !== null && feature.querySelector('a') !== null)).toBe(true);
-  expect(outlet.querySelector('[data-product-illustration]')?.textContent).toContain('Illustrative');
-  const sketch = outlet.querySelector('[data-product-illustration]');
-  expect(sketch?.querySelector('.contract-diff-header')?.textContent).toContain('Not executed');
-  expect(sketch?.querySelectorAll('.diff-line-number')).toHaveLength(4);
-  expect(sketch?.querySelector('[data-diff=removed] code')?.textContent).toBe('  id: string;');
-  expect(sketch?.querySelector('[data-diff=added] code')?.textContent).toBe('  id: OrderId;');
-  expect(sketch?.textContent).toContain('Independent checks must establish its result.');
-  expect(sketch?.textContent).not.toMatch(/passed|successfully|execution complete/i);
-  expect(outlet.querySelector('.public-product-preview')?.textContent).not.toMatch(/RUN-0142|00:04|NORTHWIND/);
+test('landing pricing cards come from the API snapshot', async () => {
+  stubFetch({ '/api/site/pricing': { status: 200, json: PRICING_SNAPSHOT } });
+  const outlet = bootFixed();
+  await renderRoute(outlet, '#/landing');
+  const cards = outlet.querySelectorAll('.pricing-section .price-card');
+  expect(cards.length).toBe(2);
+  expect(cards[0]?.querySelector('h3')?.textContent).toBe('Free capped tier');
+  expect(outlet.querySelector('.pricing-section')?.textContent).toContain('2026-11-01');
 });
 
-test('Pricing polish explains reservation flow without manufacturing an account balance', async () => {
-  stubFetch({ '/api/site/routes?path=%2Fpricing': { status: 200, json: PRICING } });
-  registerPublicPages([], [], []); const outlet = boot(); await renderRoute(outlet, '#/p/pricing');
-  expect(outlet.querySelector('[data-budget-concepts]')?.getAttribute('aria-label')).toContain('not an account balance');
-  expect(outlet.querySelectorAll('.public-price-details .public-steps li')).toHaveLength(3);
-  expect(outlet.querySelector('[data-budget-concepts]')?.textContent).not.toMatch(/\$|\d+ credits/);
+test('landing survives pricing outages with an honest note', async () => {
+  stubFetch({});
+  const outlet = bootFixed();
+  await renderRoute(outlet, '#/landing');
+  expect(outlet.querySelector('.cp-identity-hero')).not.toBeNull();
+  expect(outlet.querySelector('.pricing-section')?.textContent).toContain('unavailable right now');
 });
 
-test('Changelog keeps design notes separate from releases and gives each entry its own date/title/body', async () => {
+test('final CTA later button stays honest without navigating', async () => {
+  stubFetch({ '/api/site/pricing': { status: 200, json: PRICING_SNAPSHOT } });
+  const outlet = bootFixed();
+  await renderRoute(outlet, '#/landing');
+  const later = outlet.querySelector('.final-cta [data-evidence="later"]');
+  if (!(later instanceof HTMLButtonElement)) throw new Error('Later button is missing.');
+  later.click();
+  expect(outlet.querySelector('.final-cta p')?.textContent).toContain("When you're ready");
+});
+
+/* --- Fixed sub-pages. --- */
+
+test('product page uses the public shell with breadcrumb, grid, note, related', async () => {
+  stubFetch({});
+  const outlet = bootFixed();
+  await renderRoute(outlet, '#/product');
+  const page = outlet.querySelector('.public-page > .modern-container');
+  expect(page).not.toBeNull();
+  expect(outlet.querySelector('.public-breadcrumb')?.textContent).toContain('Home');
+  expect(outlet.querySelector('.public-page-hero h1')).not.toBeNull();
+  expect(outlet.querySelectorAll('.public-info-grid .public-info-card').length).toBeGreaterThan(0);
+  expect(outlet.querySelector('.public-note')).not.toBeNull();
+  expect(outlet.querySelector('.public-related')).not.toBeNull();
+});
+
+test('every fixed page renders a hero and resolving related links', async () => {
   stubFetch({
-    '/api/site/routes?path=%2Fchangelog': { status: 200, json: { path: '/changelog', title: 'Product notes', summary: 'Published notes.', section: 'product', ctas: [] } },
-    '/api/site/changelog': { status: 200, json: { design: [
-      { title: 'Plan revision 2', body: 'A specification note, not a shipped release.', date: '2026-10-24' },
-      { title: 'Public site draft', body: 'An illustrative content draft.', date: '2026-11-02' },
-    ], releases: [] } },
+    '/api/site/pricing': { status: 200, json: PRICING_SNAPSHOT },
+    '/api/site/faqs': { status: 200, json: [] },
+    '/api/site/templates': { status: 200, json: [] },
+    '/api/site/samples': { status: 200, json: [] },
+    '/api/health': { status: 200, json: { status: 'ok', service: 'changeproof', contentVersion: 'v1' } },
+    '/api/site/changelog': { status: 200, json: { design: [], releases: [] } },
+    '/api/site/roadmap': { status: 200, json: [] },
   });
-  registerPublicPages([], [], []);
-  const outlet = boot(); await renderRoute(outlet, '#/p/changelog');
-  const groups = [...outlet.querySelectorAll('.public-release')];
-  expect(groups.map(group => group.querySelector('h2')?.textContent)).toEqual(['Design notes', 'Releases']);
-  const entries = [...(groups[0]?.querySelectorAll('.release-entry') ?? [])];
-  expect(entries.map(entry => [...entry.children].map(child => child.tagName))).toEqual([['TIME', 'H3', 'P'], ['TIME', 'H3', 'P']]);
-  expect(entries.map(entry => entry.querySelector('time')?.getAttribute('datetime'))).toEqual(['2026-10-24', '2026-11-02']);
-  expect(entries.map(entry => entry.querySelector('h3')?.textContent)).toEqual(['Plan revision 2', 'Public site draft']);
-  expect(groups[1]?.textContent).toContain('Nothing published here yet.');
-  expect(groups[1]?.querySelector('.release-entry')).toBeNull();
+  const outlet = bootFixed();
+  const paths = routePaths();
+  for (const path of FIXED_PATHS) {
+    if (path === '/' || path === '/landing') continue;
+    await renderRoute(outlet, `#${path}`);
+    expect(outlet.querySelector('h1'), path).not.toBeNull();
+    const related = [...outlet.querySelectorAll('.public-related a')].map((a) => a.getAttribute('href'));
+    expect(related.length, path).toBeGreaterThan(0);
+    for (const href of related) {
+      expect(href, `${path} -> ${href}`).toMatch(/^#\//);
+      expect(paths, `${path} -> ${href}`).toContain((href ?? '').slice(1));
+    }
+  }
+});
+
+test('pricing page renders API tiers as text, never markup', async () => {
+  stubFetch({
+    '/api/site/pricing': {
+      status: 200,
+      json: {
+        pricingVersion: 'v9',
+        currency: 'USD',
+        tiers: [{ id: 'x', name: '<img src=x onerror=alert(1)>', notes: '<b>bold</b> notes' }],
+      },
+    },
+  });
+  const outlet = bootFixed();
+  await renderRoute(outlet, '#/pricing');
+  expect(outlet.querySelector('img')).toBeNull();
+  expect(outlet.querySelector('b')).toBeNull();
+  expect(outlet.querySelector('.public-info-card h2')?.textContent).toBe('<img src=x onerror=alert(1)>');
+  expect(outlet.querySelector('.public-info-card p')?.textContent).toBe('<b>bold</b> notes');
+});
+
+test('contact form posts a ticket and reports its id', async () => {
+  stubFetch({
+    '/api/support/tickets': {
+      status: 201,
+      json: { ticketId: 'ticket-9', status: 'open', category: 'question', summary: 'Hi', context: 'Help' },
+    },
+  });
+  const outlet = bootFixed();
+  await renderRoute(outlet, '#/contact');
+  const summary = outlet.querySelector('#contact-summary');
+  const context = outlet.querySelector('#contact-context');
+  const category = outlet.querySelector('#contact-category');
+  if (!(summary instanceof HTMLInputElement) || !(context instanceof HTMLTextAreaElement)) {
+    throw new Error('Contact fields are missing.');
+  }
+  if (!(category instanceof HTMLSelectElement)) throw new Error('Contact category is missing.');
+  summary.value = 'Cannot verify a run';
+  context.value = 'The status page says ok but runs fail.';
+  category.value = 'bug';
+  outlet.querySelector('form')?.dispatchEvent(new SubmitEvent('submit', { bubbles: true, cancelable: true }));
+  for (let i = 0; i < 20 && posted.length === 0; i += 1) {
+    await new Promise((resolve) => setTimeout(resolve, 10));
+  }
+  expect(posted.map((entry) => entry.url)).toContain('/api/support/tickets');
+  expect(posted[0]?.body).toEqual({
+    category: 'bug',
+    summary: 'Cannot verify a run',
+    context: 'The status page says ok but runs fail.',
+  });
+  for (let i = 0; i < 20 && !outlet.textContent.includes('ticket-9'); i += 1) {
+    await new Promise((resolve) => setTimeout(resolve, 10));
+  }
+  expect(outlet.textContent).toContain('ticket-9');
+});
+
+test('empty contact submit fails on the form without a request', async () => {
+  stubFetch({});
+  const outlet = bootFixed();
+  await renderRoute(outlet, '#/contact');
+  outlet.querySelector('form')?.dispatchEvent(new SubmitEvent('submit', { bubbles: true, cancelable: true }));
+  expect(outlet.querySelector('.error-text')?.textContent).toContain('both required');
+  expect(posted.length).toBe(0);
+});
+
+test('status page shows live health data', async () => {
+  stubFetch({
+    '/api/health': { status: 200, json: { status: 'ok', service: 'changeproof', contentVersion: '2026-11-03' } },
+  });
+  const outlet = bootFixed();
+  await renderRoute(outlet, '#/status');
+  expect(outlet.textContent).toContain('OK');
+  expect(outlet.textContent).toContain('2026-11-03');
+});
+
+test('changelog keeps releases and design notes separate', async () => {
+  stubFetch({
+    '/api/site/changelog': {
+      status: 200,
+      json: {
+        releases: [{ date: '2026-10-01', kind: 'release', version: '1.2.0', title: 'Shipped', body: 'Things.' }],
+        design: [{ date: '2026-10-02', kind: 'design', title: 'Exploring', body: 'Ideas.' }],
+      },
+    },
+  });
+  const outlet = bootFixed();
+  await renderRoute(outlet, '#/changelog');
+  const entries = outlet.querySelectorAll('.public-release');
+  expect(entries.length).toBe(2);
+  const eyebrows = [...outlet.querySelectorAll('.public-page-content .section-eyebrow')].map((node) => node.textContent);
+  expect(eyebrows).toEqual(['Releases', 'Design notes']);
+  expect(outlet.textContent).toContain('1.2.0');
+});
+
+test('roadmap renders statuses with evidence refs', async () => {
+  stubFetch({
+    '/api/site/roadmap': {
+      status: 200,
+      json: [{ id: 'a', title: 'OpenAPI deltas', status: 'in-qualification', evidenceRef: 'ev-1' }],
+    },
+  });
+  const outlet = bootFixed();
+  await renderRoute(outlet, '#/roadmap');
+  expect(outlet.querySelector('.public-info-card h2')?.textContent).toBe('OpenAPI deltas');
+  expect(outlet.textContent).toContain('in-qualification');
+  expect(outlet.textContent).toContain('ev-1');
+});
+
+test('templates page lists plans with disclosure details', async () => {
+  stubFetch({
+    '/api/site/templates': {
+      status: 200,
+      json: [
+        {
+          id: 'bugfix-run',
+          title: 'Bug fix run',
+          description: 'Fix one failure.',
+          requiresLogin: true,
+          fields: [{ name: 'intent', label: 'Intent', help: 'One sentence.' }],
+        },
+      ],
+    },
+  });
+  const outlet = bootFixed();
+  await renderRoute(outlet, '#/templates');
+  expect(outlet.querySelector('.public-info-card h2')?.textContent).toBe('Bug fix run');
+  expect(outlet.querySelector('details.public-template-detail summary')?.textContent).toBe('See plan contents');
+  expect(outlet.textContent).toContain('One sentence.');
+});
+
+test('sample report page links to sample details', async () => {
+  stubFetch({
+    '/api/site/samples': {
+      status: 200,
+      json: [
+        {
+          id: 's1',
+          title: 'Order totals',
+          summary: 'A totals change.',
+          provenance: {
+            datasetId: 'demo',
+            datasetVersion: '1',
+            capturedAt: '2026-01-01',
+            synthetic: true,
+            source: 'static-sample-dataset',
+            label: 'Synthetic sample',
+          },
+        },
+      ],
+    },
+  });
+  registerPublicPages([], [], ['s1']);
+  const app = document.createElement('div');
+  document.body.appendChild(app);
+  const { outlet } = renderShell(app);
+  await renderRoute(outlet, '#/sample-report');
+  expect(outlet.querySelector('.public-info-card h2')?.textContent).toBe('Order totals');
+  expect(outlet.querySelector('.public-info-card a')?.getAttribute('href')).toBe('#/p/samples/s1');
+});
+
+test('documentation FAQ search filters the list live', async () => {
+  stubFetch({
+    '/api/site/faqs': {
+      status: 200,
+      json: [
+        { id: 'a', question: 'How do budgets work?', answer: 'Caps apply.', topics: ['billing'], updatedAt: '2026-01-01' },
+        { id: 'b', question: 'How do retries work?', answer: 'Bounded.', topics: ['runs'], updatedAt: '2026-01-01' },
+      ],
+    },
+  });
+  const outlet = bootFixed();
+  await renderRoute(outlet, '#/documentation');
+  expect(outlet.querySelectorAll('details.public-faq').length).toBe(2);
+  const input = outlet.querySelector('[data-public-search="faq"]');
+  if (!(input instanceof HTMLInputElement)) throw new Error('FAQ search is missing.');
+  input.value = 'budgets';
+  input.dispatchEvent(new Event('input', { bubbles: true }));
+  const items = [...outlet.querySelectorAll('details.public-faq')];
+  expect(items.filter((item) => !item.hasAttribute('hidden')).length).toBe(1);
+  input.value = 'nothing matches this';
+  input.dispatchEvent(new Event('input', { bubbles: true }));
+  expect(outlet.querySelector('.public-no-results')?.hasAttribute('hidden')).toBe(false);
 });

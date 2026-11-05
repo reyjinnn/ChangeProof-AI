@@ -5,6 +5,9 @@
 
 export type Theme = 'light' | 'dark';
 
+/** Dispatched after login/logout so the shell re-renders in place. */
+export const SESSION_CHANGED_EVENT = 'cp:session-changed';
+
 const THEME_KEY = 'changeproof-modern-theme';
 const SIDEBAR_KEY = 'changeproof-sidebar-collapsed';
 const DRAFT_PREFIX = 'changeproof-draft:';

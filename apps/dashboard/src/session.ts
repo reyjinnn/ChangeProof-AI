@@ -3,10 +3,11 @@
  * never a full reload, which races navigation and wipes in-memory
  * tickets. */
 
-import { apiGet, apiPost } from './api.js';
-import { h, svgEl } from './components.js';
+import { apiGet } from './api.js';
+import { setAccountPopoverState } from './shell.js';
+import { SESSION_CHANGED_EVENT } from './store.js';
 
-export const SESSION_CHANGED_EVENT = 'cp:session-changed';
+export { SESSION_CHANGED_EVENT };
 
 export interface AccountState {
   readonly authenticated: boolean;
@@ -14,43 +15,34 @@ export interface AccountState {
   readonly role?: string;
 }
 
-/** Topbar account slot: login link out, tenant/role + logout in. */
+function initialsFor(tenantId: string): string {
+  const letters = tenantId.replace(/[^a-z0-9]/gi, '').slice(0, 2).toUpperCase();
+  return letters === '' ? '–' : letters;
+}
+
+/** Topbar avatar + account popover identity. Logged out shows Guest and
+ * the popover offers Sign in; logged in shows tenant initials, identity,
+ * and Sign out (handled by the auth page module). */
 export function renderAccount(state: AccountState): void {
-  const sidebarSummary = document.getElementById('sidebar-session-summary');
-  if (sidebarSummary !== null) {
-    sidebarSummary.textContent =
-      state.authenticated && state.tenantId !== undefined && state.role !== undefined
-        ? 'Authenticated tenant workspace'
-        : 'Guest session · sign in to access workspace';
+  const authenticated = state.authenticated && state.tenantId !== undefined && state.role !== undefined;
+  const name = authenticated ? (state.tenantId) : 'Guest';
+  const detail = authenticated ? `${state.role} · workspace` : 'Not signed in';
+  const initials = authenticated ? initialsFor(state.tenantId) : 'G';
+  setAccountPopoverState({ authenticated, name, detail, initials });
+  document.querySelector('.top-avatar .avatar-circle')?.replaceChildren(document.createTextNode(initials));
+  document.querySelector('.top-avatar .avatar-label')?.replaceChildren(document.createTextNode(name));
+  document.querySelector('.top-avatar')?.setAttribute('aria-label', authenticated ? `${name} account menu` : 'Guest account menu');
+  const orgLabel = document.getElementById('orgLabel');
+  if (orgLabel !== null) orgLabel.textContent = name;
+  const orgDetail = document.getElementById('orgDetail');
+  if (orgDetail !== null) {
+    // `authenticated` already implies a defined role (same alias as name/detail above).
+    orgDetail.textContent = authenticated
+      ? state.role.slice(0, 1).toUpperCase() + state.role.slice(1)
+      : 'Sign in to load';
   }
-  const slot = document.getElementById('account');
-  if (slot === null) return;
-  if (!state.authenticated || state.tenantId === undefined || state.role === undefined) {
-    slot.replaceChildren(h('a', { class: 'button', href: '#/login' }, ['Log in']));
-    return;
-  }
-  const logout = h('button', { class: 'button', type: 'button' }, ['Log out']);
-  logout.addEventListener('click', () => {
-    logout.disabled = true;
-    void apiPost('/api/auth/logout', {})
-      .catch(() => undefined)
-      .then(() => {
-        window.location.hash = '#/';
-        notifySessionChanged();
-      });
-  });
-  const summary = h('summary', { id: 'account-summary', 'aria-label': 'Account menu', title: `${state.tenantId} · ${state.role}` }, [
-    svgEl('svg', { viewBox: '0 0 24 24', width: '18', height: '18', fill: 'none', stroke: 'currentColor', 'stroke-width': '1.6', 'aria-hidden': 'true' }, [svgEl('circle', { cx: '12', cy: '8', r: '3.5' }), svgEl('path', { d: 'M5 21v-2a7 7 0 0 1 14 0v2' })]),
-  ]);
-  const menu = h('details', { id: 'account-menu', class: 'account-menu' }, [summary,
-    h('div', { class: 'account-popover' }, [
-      h('strong', {}, [state.tenantId]), h('span', { class: 'badge', 'data-tone': 'info' }, [`${state.tenantId} · ${state.role}`]),
-      h('a', { href: '#/account' }, ['Account settings']), h('a', { href: '#/team' }, ['Team & access']), h('a', { href: '#/privacy' }, ['Privacy & data']),
-      h('a', { class: 'button', href: '#/settings' }, ['Settings']), logout,
-    ]),
-  ]);
-  menu.addEventListener('keydown', event => { if (event.key === 'Escape') { event.stopPropagation(); menu.open = false; summary.focus(); } });
-  slot.replaceChildren(menu);
+  const orgLogo = document.querySelector('.sidebar-foot .org-logo');
+  if (orgLogo !== null) orgLogo.textContent = initials.slice(0, 1);
 }
 
 export async function refreshAccount(): Promise<void> {

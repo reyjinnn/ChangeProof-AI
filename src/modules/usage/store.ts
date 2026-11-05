@@ -178,6 +178,15 @@ export interface UsageStore {
       reserved: number;
     }[];
   }>;
+  listLedger(input: { tenantId: string; limit: number }): Promise<{
+    entries: readonly {
+      entryId: string;
+      kind: string;
+      amount: number;
+      runId: string;
+      occurredAt: string;
+    }[];
+  }>;
 }
 
 export function createUsageStore(db: UsageDb): UsageStore {
@@ -680,6 +689,48 @@ export function createUsageStore(db: UsageDb): UsageStore {
           consumed,
           reservedActive,
           reservations,
+        };
+      });
+    },
+
+    async listLedger(input: { tenantId: string; limit: number }): Promise<{
+      entries: readonly {
+        entryId: string;
+        kind: string;
+        amount: number;
+        runId: string;
+        occurredAt: string;
+      }[];
+    }> {
+      const tenantId = IdSchema.parse(input.tenantId);
+      const limit = z.number().int().min(1).max(100).parse(input.limit);
+      return inTenant(tenantId, async (client) => {
+        const table = await client.query(`SELECT to_regclass('public.usage_ledger') AS reg`);
+        if ((table.rows[0] as { reg: string | null }).reg === null) {
+          return { entries: [] };
+        }
+        const found = await client.query(
+          `SELECT effect_id, event, consumed_amount, run_id, occurred_at FROM usage_ledger
+           WHERE tenant_id = $1 ORDER BY occurred_at DESC, effect_id DESC LIMIT $2`,
+          [tenantId, limit],
+        );
+        return {
+          entries: found.rows.map((unknownRow) => {
+            const row = unknownRow as {
+              effect_id: string;
+              event: string;
+              consumed_amount: number;
+              run_id: string;
+              occurred_at: Date;
+            };
+            return {
+              entryId: row.effect_id,
+              kind: row.event,
+              amount: row.consumed_amount,
+              runId: row.run_id,
+              occurredAt: row.occurred_at.toISOString(),
+            };
+          }),
         };
       });
     },

@@ -16,7 +16,7 @@
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
     "clean": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\"",
-    "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p apps/dashboard/tsconfig.json",
+    "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p apps/dashboard/tsconfig.json && tsc --noEmit -p apps/trace-viewer/tsconfig.json",
     "lint": "eslint . && depcruise --config .dependency-cruiser.cjs src apps",
     "lint:eslint": "eslint .",
     "lint:boundaries": "depcruise --config .dependency-cruiser.cjs src",
@@ -34,6 +34,8 @@
     "dev": "vite apps/dashboard",
     "build:ui": "vite build apps/dashboard",
     "test:ui": "vitest run --config apps/dashboard/vitest.config.ts",
+    "test:trace": "vitest run --config apps/trace-viewer/vitest.config.ts",
+    "build:trace": "vite build apps/trace-viewer",
     "test:e2e": "node tests/e2e/run.mjs",
     "verify": "pnpm typecheck && pnpm lint && pnpm test"
   },

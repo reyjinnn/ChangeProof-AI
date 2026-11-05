@@ -47,7 +47,7 @@ function outletWithAnnouncer(): HTMLElement {
   const announcer = document.createElement('p');
   announcer.id = 'announcer';
   const outlet = document.createElement('main');
-  outlet.id = 'outlet';
+  outlet.id = 'content';
   outlet.tabIndex = -1;
   document.body.append(announcer, outlet);
   return outlet;

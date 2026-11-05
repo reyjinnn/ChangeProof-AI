@@ -2,10 +2,11 @@
  * list over the real notifications store; every action re-lists so the
  * count is always fresh from the server, never locally guessed. Run
  * links navigate; deep links render as plain text because the /app
- * surface they name is not this dashboard — never as hrefs. */
+ * surface they name is not this dashboard — never as hrefs. Items use
+ * the mockup `.notification-toast` structure shared with the shell. */
 
 import { apiGet, apiPost, ApiRequestError } from '../api.js';
-import { badge, emptyState, errorState, h } from '../components.js';
+import { badge, emptyState, errorState, h, iconSvg } from '../components.js';
 import { registerRoute } from '../routes.js';
 
 const PAGE_LIMIT = 20;
@@ -169,25 +170,32 @@ async function renderInbox(outlet: HTMLElement): Promise<void> {
           actionNote.replaceChildren(h('span', { class: 'error-text', role: 'alert' }, [asErrorMessage(error)]));
         });
     });
-    return h('article', { class: 'faq-item' }, [
-      h('h3', {}, [categoryBadge(item.category), document.createTextNode(` ${item.title}`)]),
-      h('p', { class: 'muted' }, [`${read ? 'Read' : 'Unread'} · ${item.createdAt}`]),
-      h('p', {}, [item.body]),
+    // Mockup `.notification-toast` shape (shell notification stack):
+    // icon slot, body with heading + text + meta, action column.
+    const tone = item.category === 'blockers' ? ' error' : item.category === 'results' ? ' success' : '';
+    const iconSlot = h('span', { class: 'event-icon', 'aria-hidden': 'true' }, []);
+    iconSlot.appendChild(iconSvg(read ? 'check' : 'bell'));
+    const heading = h('h3', {}, [categoryBadge(item.category), document.createTextNode(` ${item.title}`)]);
+    if (!read) heading.prepend(h('i', { class: 'read-dot', 'aria-hidden': 'true' }, []));
+    const meta = h('div', { class: 'notification-meta' }, [
+      h('span', {}, [`${read ? 'Read' : 'Unread'} · ${item.createdAt}`]),
       ...(item.runId === undefined
         ? []
-        : [
-            h('p', {}, [
-              h('a', { href: `#/run?id=${encodeURIComponent(item.runId)}` }, ['Open run']),
-            ]),
-          ]),
+        : [h('a', { href: `#/run?id=${encodeURIComponent(item.runId)}` }, ['Open run →'])]),
+    ]);
+    const body = h('div', { class: 'notification-body' }, [
+      heading,
+      h('p', {}, [item.body]),
       ...(item.deepLink === undefined
         ? []
         : [h('p', { class: 'muted' }, ['Deep link ', h('code', { class: 'inline' }, [item.deepLink])])]),
-      h('p', {}, [
-        ...(readButton === null ? [] : [readButton, document.createTextNode(' ')]),
-        dismissButton,
-      ]),
+      meta,
     ]);
+    const actions = h('div', { class: 'notification-actions' }, [
+      ...(readButton === null ? [] : [readButton]),
+      dismissButton,
+    ]);
+    return h('article', { class: `notification-toast${tone}${read ? ' is-read' : ''}` }, [iconSlot, body, actions]);
   };
 
   const paint = (items: readonly InboxItem[], unreadCount: number, nextCursor: string, append: boolean): void => {

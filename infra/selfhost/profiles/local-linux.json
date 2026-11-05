@@ -15,7 +15,10 @@
     "V7__engagement.sql",
     "V8__teamwork.sql",
     "V9__distribution.sql",
-    "V10__enterprise.sql"
+    "V10__enterprise.sql",
+    "V11__service_operations.sql",
+    "V12__workspace.sql",
+    "V13__github_identity.sql"
   ],
   "maxConcurrentRuns": 4,
   "diskGb": 20,

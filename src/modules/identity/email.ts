@@ -101,7 +101,8 @@ function randomId(prefix: string): string {
   return `${prefix}-${randomBytes(16).toString('hex')}`;
 }
 
-function normalizeEmail(email: string): string {
+/** Shared by the GitHub identity store: one email rule for every sign-in path. */
+export function normalizeEmail(email: string): string {
   const normalized = email.trim().toLowerCase();
   if (normalized.length === 0 || normalized.length > 254 || !EMAIL_PATTERN.test(normalized)) {
     throw new ChangeProofError('Email address is malformed; refusing.');

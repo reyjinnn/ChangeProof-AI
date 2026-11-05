@@ -77,7 +77,7 @@ const HITS = {
 test('topbar carries a search trigger; Ctrl+K opens the palette focused', () => {
   boot();
   const button = trigger();
-  expect(button.textContent).toContain('Ctrl+K');
+  expect(button.textContent).toContain('ctrl+K');
   press(document, 'k', { ctrlKey: true });
   expect(document.querySelector('.modal-backdrop')).not.toBeNull();
   expect(document.activeElement?.id).toBe('palette-q');

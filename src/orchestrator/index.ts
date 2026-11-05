@@ -2,12 +2,17 @@ export * from './bundle.js';
 export * from './configuration.js';
 export * from './distribution.js';
 export * from './errors.js';
+export * from './github-auth.js';
+export * from './installation-connect.js';
 export * from './providers.js';
 export * from './publication.js';
+
+export type { GitHubClient } from '../modules/github/index.js';
 
 import {
   type BundleAssessment,
   type EmailDeliveryPort,
+  type ModelClientPort,
   type SecretBrokerPort,
   type TargetAssessment,
   type TelemetryConnectorPort,
@@ -55,6 +60,7 @@ import {
   authorizeMutation,
   createHypothesisLedger,
   createModelClient,
+  modelFetchTransport,
   reviewPatch,
   type ModelClientConfig,
 } from '../modules/agent/index.js';
@@ -68,6 +74,14 @@ import {
   reduceMatchedWindows,
   summarizeCampaign,
   validateFaultTarget,
+  CleanupReceiptSchema,
+  GuestRunner,
+  QuarantineError,
+  MODAL_PROBE_APP,
+  runModalProbe,
+  type CleanupReceipt,
+  type ModalProbeSummary,
+  type ModalSpawner,
 } from '../modules/verifier/index.js';
 import {
   type DependencyBroker,
@@ -117,6 +131,23 @@ import {
   type SupportDb,
   type SupportStore,
 } from '../modules/support/index.js';
+import {
+  AdapterRegistry,
+  DOTNET_ADAPTER_RECORD,
+  GO_ADAPTER_RECORD,
+  GO_FIBER_RECORD,
+  PHP_ADAPTER_RECORD,
+  PYTHON_ADAPTER_RECORD,
+  PYTHON_DJANGO_RECORD,
+  PYTHON_PYDANTIC_RECORD,
+  PYTHON_SQLALCHEMY_RECORD,
+  TYPESCRIPT_ADAPTER_RECORD,
+  TYPESCRIPT_EXPRESS_RECORD,
+  TYPESCRIPT_FASTIFY_RECORD,
+  TYPESCRIPT_NESTJS_RECORD,
+  TYPESCRIPT_PRISMA_RECORD,
+  TYPESCRIPT_REACT_RECORD,
+} from '../modules/adapters/index.js';
 
 /**
  * Composition root (.prepare/architecture.md §3).
@@ -283,6 +314,96 @@ export function composeGitHub(broker: SecretBrokerPort): GitHubComposition {
     client: createGitHubClient({ broker, transport: octokitTransport }),
   };
 }
+
+/**
+ * Live model client wiring (P3, WP3-07).
+ *
+ * The composition root binds the live HTTP transport to the broker; it adds
+ * no reasoning or budget behavior of its own. The credential stays behind
+ * the broker ref; budgets come from the caller and are never reset.
+ */
+export interface LiveModelClientOptions {
+  readonly baseUrl: string;
+  readonly secrets: SecretBrokerPort;
+  readonly secretRef: string;
+  readonly provider: string;
+  readonly model: string;
+  readonly configId: string;
+  readonly tokenCeiling: number;
+}
+
+export function composeLiveModelClient(options: LiveModelClientOptions): ModelClientPort {
+  return createModelClient({ ...options, transport: modelFetchTransport(options.baseUrl) });
+}
+
+/**
+ * Modal Sandbox runner wiring (P4, WP3-04).
+ *
+ * The composition root injects the secret broker, the trusted helper paths,
+ * and the spawn seam into the leaf runner; it adds no guest behavior of its
+ * own. Each probe run maps to a cleanup receipt recorded on a
+ * per-composition quarantine ledger: an unconfirmed cleanup quarantines
+ * instead of passing.
+ */
+export interface ModalRunnerOptions {
+  readonly secrets: SecretBrokerPort;
+  readonly tokenIdRef: string;
+  readonly tokenSecretRef: string;
+  readonly pythonBin: string;
+  readonly scriptPath: string;
+  readonly expectedApp?: string | undefined;
+  readonly timeoutMs: number;
+  readonly spawner?: ModalSpawner | undefined;
+}
+
+export interface ModalProbeRunResult {
+  readonly summary: ModalProbeSummary;
+  readonly cleanup: CleanupReceipt;
+  readonly quarantined: boolean;
+  readonly quarantineReason?: string | undefined;
+}
+
+export interface ModalRunnerComposition {
+  runProbes(nowIso: string): Promise<ModalProbeRunResult>;
+}
+
+export function composeModalRunner(options: ModalRunnerOptions): ModalRunnerComposition {
+  const guestRunner = new GuestRunner();
+  return {
+    runProbes: async (nowIso: string): Promise<ModalProbeRunResult> => {
+      const run = await runModalProbe({
+        config: {
+          pythonBin: options.pythonBin,
+          scriptPath: options.scriptPath,
+          expectedApp: options.expectedApp ?? MODAL_PROBE_APP,
+          timeoutMs: options.timeoutMs,
+        },
+        secrets: options.secrets,
+        tokenIdRef: options.tokenIdRef,
+        tokenSecretRef: options.tokenSecretRef,
+        ...(options.spawner === undefined ? {} : { spawner: options.spawner }),
+      });
+      const removed = run.summary.cleanup.terminated && run.summary.cleanup.confirmed;
+      const cleanup = CleanupReceiptSchema.parse({
+        schemaVersion: '1',
+        runId: run.summary.runId,
+        completedAt: nowIso,
+        targets: [{ kind: 'container', id: run.summary.sandboxId, removed }],
+        environmentReusable: run.summary.verdict === 'pass' && removed,
+      });
+      try {
+        guestRunner.recordCleanup(cleanup);
+        return { summary: run.summary, cleanup, quarantined: false };
+      } catch (error) {
+        if (!(error instanceof QuarantineError)) {
+          throw error;
+        }
+        return { summary: run.summary, cleanup, quarantined: true, quarantineReason: error.message };
+      }
+    },
+  };
+}
+
 
 /**
  * Observability connector wiring (WP3-15).
@@ -491,6 +612,39 @@ export function composeSupport(
       session: { deriveContext: (input) => deps.identity.deriveContext(input) },
       jobs: { requestJobCancel: (input) => deps.jobs.requestCancel(input) },
     }),
+  };
+}
+
+/**
+ * Adapter-capability wiring (WP3-30 capability matrix).
+ *
+ * The composition root builds the registry from the fourteen trusted,
+ * explicitly-versioned adapter records; it adds no support claim of its
+ * own. Target levels are claimed support, proven levels are evidenced
+ * support — the route reports both side by side, never merged.
+ */
+export interface AdapterCapabilitiesComposition {
+  registry: AdapterRegistry;
+}
+
+export function composeAdapterCapabilities(): AdapterCapabilitiesComposition {
+  return {
+    registry: new AdapterRegistry([
+      TYPESCRIPT_ADAPTER_RECORD,
+      TYPESCRIPT_EXPRESS_RECORD,
+      TYPESCRIPT_REACT_RECORD,
+      TYPESCRIPT_NESTJS_RECORD,
+      TYPESCRIPT_FASTIFY_RECORD,
+      TYPESCRIPT_PRISMA_RECORD,
+      PYTHON_ADAPTER_RECORD,
+      PYTHON_DJANGO_RECORD,
+      PYTHON_PYDANTIC_RECORD,
+      PYTHON_SQLALCHEMY_RECORD,
+      GO_ADAPTER_RECORD,
+      GO_FIBER_RECORD,
+      PHP_ADAPTER_RECORD,
+      DOTNET_ADAPTER_RECORD,
+    ]),
   };
 }
 

@@ -1,10 +1,11 @@
-/* Billing (T-49, WP3-24/31): the current usage period cap, consumed
- * and reserved totals, and open reservations. Invoices and payment
- * methods have no listing endpoint — the backend only records provider
- * webhook events — so the page says so instead of faking a table. */
+/* Usage & credits (T-49, WP3-24/31): the current usage period cap,
+ * consumed and reserved totals, and open reservations. Invoices, the
+ * credit ledger, spending limits, and checkout have no listing or write
+ * endpoint — the backend only records provider webhook events — so the
+ * page says so instead of faking tables or saved settings. */
 
 import { apiGet, ApiRequestError } from '../api.js';
-import { emptyState, errorState, h, pageHead } from '../components.js';
+import { emptyState, errorState, field, h, head, padcard, pillIcon, row, staticBadge, table } from '../components.js';
 import { registerRoute } from '../routes.js';
 
 interface BillingSession {
@@ -27,12 +28,92 @@ interface Balances {
   readonly reservations: readonly Reservation[];
 }
 
+interface LedgerEntry {
+  readonly entryId: string;
+  readonly kind: string;
+  readonly amount: string;
+  readonly detail: string;
+}
+
 function loginCard(outlet: HTMLElement): void {
   outlet.replaceChildren(
     h('section', { class: 'card' }, [
       h('h1', {}, ['Billing needs a login']),
       h('p', {}, ['Log in to see this organization\u2019s usage and reservations.']),
       h('p', {}, [h('a', { class: 'button primary', href: '#/login' }, ['Log in'])]),
+    ]),
+  );
+}
+
+function statCard(label: string, value: string, help: string, meterPercent: number | null): HTMLElement {
+  const valueEl = h('div', { class: 'value' }, [value]);
+  const card = h('section', { class: 'card stat' }, [
+    h('div', { class: 'stat-top' }, [h('span', { class: 'label' }, [label]), pillIcon('usage')]),
+    valueEl,
+    h('div', { class: 'help' }, [help]),
+  ]);
+  if (meterPercent !== null) {
+    const clamped = Math.min(100, Math.max(0, meterPercent));
+    card.appendChild(h('div', { class: 'meter' }, [h('span', { style: `width:${String(clamped)}%` }, [])]));
+  }
+  return card;
+}
+
+function asLedgerEntries(data: unknown): LedgerEntry[] | null {
+  const items = Array.isArray(data)
+    ? data
+    : typeof data === 'object' && data !== null && Array.isArray((data as Record<string, unknown>)['items'])
+      ? ((data as Record<string, unknown>)['items'] as unknown[])
+      : null;
+  if (items === null) return null;
+  const entries: LedgerEntry[] = [];
+  for (const item of items) {
+    if (typeof item !== 'object' || item === null) return null;
+    const record = item as Record<string, unknown>;
+    const entryId = record['entryId'] ?? record['id'];
+    const kind = record['kind'] ?? record['type'];
+    const amount = record['amount'];
+    if (typeof entryId !== 'string' || typeof kind !== 'string') return null;
+    const detail = record['detail'] ?? record['runId'] ?? '';
+    entries.push({
+      entryId,
+      kind,
+      amount: typeof amount === 'number' ? String(amount) : typeof amount === 'string' ? amount : '—',
+      detail: typeof detail === 'string' ? detail : '',
+    });
+  }
+  return entries;
+}
+
+function capsForm(cap: number): HTMLElement {
+  const ceiling = field({ id: 'caps-ceiling', label: 'Credit ceiling per period', required: true, type: 'number' });
+  ceiling.input.value = String(cap);
+  ceiling.input.min = '1';
+  const concurrency = field({ id: 'caps-concurrency', label: 'Max concurrent jobs', required: true, type: 'number' });
+  concurrency.input.min = '1';
+  concurrency.input.placeholder = 'Not reported by the service';
+  const note = h('p', { 'aria-live': 'polite' }, []);
+  const submit = h('button', { class: 'button', type: 'submit' }, ['Save limits']);
+  const form = h('form', { id: 'capsForm', novalidate: 'novalidate' }, [
+    h('div', { class: 'grid2' }, [ceiling.wrap, concurrency.wrap]),
+    note,
+    h('p', {}, [submit]),
+  ]);
+  form.addEventListener('submit', (event) => {
+    event.preventDefault();
+    // Fail closed: no spending-limit endpoint exists, so nothing is sent
+    // and nothing claims to be saved.
+    note.replaceChildren(
+      h('span', { class: 'error-text', role: 'alert' }, [
+        'Not saved: the service exposes no spending-limit endpoint, so the period cap stays as it is.',
+      ]),
+    );
+  });
+  return padcard(
+    'Budget & concurrency',
+    h('div', {}, [
+      form,
+      h('p', { class: 'help' }, ['Only owners can raise the ceiling once the endpoint exists.']),
     ]),
   );
 }
@@ -72,84 +153,93 @@ async function renderBilling(outlet: HTMLElement): Promise<void> {
 
   if (balances.periodId === null || balances.cap === null) {
     outlet.replaceChildren(
-      pageHead({ title: 'Usage & data', subtitle: 'Your current billing period and data controls.' }),
-      emptyState('Usage period not configured', 'This organization has no active usage entitlement. Ask your operator to configure the period and cap before submitting a run.'),
-      h('section', { class: 'card' }, [h('h2', {}, ['Data and privacy']), h('p', {}, ['Account and organization data controls remain available.']), h('a', { href: '#/privacy' }, ['Open privacy & data controls'])]),
+      h('section', { class: 'card' }, [
+        emptyState(
+          'No active billing period',
+          'This organization has no spending cap yet, so new runs cannot be admitted. Ask your operator to set the initial entitlement; usage appears here afterwards.',
+        ),
+      ]),
     );
     return;
   }
 
-  const cap = balances.cap;
-  const rows = balances.reservations.map((reservation) =>
-    h('tr', {}, [
-      h('td', {}, [reservation.reservationId]),
-      h('td', {}, [h('a', { href: `#/run?id=${encodeURIComponent(reservation.runId)}` }, [reservation.runId])]),
-      h('td', {}, [reservation.state]),
-      h('td', {}, [String(reservation.reserved)]),
-      h('td', {}, [String(reservation.consumed)]),
-    ]),
-  );
-
   const remaining = balances.cap - balances.consumed - balances.reservedActive;
+  const usedPercent = balances.cap > 0 ? ((balances.consumed + balances.reservedActive) / balances.cap) * 100 : 0;
   const stats = h('div', { class: 'stats' }, [
-    h('div', { class: 'stat' }, [
-      h('div', { class: 'label' }, ['Period cap']),
-      h('div', { class: 'value' }, [String(balances.cap)]),
-      h('div', { class: 'sub' }, ['Active billing cycle cap']),
-    ]),
-    h('div', { class: 'stat' }, [
-      h('div', { class: 'label' }, ['Consumed']),
-      h('div', { class: 'value' }, [String(balances.consumed)]),
-      h('div', { class: 'sub' }, ['Settled run usage']),
-    ]),
-    h('div', { class: 'stat' }, [
-      h('div', { class: 'label' }, ['Active reserved']),
-      h('div', { class: 'value' }, [String(balances.reservedActive)]),
-      h('div', { class: 'sub' }, [`${String(balances.reservations.length)} open reservation(s)`]),
-    ]),
-    h('div', { class: 'stat' }, [
-      h('div', { class: 'label' }, ['Remaining']),
-      h('div', { class: 'value' }, [String(remaining)]),
-      h('div', { class: 'sub' }, ['Available for new runs']),
-    ]),
+    statCard('Period cap', String(balances.cap), 'Active billing cycle cap', null),
+    statCard('Consumed', String(balances.consumed), 'Settled run usage', usedPercent),
+    statCard('Active reserved', String(balances.reservedActive), `${String(balances.reservations.length)} open reservation(s)`, null),
+    statCard('Remaining', String(remaining), 'Available for new runs', null),
   ]);
 
-  const percent = (value: number): string => `${Math.min(100, Math.max(0, cap > 0 ? value / cap * 100 : 0))}%`;
-  const entitlement = h('section', { class: 'card usage-entitlement' }, [
-    h('div', { class: 'card-head' }, [h('h2', {}, ['Current period entitlement']), h('span', { class: 'badge' }, [balances.periodId])]),
-    h('div', { class: 'pad' }, [
-      h('p', {}, [h('strong', {}, [String(balances.consumed + balances.reservedActive)]), ` of ${balances.cap} · ${remaining} remaining`]),
-      h('div', { class: 'usage-bar', role: 'img', 'aria-label': `${balances.consumed} used, ${balances.reservedActive} reserved, ${remaining} remaining` }, [
-        h('span', { class: 'settled', style: `width:${percent(balances.consumed)}` }),
-        h('span', { class: 'reserved', style: `width:${percent(balances.reservedActive)}` }),
-      ]),
-      h('div', { class: 'legend' }, [h('span', {}, [`Used (settled) ${balances.consumed}`]), h('span', {}, [`Reserved ${balances.reservedActive}`])]),
-      h('p', { class: 'help' }, ['Usage and reservation status are separate from run status and verification verdicts.']),
-    ]),
+  const reservations = balances.reservations.length === 0
+    ? h('p', {}, ['No open reservations in this period.'])
+    : table(
+        ['Reservation', 'Run', 'State', 'Reserved', 'Consumed'],
+        balances.reservations.map((reservation) => [
+          reservation.reservationId,
+          h('a', { href: `#/runs/${reservation.runId}` }, [reservation.runId]),
+          reservation.state,
+          String(reservation.reserved),
+          String(reservation.consumed),
+        ]),
+      );
+
+  const ledgerHost = h('div', {}, [
+    h('p', { class: 'muted' }, ['Reading the credit ledger…']),
   ]);
-  const reservations = h('section', { class: 'card' }, [
-      h('h2', {}, ['Usage & reservations']),
-      h('p', {}, [`Period ${balances.periodId}: cap ${balances.cap}, consumed ${balances.consumed}, reserved ${balances.reservedActive}, remaining ${remaining}.`]),
-      balances.reservations.length === 0
-        ? h('p', {}, ['No open reservations in this period.'])
-        : h('div', { class: 'table-wrap' }, [h('table', {}, [
-            h('thead', {}, [
-              h('tr', {}, [
-                h('th', {}, ['Reservation']),
-                h('th', {}, ['Run']),
-                h('th', {}, ['State']),
-                h('th', {}, ['Reserved']),
-                h('th', {}, ['Consumed']),
-              ]),
+
+  const checkoutNote = h('p', { 'aria-live': 'polite' }, []);
+  const checkout = h('button', { class: 'button primary', type: 'button' }, ['Start checkout']);
+  checkout.addEventListener('click', () => {
+    checkoutNote.replaceChildren(
+      h('span', { class: 'error-text', role: 'alert' }, [
+        'Checkout is not configured: the service exposes no payment endpoint.',
+      ]),
+    );
+  });
+
+  outlet.replaceChildren(
+    head('Usage & credits', 'Period cap, settled usage, reservations, and plan settlement.'),
+    stats,
+    h('section', { class: 'card' }, [
+      h('div', { class: 'card-head' }, [
+        h('div', {}, [
+          h('h2', {}, ['Usage & reservations']),
+          h('div', { class: 'help' }, [
+            `Period ${balances.periodId}: cap ${balances.cap}, consumed ${balances.consumed}, reserved ${balances.reservedActive}, remaining ${remaining}.`,
+          ]),
+        ]),
+      ]),
+      h('div', { class: 'pad' }, [reservations]),
+    ]),
+    h('div', { class: 'split' }, [
+      h('div', {}, [
+        h('section', { class: 'card' }, [
+          h('div', { class: 'card-head' }, [
+            h('div', {}, [
+              h('h2', {}, ['Immutable credit ledger']),
+              h('div', { class: 'help' }, ['Append-only entries; nothing here is edited or averaged.']),
             ]),
-            h('tbody', {}, rows),
-          ])]),
-    ]);
-  const invoices = h('section', { class: 'card' }, [
-      h('div', { class: 'eyebrow' }, ['Provider Settlement']),
-      h('h2', {}, ['Invoices']),
-      h('p', {}, [
-        'There is no invoice listing: the service records provider payment webhooks but exposes no invoice or payment-method endpoint, so charges live with the payment provider.',
+          ]),
+          h('div', { class: 'pad' }, [ledgerHost]),
+        ]),
+        capsForm(balances.cap),
+      ]),
+      h('aside', {}, [
+        padcard(
+          'Current plan',
+          h('div', {}, [
+            row('Plan', staticBadge('not reported', '')),
+            row('Period cap', `${String(balances.cap)} credits`),
+            row('Settlement', 'Provider webhooks only'),
+            h('p', { class: 'help' }, [
+              'There is no invoice listing: the service records provider payment webhooks but exposes no invoice or payment-method endpoint, so charges live with the payment provider.',
+            ]),
+            checkoutNote,
+            h('p', {}, [checkout]),
+          ]),
+        ),
       ]),
     ]);
   outlet.replaceChildren(
@@ -162,8 +252,45 @@ async function renderBilling(outlet: HTMLElement): Promise<void> {
       h('section', { class: 'card' }, [h('h2', {}, ['Data deletion']), h('p', {}, ['Organization owners can review the real deletion controls and pending status in privacy settings.']), h('a', { href: '#/privacy' }, ['Open privacy & data controls'])]),
     ]),
   );
+
+  try {
+    const entries = asLedgerEntries(await apiGet<unknown>('/api/billing/ledger?limit=50'));
+    if (entries === null || entries.length === 0) {
+      ledgerHost.replaceChildren(
+        h('div', { class: 'empty-state' }, [
+          h('h2', {}, ['No ledger entries']),
+          h('p', {}, [
+            'No usage has settled in this period yet. Entries appear here as runs consume reserved credits.',
+          ]),
+        ]),
+      );
+    } else {
+      ledgerHost.replaceChildren(
+        table(
+          ['Entry', 'Kind', 'Amount', 'Details'],
+          entries.map((entry) => [entry.entryId, entry.kind, entry.amount, entry.detail]),
+        ),
+      );
+    }
+  } catch {
+    ledgerHost.replaceChildren(
+      h('div', { class: 'empty-state' }, [
+        h('h2', {}, ['Ledger unavailable']),
+        h('p', {}, [
+          'The credit ledger could not be loaded. Settled usage stays visible in the period totals above.',
+        ]),
+      ]),
+    );
+  }
 }
 
 export function registerBillingPages(): void {
-  registerRoute({ path: '/billing', title: 'Billing', navLabel: 'Billing', navSection: 'workspace', render: renderBilling });
+  registerRoute({
+    path: '/usage',
+    title: 'Usage & credits',
+    navLabel: 'Usage & credits',
+    navSection: 'workspace',
+    render: renderBilling,
+  });
+  registerRoute({ path: '/billing', title: 'Billing', render: renderBilling });
 }

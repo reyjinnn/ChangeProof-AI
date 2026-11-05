@@ -5,6 +5,7 @@ import { z } from 'zod';
 
 import {
   ChangeProofError,
+  MissingConfigurationError,
   DraftBodySchema,
   ExecutionModeSchema,
   IdSchema,
@@ -13,7 +14,11 @@ import {
   Sha256Schema,
 } from '../core/index.js';
 import type { LifecycleSessionPort } from '../core/ports/index.js';
-import type { LifecycleComposition, QueriesComposition } from '../orchestrator/index.js';
+import type {
+  InstallationConnectComposition,
+  LifecycleComposition,
+  QueriesComposition,
+} from '../orchestrator/index.js';
 import { actingContext, HttpRouteError, parseBody, pathSegment } from './context.js';
 import { sendBytes, sendCreated, sendFail, sendOk } from './respond.js';
 
@@ -34,6 +39,7 @@ export interface RunsDeps {
   readonly session: LifecycleSessionPort;
   readonly lifecycle: LifecycleComposition;
   readonly queries: QueriesComposition;
+  readonly githubConnect?: InstallationConnectComposition | undefined;
 }
 
 const ProjectBody = z.strictObject({ name: z.string().trim().min(1).max(200) });
@@ -63,7 +69,32 @@ const EventsQuery = z.strictObject({
   afterSeq: z.coerce.number().int().nonnegative(),
   limit: z.coerce.number().int().min(1).max(100),
 });
+const ConnectBody = z.strictObject({ installationId: z.string().regex(/^[1-9][0-9]*$/) });
 const RetryBody = z.strictObject({ idempotencyKey: Sha256Schema });
+const RunsListQuery = z.strictObject({ limit: z.coerce.number().int().min(1).max(100).optional() });
+const ProjectPatchBody = z
+  .strictObject({
+    name: z.string().trim().min(1).max(200).optional(),
+    description: z.string().trim().max(2000).optional(),
+  })
+  .superRefine((body, ctx) => {
+    if (body.name === undefined && body.description === undefined) {
+      ctx.addIssue({ code: 'custom', message: 'Nothing to update; name or description is required.' });
+    }
+  });
+const EnvironmentBody = z.strictObject({
+  name: z.string().trim().min(1).max(200),
+  dataset: z.string().trim().max(500).optional(),
+  migration: z.string().trim().max(500).optional(),
+});
+const TelemetryBody = z.strictObject({
+  name: z.string().trim().min(1).max(255),
+  sizeBytes: z.number().int().min(0).max(1099511627776),
+  kind: z.enum(['log', 'trace', 'metric']),
+  label: z.string().trim().max(200).optional(),
+});
+const EmptyBody = z.strictObject({});
+const AuditQuery = z.strictObject({ limit: z.coerce.number().int().min(1).max(50) });
 
 function queryParams(url: URL): Record<string, string> {
   const params: Record<string, string> = {};
@@ -102,8 +133,22 @@ export function isRunsPath(pathname: string): boolean {
     pathname.startsWith('/api/drafts/') ||
     pathname === '/api/runs' ||
     pathname.startsWith('/api/runs/') ||
-    pathname === '/api/search'
+    pathname === '/api/search' ||
+    pathname === '/api/environments' ||
+    pathname === '/api/github/connections' ||
+    pathname.startsWith('/api/github/connections/') ||
+    pathname === '/api/telemetry/corpus' ||
+    pathname === '/api/audit/entries'
   );
+}
+
+/** Event payloads are untrusted data: only a string `by` names an actor. */
+function actorOf(payload: unknown): string {
+  if (typeof payload === 'object' && payload !== null && !Array.isArray(payload)) {
+    const by = (payload as Record<string, unknown>)['by'];
+    if (typeof by === 'string' && by !== '') return by;
+  }
+  return 'system';
 }
 
 export async function handleRunsApi(
@@ -255,6 +300,192 @@ export async function handleRunsApi(
       runs.queries.store.search({ sessionId: ctx.sessionId, nowIso }, query),
     );
     sendOk(response, result);
+    return;
+  }
+  if (method === 'GET' && pathname === '/api/runs') {
+    const ctx = await actingContext(runs.session, request, nowIso);
+    const query = RunsListQuery.parse(queryParams(url));
+    const listed = await orMapped(
+      runs.lifecycle.store.listRuns(
+        { sessionId: ctx.sessionId, nowIso },
+        { ...(query.limit === undefined ? {} : { limit: query.limit }) },
+      ),
+    );
+    sendOk(response, {
+      runs: listed.runs.map((run) => ({
+        runId: run.runId,
+        title: `run ${run.runId} (${run.state})`,
+        state: run.state,
+        result: null,
+        updatedAt: run.createdAt,
+      })),
+    });
+    return;
+  }
+  if (method === 'GET' && pathname.startsWith('/api/projects/') && pathname.split('/').length === 4) {
+    const ctx = await actingContext(runs.session, request, nowIso);
+    const projectId = pathSegment(pathname, 3, 'Project');
+    const detail = await orMapped(
+      runs.lifecycle.store.getProject({ sessionId: ctx.sessionId, nowIso }, { projectId }),
+    );
+    sendOk(response, detail);
+    return;
+  }
+  if (method === 'PATCH' && pathname.startsWith('/api/projects/') && pathname.split('/').length === 4) {
+    const ctx = await actingContext(runs.session, request, nowIso);
+    const projectId = pathSegment(pathname, 3, 'Project');
+    const body = parseBody(ProjectPatchBody, rawBody);
+    const patched = await orMapped(
+      runs.lifecycle.store.updateProject(
+        { sessionId: ctx.sessionId, nowIso },
+        {
+          projectId,
+          ...(body.name === undefined ? {} : { name: body.name }),
+          ...(body.description === undefined ? {} : { description: body.description }),
+        },
+      ),
+    );
+    sendOk(response, patched);
+    return;
+  }
+  if (method === 'GET' && pathname === '/api/environments') {
+    const ctx = await actingContext(runs.session, request, nowIso);
+    const profile = await orMapped(runs.lifecycle.store.getEnvironment({ sessionId: ctx.sessionId, nowIso }));
+    sendOk(response, profile);
+    return;
+  }
+  if (method === 'POST' && pathname === '/api/environments') {
+    const ctx = await actingContext(runs.session, request, nowIso);
+    const body = parseBody(EnvironmentBody, rawBody);
+    const saved = await orMapped(
+      runs.lifecycle.store.saveEnvironment(
+        { sessionId: ctx.sessionId, nowIso },
+        {
+          name: body.name,
+          ...(body.dataset === undefined ? {} : { dataset: body.dataset }),
+          ...(body.migration === undefined ? {} : { migration: body.migration }),
+        },
+      ),
+    );
+    sendCreated(response, saved);
+    return;
+  }
+  if (method === 'GET' && pathname === '/api/github/connections') {
+    const ctx = await actingContext(runs.session, request, nowIso);
+    const listed = await orMapped(runs.lifecycle.store.listConnections({ sessionId: ctx.sessionId, nowIso }));
+    sendOk(response, {
+      connections: listed.connections.map((connection) => ({
+        id: connection.id,
+        name: connection.name,
+        status: connection.status,
+        webhook:
+          connection.webhookState === null && connection.lastDelivery === null
+            ? null
+            : { state: connection.webhookState, lastDelivery: connection.lastDelivery },
+        updatedAt: connection.updatedAt,
+      })),
+    });
+    return;
+  }
+  if (method === 'POST' && pathname === '/api/github/connections') {
+    const ctx = await actingContext(runs.session, request, nowIso);
+    const body = parseBody(ConnectBody, rawBody);
+    const connect = runs.githubConnect;
+    if (connect === undefined) {
+      sendFail(
+        response,
+        503,
+        'github_not_configured',
+        'This server has no GitHub App configured; an operator must provision the App id and key.',
+      );
+      return;
+    }
+    try {
+      const verified = await connect.connect(body.installationId, Date.parse(nowIso));
+      const stored = await orMapped(
+        runs.lifecycle.store.registerConnections(
+          { sessionId: ctx.sessionId, nowIso },
+          { installationId: verified.installationId, repositories: verified.repositories },
+        ),
+      );
+      sendCreated(response, {
+        installationId: verified.installationId,
+        connectionIds: stored.connectionIds,
+        repositoryCount: stored.connectionIds.length,
+      });
+      return;
+    } catch (error) {
+      if (error instanceof MissingConfigurationError) {
+        sendFail(response, 503, 'github_not_configured', 'This server has no GitHub App key; an operator must provision it.');
+        return;
+      }
+      if (error instanceof ChangeProofError && error.message.includes('unknown or not shared')) {
+        sendFail(
+          response,
+          404,
+          'installation_not_found',
+          'That installation is unknown to this GitHub App; check the id and retry.',
+        );
+        return;
+      }
+      if (
+        error instanceof ChangeProofError &&
+        /unreachable|answered HTTP|rejected the App credential|no installation token/.test(error.message)
+      ) {
+        sendFail(response, 502, 'github_unavailable', 'GitHub did not answer the verification; retry the connection later.');
+        return;
+      }
+      throw error;
+    }
+  }
+  if (method === 'POST' && pathname.startsWith('/api/github/connections/') && pathname.endsWith('/revoke')) {
+    const ctx = await actingContext(runs.session, request, nowIso);
+    const connectionId = pathSegment(pathname, 4, 'Connection');
+    parseBody(EmptyBody, rawBody);
+    const revoked = await orMapped(
+      runs.lifecycle.store.revokeConnection({ sessionId: ctx.sessionId, nowIso }, { connectionId }),
+    );
+    sendOk(response, revoked);
+    return;
+  }
+  if (method === 'GET' && pathname === '/api/telemetry/corpus') {
+    const ctx = await actingContext(runs.session, request, nowIso);
+    const corpus = await orMapped(runs.lifecycle.store.getTelemetryCorpus({ sessionId: ctx.sessionId, nowIso }));
+    sendOk(response, corpus);
+    return;
+  }
+  if (method === 'POST' && pathname === '/api/telemetry/corpus') {
+    const ctx = await actingContext(runs.session, request, nowIso);
+    const body = parseBody(TelemetryBody, rawBody);
+    const registered = await orMapped(
+      runs.lifecycle.store.registerTelemetryFile(
+        { sessionId: ctx.sessionId, nowIso },
+        {
+          name: body.name,
+          sizeBytes: body.sizeBytes,
+          kind: body.kind,
+          ...(body.label === undefined ? {} : { label: body.label }),
+        },
+      ),
+    );
+    sendCreated(response, registered);
+    return;
+  }
+  if (method === 'GET' && pathname === '/api/audit/entries') {
+    const ctx = await actingContext(runs.session, request, nowIso);
+    const query = AuditQuery.parse(queryParams(url));
+    const exported = await orMapped(
+      runs.queries.store.exportAudit({ sessionId: ctx.sessionId, nowIso }, { after: 0, limit: query.limit }),
+    );
+    sendOk(response, {
+      items: exported.rows.map((row) => ({
+        time: row.createdAt,
+        actor: actorOf(row.payload),
+        event: row.kind,
+        scope: row.runId,
+        receipt: `${row.runId}:${String(row.seq)}`,
+      })),
+    });
     return;
   }
   sendFail(response, 404, 'unknown_endpoint', `No API endpoint at "${pathname}".`);

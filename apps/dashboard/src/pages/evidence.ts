@@ -1,11 +1,13 @@
-/* Evidence library + read-only viewer (T-46, WP3-12/29). Artifacts are
- * the run's `artifact` events (the only enumeration the backend owns);
- * bytes come from the digest-verified download endpoint. The viewer
- * renders text escaped, refuses preview for large/binary bytes, and
- * repeats the server's integrity verdict verbatim — it never judges. */
+/* Evidence library + read-only viewer (T-46, WP3-12/29; Progress UI 6
+ * mockup fidelity). Artifacts are the run's `artifact` events (the only
+ * enumeration the backend owns); bytes come from the digest-verified
+ * download endpoint. The viewer renders text escaped, refuses preview for
+ * large/binary bytes, and repeats the server's integrity verdict verbatim —
+ * it never judges. Layout follows .template-ui/mockup.html with real classes
+ * from tokens.css. All runtime copy is English (FR3-40). */
 
-import { apiGet, apiGetBytes, ApiRequestError } from '../api.js';
-import { emptyState, errorState, h } from '../components.js';
+import { apiGet, apiGetBytes, apiPost, ApiRequestError } from '../api.js';
+import { card, emptyState, errorState, h, pageHead, row, staticBadge, table, tabs, type TabItem } from '../components.js';
 import { registerRoute, type RouteContext } from '../routes.js';
 
 const HEX64 = /^[0-9a-f]{64}$/;
@@ -27,6 +29,8 @@ interface RunHeader {
   readonly state: string;
   readonly version: number;
   readonly submitDigest: string;
+  readonly projectId?: string;
+  readonly createdAt?: string;
 }
 
 interface EventItem {
@@ -45,6 +49,21 @@ interface ArtifactEntry {
   readonly seq: number;
   readonly digest: string;
   readonly createdAt: string;
+}
+
+interface SearchHit {
+  readonly kind: string;
+  readonly id: string;
+  readonly projectId?: string;
+  readonly title: string;
+  readonly snippet: string;
+  readonly createdAt: string;
+}
+
+interface SearchResult {
+  readonly hits: readonly SearchHit[];
+  readonly totalCount: number;
+  readonly cursor: number;
 }
 
 function asErrorMessage(error: unknown): string {
@@ -68,6 +87,19 @@ function loginCard(outlet: HTMLElement, title: string, body: string): void {
 function expired(host: HTMLElement): void {
   window.location.hash = '#/session-expired';
   host.replaceChildren(emptyState('Session expired', 'Redirecting to login…'));
+}
+
+function runTabItems(runId: string): TabItem[] {
+  const query = `?run=${encodeURIComponent(runId)}`;
+  return [
+    { id: 'review', label: 'Overview & diff', href: `#/review${query}` },
+    { id: 'impact', label: 'Impact', href: `#/impact${query}` },
+    { id: 'investigation', label: 'Investigation', href: `#/investigation${query}` },
+    { id: 'campaigns', label: 'Verification', href: `#/campaigns${query}` },
+    { id: 'evidence', label: 'Evidence', href: `#/evidence${query}` },
+    { id: 'publication', label: 'Publication', href: `#/publication${query}` },
+    { id: 'outcome', label: 'Owner validation', href: `#/outcome${query}` },
+  ];
 }
 
 function artifactOf(event: EventItem): ArtifactEntry | undefined {
@@ -162,12 +194,14 @@ function publicationSection(host: HTMLElement): void {
       h('p', { class: 'muted' }, ['Checking pull request availability…']),
     ]),
   );
-  void apiGet<{ github: boolean }>('/api/auth/providers')
+  void apiGet<{ github: boolean; githubApp?: boolean }>('/api/auth/providers')
     .then((providers) => {
       host.replaceChildren(
         h('section', { class: 'card' }, [
           h('h2', {}, ['Publication']),
-          providers.github
+          // Sign-in (`github`) is not repository authority: only an App
+          // installation (`githubApp`) can back pull request state.
+          providers.githubApp === true
             ? h('p', {}, [
                 'A GitHub App is configured, but pull request and CI state are not exposed by the API yet. ' +
                   'Nothing is shown rather than guessed.',
@@ -190,7 +224,7 @@ function publicationSection(host: HTMLElement): void {
 }
 
 async function renderLibrary(outlet: HTMLElement, ctx: RouteContext): Promise<void> {
-  const runId = ctx.params.get('run');
+  const runId = ctx.params.get('run') ?? ctx.params.get('id');
   if (runId === undefined || runId === '') {
     outlet.replaceChildren(
       errorState('Evidence needs a run', 'Open evidence from a run, where artifacts live.', undefined),
@@ -245,37 +279,33 @@ async function renderLibrary(outlet: HTMLElement, ctx: RouteContext): Promise<vo
   });
   const list =
     artifacts.length === 0
-      ? h('p', {}, ['No artifacts on this run yet — workers attach them as the run proceeds.'])
-      : h(
-          'ul',
-          {},
-          artifacts.map((entry) =>
-            h('li', {}, [
-              h('p', {}, [
-                h('code', { class: 'inline' }, [entry.digest]),
-                document.createTextNode(` · event #${String(entry.seq)} · ${entry.createdAt}`),
-              ]),
-              h('p', {}, [
-                h(
-                  'a',
-                  {
-                    class: 'button',
-                    href: `#/evidence/view?run=${encodeURIComponent(runId)}&digest=${encodeURIComponent(entry.digest)}`,
-                  },
-                  [`View ${shortDigest(entry.digest)}`],
-                ),
-                document.createTextNode(' '),
-                downloadLink(runId, entry.digest),
-                document.createTextNode(' '),
-                copyButton(entry.digest),
-              ]),
+      ? emptyState('No artifacts yet', 'Workers attach artifacts as the run proceeds; none are on this run yet.')
+      : table(
+          ['Artifact digest', 'Attached', 'Actions'],
+          artifacts.map((entry) => [
+            h('div', {}, [
+              h('code', { class: 'inline' }, [entry.digest]),
+              h('div', { class: 'help' }, [`Event #${String(entry.seq)} · ${entry.createdAt}`]),
             ]),
-          ),
+            entry.createdAt,
+            h('div', { class: 'actions' }, [
+              h(
+                'a',
+                {
+                  class: 'button small',
+                  href: `#/evidence/view?run=${encodeURIComponent(runId)}&digest=${encodeURIComponent(entry.digest)}`,
+                },
+                [`View ${shortDigest(entry.digest)}`],
+              ),
+              downloadLink(runId, entry.digest),
+              copyButton(entry.digest),
+            ]),
+          ]),
         );
   const publication = h('div', {}, []);
   publicationSection(publication);
   const exportButton = h('button', { class: 'button', type: 'button' }, ['Download run evidence (JSON)']);
-  exportButton.addEventListener('click', () => {
+  const downloadExport = (): void => {
     const text = buildEvidenceExport({ run, artifacts, exportedAt: new Date().toISOString() });
     const url = URL.createObjectURL(new Blob([text], { type: 'application/json' }));
     const anchor = h('a', { href: url, download: `evidence-${runId}.json` }, []);
@@ -283,41 +313,94 @@ async function renderLibrary(outlet: HTMLElement, ctx: RouteContext): Promise<vo
     anchor.click();
     anchor.remove();
     URL.revokeObjectURL(url);
-  });
+  };
+  exportButton.addEventListener('click', downloadExport);
+  const manifestPreview = buildEvidenceExport({ run, artifacts, exportedAt: 'preview — export stamps the time' });
   outlet.replaceChildren(
-    h('section', { class: 'card' }, [
-      h('div', { class: 'eyebrow' }, ['Content-Addressed Artifact Store']),
-      h('h1', {}, ['Evidence']),
-      h('p', { class: 'muted' }, [
-        `Run ${run.runId} · ${run.state} · version ${String(run.version)}. Artifacts below are the run's own records; the list shows everything attached, in event order.`,
-      ]),
-      ...(listed.truncated
-        ? [h('p', { role: 'status' }, [`Showing the first ${String(MAX_LIST_EVENTS)} events; older runs may carry more.`])]
-        : []),
-      list,
+    h('div', { class: 'breadcrumb' }, [
+      h('a', { href: '#/runs' }, ['Runs']),
+      document.createTextNode(' / '),
+      h('a', { href: `#/run?id=${encodeURIComponent(runId)}` }, [runId]),
+      document.createTextNode(' / Evidence'),
     ]),
-    publication,
+    pageHead({
+      eyebrow: 'Content-Addressed Artifact Store',
+      title: `Evidence ${runId}`,
+      subtitle: `Run ${run.runId} · ${run.state} · version ${String(run.version)}. Artifacts below are the run's own records, in event order.`,
+      actions: [
+        h('a', { class: 'button', href: `#/run?id=${encodeURIComponent(runId)}` }, ['Back to the run']),
+        h('a', { class: 'button primary', href: `#/review?run=${encodeURIComponent(runId)}` }, ['Back to review']),
+      ],
+    }),
+    h('div', { class: 'run-context' }, [
+      h('strong', {}, [run.runId]),
+      staticBadge(run.state, run.state === 'succeeded' ? 'green' : run.state === 'failed' ? 'red' : 'blue'),
+      h('span', {}, [`Version ${String(run.version)}`]),
+      h('span', {}, [`${String(artifacts.length)} artifacts`]),
+    ]),
+    tabs(runTabItems(runId), 'evidence'),
+    ...(listed.truncated
+      ? [
+          h('div', { class: 'notice', role: 'status' }, [
+            h('span', {}, [`Showing the first ${String(MAX_LIST_EVENTS)} events; older runs may carry more.`]),
+          ]),
+        ]
+      : []),
     h('div', { class: 'split' }, [
-      h('section', { class: 'card' }, [
-        h('div', { class: 'eyebrow' }, ['Manifest Snapshot']),
-        h('h2', {}, ['Export']),
-        h('p', {}, [
-          'A JSON snapshot of the run header and artifact list above, generated in your browser from data this page already fetched. ',
-          'It carries no verdict and proves nothing by itself.',
-        ]),
-        h('p', {}, [exportButton]),
+      h('div', {}, [
+        card(
+          'Raw artifacts',
+          h('div', {}, [
+            list,
+            h('div', { class: 'footer-note' }, [
+              'Logs are shown as escaped text and are never executed. Downloads go through the authenticated artifact endpoint, never a public URL.',
+            ]),
+          ]),
+          'Downloads follow current repository grants.',
+        ),
+        card(
+          'Reproduction manifest',
+          h('div', {}, [
+            h('pre', { class: 'codebox', 'aria-label': 'Reproduction manifest preview' }, [manifestPreview]),
+            h('p', {}, [exportButton]),
+          ]),
+          'A JSON snapshot of the run header and artifact list, generated in your browser. It carries no verdict and proves nothing by itself.',
+        ),
+        publication,
       ]),
-      h('section', { class: 'card' }, [
-        h('div', { class: 'eyebrow' }, ['Assurance Boundaries']),
-        h('h2', {}, ['Outcomes and evaluations']),
-        h('p', {}, [
-          'Owner outcome reporting and evaluation denominators are not exposed by the API yet, so this page shows no figures. ',
-          'Any number here would be invented; invented numbers stay out.',
+      h('aside', {}, [
+        h('section', { class: 'card pad' }, [
+          h('h2', {}, ['Identity bound to the run']),
+          row('Run', h('code', {}, [run.runId])),
+          row('State', run.state),
+          row('Version', String(run.version)),
+          row('Submit digest', h('code', {}, [run.submitDigest])),
+          ...(run.projectId === undefined ? [] : [row('Project', run.projectId)]),
+          ...(run.createdAt === undefined ? [] : [row('Created', run.createdAt)]),
+        ]),
+        h('section', { class: 'card pad' }, [
+          h('h2', {}, ['Retention']),
+          row(h('span', { class: 'muted' }, ['Immutable until']), 'Not exposed'),
+          row(h('span', { class: 'muted' }, ['Storage location']), 'Private object storage'),
+          h('p', { class: 'help' }, [
+            'Immutable means not overwritten during retention, not that it cannot be deleted.',
+          ]),
+        ]),
+        h('section', { class: 'card pad' }, [
+          h('h2', {}, ['Discussions']),
+          h('p', { class: 'help' }, ['Threads pin to a candidate digest. Comments never change verdicts.']),
+          h('p', {}, [
+            h('a', { class: 'button full', href: `#/threads?run=${encodeURIComponent(runId)}` }, ['Open discussions']),
+          ]),
+        ]),
+        h('section', { class: 'card pad' }, [
+          h('h2', {}, ['Outcomes and evaluations']),
+          h('p', {}, [
+            'Owner outcome reporting and evaluation denominators are not exposed by the API yet, so this page shows no figures. ',
+            'Any number here would be invented; invented numbers stay out.',
+          ]),
         ]),
       ]),
-    ]),
-    h('p', {}, [
-      h('a', { class: 'button', href: `#/run?id=${encodeURIComponent(runId)}` }, ['Back to the run']),
     ]),
   );
 }
@@ -446,7 +529,110 @@ async function renderViewer(outlet: HTMLElement, ctx: RouteContext): Promise<voi
   );
 }
 
+async function renderEvidenceLibrary(outlet: HTMLElement): Promise<void> {
+  outlet.replaceChildren(emptyState('Loading…', 'Reading the evidence library.'));
+  let session: EvidenceSession;
+  try {
+    session = await apiGet<EvidenceSession>('/api/auth/session');
+  } catch (error) {
+    outlet.replaceChildren(
+      errorState('Evidence library unavailable', asErrorMessage(error), {
+        label: 'Retry',
+        onClick: () => void renderEvidenceLibrary(outlet),
+      }),
+    );
+    return;
+  }
+  if (!session.authenticated) {
+    loginCard(outlet, 'Evidence library needs a login', 'Log in to browse run evidence.');
+    return;
+  }
+  let runs: SearchResult;
+  try {
+    runs = await apiPost<SearchResult>('/api/search', { schemaVersion: '1', scope: 'runs', limit: 20 });
+  } catch (error) {
+    if (statusOf(error) === 401) {
+      expired(outlet);
+      return;
+    }
+    if (statusOf(error) === 403) {
+      outlet.replaceChildren(errorState('Access denied', asErrorMessage(error)));
+      return;
+    }
+    outlet.replaceChildren(
+      errorState('Evidence library unavailable', asErrorMessage(error), {
+        label: 'Retry',
+        onClick: () => void renderEvidenceLibrary(outlet),
+      }),
+    );
+    return;
+  }
+  outlet.replaceChildren(
+    pageHead({
+      eyebrow: 'Evidence library',
+      title: 'Evidence library',
+      subtitle: 'Private evidence that binds changes, candidates, and verification.',
+      actions: [h('a', { class: 'button', href: '#/runs' }, ['Back to runs'])],
+    }),
+    h('div', { class: 'stats' }, [
+      h('div', { class: 'stat' }, [
+        h('div', { class: 'label' }, ['Runs with evidence']),
+        h('div', { class: 'value' }, [String(runs.hits.length)]),
+        h('div', { class: 'sub' }, ['Returned from /api/search']),
+      ]),
+      h('div', { class: 'stat' }, [
+        h('div', { class: 'label' }, ['Access']),
+        h('div', { class: 'value' }, ['Private']),
+        h('div', { class: 'sub' }, ['Downloads follow current grants']),
+      ]),
+    ]),
+    card(
+      'Bundle & manifest',
+      runs.hits.length === 0
+        ? emptyState('No runs yet', 'File your first run to see its evidence here.', h('a', { class: 'button', href: '#/new-run' }, ['File a run']))
+        : table(
+            ['Run / manifest', 'Project', 'State', 'Updated', ''],
+            runs.hits.map((hit) => [
+              h('div', {}, [
+                h('strong', {}, [hit.id]),
+                h('div', { class: 'help' }, [hit.title]),
+              ]),
+              hit.projectId ?? '—',
+              staticBadge(hit.snippet === '' ? 'unknown' : hit.snippet),
+              hit.createdAt,
+              h('a', { class: 'button small', href: `#/evidence?run=${encodeURIComponent(hit.id)}` }, ['Open evidence']),
+            ]),
+          ),
+      'Downloads and search follow current repository grants.',
+    ),
+    h('section', { class: 'card pad' }, [
+      h('h2', {}, ['Traceable review']),
+      h('div', { class: 'grid3' }, [
+        h('div', { class: 'inset' }, [
+          h('h3', {}, ['Source identity']),
+          h('p', { class: 'help' }, ['Exact base, head, candidate, and dependency refs.']),
+        ]),
+        h('div', { class: 'inset' }, [
+          h('h3', {}, ['Independent checks']),
+          h('p', { class: 'help' }, ['Required check results, trial validity, and inconclusive dimensions.']),
+        ]),
+        h('div', { class: 'inset' }, [
+          h('h3', {}, ['Reproducible scope']),
+          h('p', { class: 'help' }, ['Pinned topology, dataset, runner, and budget from the manifest.']),
+        ]),
+      ]),
+    ]),
+  );
+}
+
 export function registerEvidencePages(): void {
   registerRoute({ path: '/evidence', title: 'Evidence', navLabel: 'Evidence', navSection: 'workspace', render: renderLibrary });
   registerRoute({ path: '/evidence/view', title: 'Evidence viewer', render: renderViewer });
+  registerRoute({
+    path: '/evidence-library',
+    title: 'Evidence library',
+    navLabel: 'Evidence',
+    navSection: 'workspace',
+    render: renderEvidenceLibrary,
+  });
 }

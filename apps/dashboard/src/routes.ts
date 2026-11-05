@@ -2,7 +2,8 @@
  * public, auth, and run-journey routes. Unknown hashes render the
  * not-found page — never a blank outlet, never a guess. */
 
-import { emptyState, h } from './components.js';
+import { closeDrawer, emptyState, h } from './components.js';
+import { closeFloatingPanels, refreshShell } from './shell.js';
 
 export interface RouteContext {
   readonly hash: string;
@@ -57,6 +58,17 @@ function renderNotFound(outlet: HTMLElement, path: string): void {
   document.title = 'Not found — ChangeProof AI';
 }
 
+/** Render a registered route with no nav/focus/announce side effects.
+ * Modal pages (auth) use it to paint the public backdrop behind the dialog;
+ * returns false when no route is registered for the path. */
+export async function renderStandalone(outlet: HTMLElement, path: string): Promise<boolean> {
+  const route = registry.get(path);
+  if (route === undefined) return false;
+  const { params } = parseHash(`#${path}`);
+  await route.render(outlet, { hash: `#${path}`, params });
+  return true;
+}
+
 let epoch = 0;
 
 /** Current render generation; pages with async continuations compare against it. */
@@ -83,24 +95,13 @@ export async function renderRoute(outlet: HTMLElement, hash: string): Promise<vo
     catch { /* Preserve malformed resource paths as not-found. */ }
   }
   const route = registry.get(path);
-  document.body.classList.remove('nav-open');
-  const accountMenu = document.getElementById('account-menu');
-  if (accountMenu instanceof HTMLDetailsElement) accountMenu.open = false;
-  document.querySelector('.menu-button')?.setAttribute('aria-expanded', 'false');
-  const backdrop = document.querySelector<HTMLElement>('.nav-backdrop');
-  if (backdrop !== null) backdrop.hidden = true;
-  document.body.classList.toggle('public-surface', path.startsWith('/p/'));
-  document.body.classList.toggle('auth-surface', [
-    '/login', '/register', '/verify-email', '/check-email', '/forgot-password',
-    '/reset-password', '/session-expired', '/create-org', '/invite',
-  ].includes(path));
-  document.body.classList.toggle('auth-refined', document.body.classList.contains('auth-surface'));
-  const workspace = !document.body.classList.contains('public-surface') && !document.body.classList.contains('auth-surface');
-  const shell = document.getElementById('shell');
-  if (shell !== null) shell.dataset['workspacePage'] = workspace ? path : '';
-  for (const name of ['reyn-design', 'modern-design', 'workspace-port', 'workspace-refined']) shell?.classList.toggle(name, workspace);
-  outlet.classList.toggle('reyn-content', workspace);
+  closeDrawer();
+  closeFloatingPanels();
+  document.getElementById('sidebar')?.classList.remove('open');
+  document.getElementById('navScrim')?.remove();
+  document.body.style.overflow = '';
   if (route === undefined) {
+    refreshShell(path);
     renderNotFound(outlet, path);
     return;
   }
@@ -112,6 +113,7 @@ export async function renderRoute(outlet: HTMLElement, hash: string): Promise<vo
   // A superseded render must not mark nav, announce, or steal focus for
   // a page the user already left.
   if (mine !== epoch) return;
+  refreshShell(path);
   markCurrentNav(path);
   announce(route.title);
   // Route change moves focus to the page heading (or the main landmark)
@@ -144,7 +146,7 @@ function announce(title: string): void {
 }
 
 function markCurrentNav(path: string): void {
-  for (const link of document.querySelectorAll<HTMLAnchorElement>('.sidebar nav a[href^="#"]')) {
+  for (const link of document.querySelectorAll<HTMLAnchorElement>('#nav a[href^="#"]')) {
     if (link.getAttribute('href') === `#${path}`) link.setAttribute('aria-current', 'page');
     else link.removeAttribute('aria-current');
   }

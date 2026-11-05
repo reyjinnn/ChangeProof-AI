@@ -14,13 +14,14 @@ import { registerNotificationPages } from './pages/notifications.js';
 import { registerOperatorPages } from './pages/operator.js';
 import { registerSupportPages } from './pages/support.js';
 import { registerThreadPages } from './pages/threads.js';
+import { registerWorkspacePages } from './pages/workspace.js';
 import { registerPublicPages } from './pages/public.js';
 import { registerRunPages } from './pages/runs.js';
 import { registerWorkspacePages } from './pages/workspace.js';
 import { registerSettingsPage } from './pages/settings.js';
 import { renderRoute, registerRoute } from './routes.js';
 import { refreshAccount, SESSION_CHANGED_EVENT } from './session.js';
-import { renderShell } from './shell.js';
+import { refreshShellServices, renderShell } from './shell.js';
 import { renderStatus } from './status.js';
 
 async function boot(): Promise<void> {
@@ -67,9 +68,11 @@ async function boot(): Promise<void> {
   registerSupportPages();
   registerOperatorPages();
   registerThreadPages();
+  registerWorkspacePages();
 
   const { outlet } = renderShell(app);
   await refreshAccount();
+  refreshShellServices();
   window.addEventListener('hashchange', () => void renderRoute(outlet, window.location.hash));
   window.addEventListener(SESSION_CHANGED_EVENT, () => {
     // The account refresh is async; if the user navigates meanwhile, the

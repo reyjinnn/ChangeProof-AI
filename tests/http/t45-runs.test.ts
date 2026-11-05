@@ -1,9 +1,11 @@
+import { createHash } from 'node:crypto';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { afterAll, beforeAll, expect, test } from 'vitest';
 
 import {
   ChangeProofError,
+  MissingConfigurationError,
   type LifecycleRun,
   type RunEvent,
   type SearchResult,
@@ -13,7 +15,7 @@ import type { RunsDeps } from '../../src/http/routes-runs.js';
 import type { LifecycleStore } from '../../src/modules/lifecycle/index.js';
 import type { QueriesStore } from '../../src/modules/queries/index.js';
 import { createHttpServer, type HttpHandle } from '../../src/http/index.js';
-import { composePublicSite } from '../../src/orchestrator/index.js';
+import { composePublicSite, type InstallationConnectComposition } from '../../src/orchestrator/index.js';
 
 // Run-journey HTTP proof (T-45): the real server over stub stores with
 // sentinel ids. No database — the native suite proves the real stores;
@@ -24,6 +26,8 @@ const manifestPath = join(rootDir, 'config', 'publicsite', 'manifest.json');
 
 const HEX_64 = 'a'.repeat(64);
 const NOW_ISO = '2026-11-02T00:00:00.000Z';
+// Mirrors the store's tenant-scope suffix so the fake keeps the real id shape.
+const FAKE_SCOPE = createHash('sha256').update('tenant-acme').digest('hex').slice(0, 12);
 
 const ctx: TenantContext = {
   schemaVersion: '1',
@@ -125,6 +129,59 @@ const lifecycle: LifecycleStore = {
     input.runId === 'run-missing'
       ? Promise.reject(unknown('Run'))
       : Promise.resolve({ digest: input.digest, bytes: new TextEncoder().encode('stub-evidence-bytes') }),
+  listRuns: () =>
+    Promise.resolve({
+      runs: [{ runId: 'run-1', projectId: 'project-1', state: 'queued', createdAt: NOW_ISO }],
+    }),
+  getProject: (_actor, input) =>
+    input.projectId === 'project-missing'
+      ? Promise.reject(unknown('Project'))
+      : Promise.resolve({
+          projectId: input.projectId,
+          name: 'checkout project',
+          description: 'Restores the checkout flow.',
+          repositories: [{ id: 'repo-1', name: 'repo-1', ownership: 'granted', status: 'active' }],
+          readiness: [{ label: 'Repository access', status: 'ready' }],
+          baseline: { revision: 'abc1234', pinnedAt: NOW_ISO },
+        }),
+  updateProject: (_actor, input) =>
+    input.projectId === 'project-missing'
+      ? Promise.reject(unknown('Project'))
+      : input.projectId === 'project-forbidden'
+        ? Promise.reject(new ChangeProofError('Request is not authorized for this project.'))
+        : Promise.resolve({
+            projectId: input.projectId,
+            name: input.name ?? 'checkout project',
+            description: input.description ?? 'Restores the checkout flow.',
+          }),
+  getEnvironment: () =>
+    Promise.resolve({
+      profileId: 'env-1',
+      name: 'default',
+      revision: 1,
+      dataset: 'ds-1',
+      migration: 'mig-1',
+      services: [],
+      journal: null,
+      reset: null,
+      boundary: { isolation: null, egress: null, dependencyFetch: null, mounts: null, cleanup: null },
+      resources: { wallTime: null, attempts: null, creditCap: null },
+    }),
+  saveEnvironment: (_actor, input) =>
+    input.name === ''
+      ? Promise.reject(new ChangeProofError('Profile name must not be empty; refusing.'))
+      : Promise.resolve({ profileId: 'env-2', revision: 2 }),
+  listConnections: () => Promise.resolve({ connections: [] }),
+  registerConnections: (_actor, input) =>
+    Promise.resolve({
+      connectionIds: input.repositories.map((repo) => `conn-${input.installationId}-${repo.id}-${FAKE_SCOPE}`),
+    }),
+  revokeConnection: (_actor, input) =>
+    input.connectionId === 'conn-missing'
+      ? Promise.reject(unknown('Connection'))
+      : Promise.resolve({ connectionId: input.connectionId, status: 'revoked' }),
+  getTelemetryCorpus: () => Promise.resolve({ files: [], gaps: [] }),
+  registerTelemetryFile: (_actor, input) => Promise.resolve({ fileId: 'file-1', name: input.name }),
 };
 
 const searchResult: SearchResult = {
@@ -145,7 +202,21 @@ const searchResult: SearchResult = {
 
 const queries: QueriesStore = {
   search: () => Promise.resolve(searchResult),
-  exportAudit: () => Promise.reject(new Error('not exposed over HTTP in T-45')),
+  exportAudit: () =>
+    Promise.resolve({
+      rows: [
+        { runId: 'run-1', seq: 1, kind: 'submitted', payload: { submitDigest: HEX_64 }, createdAt: NOW_ISO },
+      ],
+      cursor: 1,
+      manifest: {
+        schemaVersion: '1' as const,
+        exportId: 'exp-1',
+        scope: 'audit' as const,
+        rowCount: 1,
+        digest: HEX_64,
+        createdAt: NOW_ISO,
+      },
+    }),
   requestReproduction: () => Promise.reject(new Error('not exposed over HTTP in T-45')),
   bumpGrantEpoch: () => Promise.reject(new Error('control-plane only: never over HTTP')),
   invalidateTenantCache: () => {
@@ -156,6 +227,22 @@ const queries: QueriesStore = {
   },
 };
 
+let connectFailure: Error | undefined;
+const connectCalls: string[] = [];
+const githubConnect: InstallationConnectComposition = {
+  connect: (installationId: string) => {
+    connectCalls.push(installationId);
+    if (connectFailure !== undefined) return Promise.reject(connectFailure);
+    return Promise.resolve({
+      installationId,
+      repositories: [
+        { id: '1438299201', fullName: 'reyjinnn/ChangeProof-AI', isPrivate: false },
+        { id: '1', fullName: 'reyjinnn/pilot', isPrivate: true },
+      ],
+    });
+  },
+};
+
 function deps(): RunsDeps {
   return {
     session: {
@@ -163,6 +250,7 @@ function deps(): RunsDeps {
         input.sessionId === 'sess-good' ? Promise.resolve(ctx) : Promise.reject(new ChangeProofError('nope')),
     },
     lifecycle: { store: lifecycle },
+    githubConnect,
     queries: { store: queries },
   };
 }
@@ -339,4 +427,167 @@ test('runs paths fail closed without the marker, without the database, and on un
   expect(noDb.status).toBe(503);
   const unknownEndpoint = await call('GET', '/api/runs/run-1/merge', { headers: authed });
   expect(unknownEndpoint.status).toBe(404);
+});
+
+test('runs list for the dashboard behind the session', async () => {
+  const listed = await call('GET', '/api/runs', { headers: authed });
+  expect(listed.status).toBe(200);
+  const runs = (listed.body as { data: { runs: { runId: string; title: string; state: string; updatedAt: string }[] } })
+    .data.runs;
+  expect(runs).toHaveLength(1);
+  expect(runs[0]).toMatchObject({ runId: 'run-1', state: 'queued', updatedAt: NOW_ISO });
+  expect(typeof runs[0]?.title).toBe('string');
+  const guest = await call('GET', '/api/runs', { headers: UI });
+  expect(guest.status).toBe(401);
+});
+
+test('projects read and patch; unknown ids 404 without disclosure, foreign projects 403', async () => {
+  const read = await call('GET', '/api/projects/project-1', { headers: authed });
+  expect(read.status).toBe(200);
+  expect((read.body as { data: { name: string } }).data.name).toBe('checkout project');
+  const missing = await call('GET', '/api/projects/project-missing', { headers: authed });
+  expect(missing.status).toBe(404);
+  expect((missing.body as { error: { message: string } }).error.message).not.toMatch(/tenant-acme|user-owner/);
+  const patched = await call('PATCH', '/api/projects/project-1', {
+    headers: authed,
+    body: { name: 'renamed', description: 'new words' },
+  });
+  expect(patched.status).toBe(200);
+  const forbidden = await call('PATCH', '/api/projects/project-forbidden', {
+    headers: authed,
+    body: { name: 'x' },
+  });
+  expect(forbidden.status).toBe(403);
+  const patchMissing = await call('PATCH', '/api/projects/project-missing', { headers: authed, body: { name: 'x' } });
+  expect(patchMissing.status).toBe(404);
+  const empty = await call('PATCH', '/api/projects/project-1', { headers: authed, body: {} });
+  expect(empty.status).toBe(400);
+  const badName = await call('PATCH', '/api/projects/project-1', { headers: authed, body: { name: '' } });
+  expect(badName.status).toBe(400);
+});
+
+test('environments read and save revisions behind the session', async () => {
+  const read = await call('GET', '/api/environments', { headers: authed });
+  expect(read.status).toBe(200);
+  expect((read.body as { data: { dataset: string } }).data.dataset).toBe('ds-1');
+  const saved = await call('POST', '/api/environments', {
+    headers: authed,
+    body: { name: 'staging', dataset: 'ds-2', migration: 'mig-2' },
+  });
+  expect(saved.status).toBe(201);
+  const bad = await call('POST', '/api/environments', { headers: authed, body: { name: '', dataset: 'x' } });
+  expect(bad.status).toBe(400);
+  const guest = await call('POST', '/api/environments', { headers: UI, body: { name: 'x' } });
+  expect(guest.status).toBe(401);
+  const noMarker = await call('POST', '/api/environments', {
+    headers: { 'Content-Type': 'application/json', Cookie: 'cp_session=sess-good' },
+    body: { name: 'x' },
+  });
+  expect(noMarker.status).toBe(403);
+});
+
+test('connecting an installation verifies live, then stores one row per repo', async () => {
+  connectFailure = undefined;
+  connectCalls.length = 0;
+  const done = await call('POST', '/api/github/connections', { headers: authed, body: { installationId: '178697398' } });
+  expect(done.status).toBe(201);
+  expect(connectCalls).toEqual(['178697398']);
+  expect(done.body).toEqual({
+    ok: true,
+    data: {
+      installationId: '178697398',
+      connectionIds: [`conn-178697398-1438299201-${FAKE_SCOPE}`, `conn-178697398-1-${FAKE_SCOPE}`],
+      repositoryCount: 2,
+    },
+  });
+});
+
+test('connect refuses bad ids quietly and unknown installations honestly', async () => {
+  connectFailure = undefined;
+  const malformed = await call('POST', '/api/github/connections', { headers: authed, body: { installationId: '../x' } });
+  expect(malformed.status).toBe(400);
+  connectFailure = new ChangeProofError('GitHub installation is unknown or not shared with this App; refusing.');
+  const unknown = await call('POST', '/api/github/connections', { headers: authed, body: { installationId: '999' } });
+  expect(unknown.status).toBe(404);
+  expect(JSON.stringify(unknown.body)).toContain('installation_not_found');
+  connectFailure = new MissingConfigurationError('CP_GITHUB_APP_KEY_FILE', 'secret broker ref "github-app-key"', 'test');
+  const unconfigured = await call('POST', '/api/github/connections', {
+    headers: authed,
+    body: { installationId: '178697398' },
+  });
+  expect(unconfigured.status).toBe(503);
+  connectFailure = undefined;
+});
+
+test('github connections list honestly empty and revoke refuses unknown ids', async () => {
+  const listed = await call('GET', '/api/github/connections', { headers: authed });
+  expect(listed.status).toBe(200);
+  expect((listed.body as { data: { connections: unknown[] } }).data.connections).toEqual([]);
+  const revoked = await call('POST', '/api/github/connections/conn-1/revoke', { headers: authed, body: {} });
+  expect(revoked.status).toBe(200);
+  const missing = await call('POST', '/api/github/connections/conn-missing/revoke', { headers: authed, body: {} });
+  expect(missing.status).toBe(404);
+  expect((missing.body as { error: { message: string } }).error.message).not.toMatch(/tenant-acme|user-owner/);
+  const guest = await call('GET', '/api/github/connections', { headers: UI });
+  expect(guest.status).toBe(401);
+});
+
+test('telemetry corpus reads metadata and registers files with validated kinds', async () => {
+  const read = await call('GET', '/api/telemetry/corpus', { headers: authed });
+  expect(read.status).toBe(200);
+  expect((read.body as { data: { files: unknown[]; gaps: unknown[] } }).data).toEqual({ files: [], gaps: [] });
+  const registered = await call('POST', '/api/telemetry/corpus', {
+    headers: authed,
+    body: { name: 'app.log', sizeBytes: 1024, kind: 'log', label: 'api' },
+  });
+  expect(registered.status).toBe(201);
+  const badKind = await call('POST', '/api/telemetry/corpus', {
+    headers: authed,
+    body: { name: 'app.log', sizeBytes: 10, kind: 'screenshot' },
+  });
+  expect(badKind.status).toBe(400);
+  const badSize = await call('POST', '/api/telemetry/corpus', {
+    headers: authed,
+    body: { name: 'app.log', sizeBytes: -1, kind: 'log' },
+  });
+  expect(badSize.status).toBe(400);
+  const guest = await call('POST', '/api/telemetry/corpus', {
+    headers: UI,
+    body: { name: 'app.log', sizeBytes: 1, kind: 'log' },
+  });
+  expect(guest.status).toBe(401);
+});
+
+test('audit entries list from the event history with a bounded limit', async () => {
+  const listed = await call('GET', '/api/audit/entries?limit=50', { headers: authed });
+  expect(listed.status).toBe(200);
+  const items = (
+    listed.body as { data: { items: { time: string; actor: string; event: string; scope: string; receipt: string }[] } }
+  ).data.items;
+  expect(items).toHaveLength(1);
+  expect(items[0]).toMatchObject({ time: NOW_ISO, event: 'submitted', scope: 'run-1', receipt: 'run-1:1' });
+  expect(typeof items[0]?.actor).toBe('string');
+  const bad = await call('GET', '/api/audit/entries?limit=500', { headers: authed });
+  expect(bad.status).toBe(400);
+  const guest = await call('GET', '/api/audit/entries?limit=50', { headers: UI });
+  expect(guest.status).toBe(401);
+});
+
+test('new workspace paths answer 503 without the database', async () => {
+  for (const [method, path, body] of [
+    ['GET', '/api/runs', undefined],
+    ['GET', '/api/projects/project-1', undefined],
+    ['PATCH', '/api/projects/project-1', { name: 'x' }],
+    ['GET', '/api/environments', undefined],
+    ['POST', '/api/environments', { name: 'x' }],
+    ['GET', '/api/github/connections', undefined],
+    ['POST', '/api/github/connections', { installationId: '178697398' }],
+    ['POST', '/api/github/connections/conn-1/revoke', {}],
+    ['GET', '/api/telemetry/corpus', undefined],
+    ['POST', '/api/telemetry/corpus', { name: 'a', sizeBytes: 1, kind: 'log' }],
+    ['GET', '/api/audit/entries?limit=50', undefined],
+  ] as const) {
+    const answer = await call(method, path, { headers: authed, root: bareBase, ...(body === undefined ? {} : { body }) });
+    expect(answer.status, `${method} ${path}`).toBe(503);
+  }
 });
