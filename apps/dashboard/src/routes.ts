@@ -98,6 +98,19 @@ export async function renderRoute(outlet: HTMLElement, hash: string): Promise<vo
   closeDrawer();
   closeFloatingPanels();
   document.getElementById('sidebar')?.classList.remove('open');
+  document.body.classList.remove('nav-open');
+  document.querySelector('.menu-button')?.setAttribute('aria-expanded', 'false');
+  document.body.classList.toggle('public-surface', path.startsWith('/p/'));
+  document.body.classList.toggle('auth-surface', [
+    '/login', '/register', '/verify-email', '/check-email', '/forgot-password',
+    '/reset-password', '/session-expired', '/create-org', '/invite',
+  ].includes(path));
+  document.body.classList.toggle('auth-refined', document.body.classList.contains('auth-surface'));
+  const workspaceSurface = !document.body.classList.contains('public-surface') && !document.body.classList.contains('auth-surface');
+  const shell = document.getElementById('shell');
+  if (shell !== null) shell.dataset['workspacePage'] = workspaceSurface ? path : '';
+  for (const name of ['reyn-design', 'modern-design', 'workspace-port', 'workspace-refined']) shell?.classList.toggle(name, workspaceSurface);
+  outlet.classList.toggle('reyn-content', workspaceSurface);
   document.getElementById('navScrim')?.remove();
   document.body.style.overflow = '';
   if (route === undefined) {

@@ -8,6 +8,7 @@
 
 import { apiGet, apiPost } from './api.js';
 import {
+  changeproofMarkSvg,
   closeCustomSelect,
   drawer,
   enhanceCustomSelects,
@@ -211,6 +212,8 @@ export function closeMenu(): void {
   const wasOpen = sidebar?.classList.contains('open') === true;
   sidebar?.classList.remove('open');
   document.getElementById('navScrim')?.remove();
+  document.body.classList.remove('nav-open');
+  document.querySelector('.menu-button')?.setAttribute('aria-expanded', 'false');
   document.body.style.overflow = '';
   updateSidebarState();
   if (wasOpen && hadFocus && smallViewport()) {
@@ -715,10 +718,10 @@ export function renderShell(app: HTMLElement): Shell {
   document.documentElement.dataset['theme'] = loadTheme();
   document.body.classList.toggle('is-collapsed', loadSidebarCollapsed());
 
-  const skip = h('a', { class: 'skip-link', href: '#content' }, ['Skip to content']);
+  const skip = h('a', { class: 'skip-link', href: '#outlet' }, ['Skip to content']);
 
-  const brandmark = h('span', { class: 'brandmark', 'aria-hidden': 'true' }, []);
-  brandmark.appendChild(iconSvg('shield'));
+  const brandmark = h('span', { class: 'cp-brandmark', 'aria-hidden': 'true' }, []);
+  brandmark.appendChild(changeproofMarkSvg());
   const brand = h('a', { href: '#/dashboard', class: 'brand' }, []);
   brand.append(brandmark, h('span', { class: 'brand-word' }, ['ChangeProof ', h('em', {}, ['AI'])]));
   const menuClose = h('button', { class: 'mobile-close', type: 'button', 'aria-label': 'Close navigation', id: 'menuClose' }, ['×']);
@@ -752,9 +755,8 @@ export function renderShell(app: HTMLElement): Shell {
 
   const planMeter = h('div', { class: 'plan-mini', id: 'planMeter' }, []);
   planMeter.replaceChildren(
-    h('div', {}, [h('strong', {}, ['Usage']), h('span', {}, ['Loading…'])]),
+    h('div', {}, [h('strong', {}, ['Usage']), h('span', {}, [' Loading…'])]),
     h('div', { class: 'meter' }, []),
-    h('a', { href: '#/usage' }, ['Manage usage →']),
   );
   const orgButton = h('button', { class: 'organization', type: 'button', 'data-modern': 'workspace', 'aria-label': 'Select workspace' }, [
     h('span', { class: 'org-logo' }, ['–']),
@@ -797,6 +799,21 @@ export function renderShell(app: HTMLElement): Shell {
   );
   menuButton.appendChild(iconSvg('collapse'));
   menuButton.addEventListener('click', toggleSidebar);
+  // Mobile drawer trigger: the collapse control above is desktop-oriented.
+  // CSS shows this button only below 760px; it owns body.nav-open while
+  // closeMenu/renderRoute clear it so both triggers agree on one state.
+  const navMenuButton = h(
+    'button',
+    { class: 'button menu-button', type: 'button', 'aria-expanded': 'false', 'aria-controls': 'sidebar', 'aria-label': 'Open navigation' },
+    [],
+  );
+  navMenuButton.appendChild(iconSvg('menu'));
+  navMenuButton.addEventListener('click', () => {
+    const open = !document.body.classList.contains('nav-open');
+    document.body.classList.toggle('nav-open', open);
+    navMenuButton.setAttribute('aria-expanded', String(open));
+    navMenuButton.setAttribute('aria-label', open ? 'Close navigation' : 'Open navigation');
+  });
   const topContext = h('div', { class: 'top-context' }, [
     h('span', { class: 'context-orb', 'aria-hidden': 'true' }, []),
     h('span', { class: 'context-parent' }, ['Workspace /']),
@@ -806,7 +823,7 @@ export function renderShell(app: HTMLElement): Shell {
   searchTrigger.append(iconSvg('search'), h('span', { class: 'search-label' }, ['Search anything...']), h('kbd', {}, ['ctrl+K']));
   searchTrigger.setAttribute('aria-keyshortcuts', 'Control+k Meta+k');
   searchTrigger.addEventListener('click', () => { openSearchPalette(searchTrigger); });
-  const searchGroup = h('div', { class: 'header-search-group' }, [menuButton, topContext, searchTrigger]);
+  const searchGroup = h('div', { class: 'header-search-group' }, [navMenuButton, menuButton, topContext, searchTrigger]);
 
   const helpButton = h('button', { class: 'icon-btn header-help', type: 'button', 'data-modern': 'help', 'aria-label': 'Quick help' }, []);
   helpButton.appendChild(iconSvg('support'));
@@ -859,7 +876,7 @@ export function renderShell(app: HTMLElement): Shell {
   // shape the page. Merging both onto one element lets `#content` margin
   // rules cancel the sidebar offset and slide content underneath it.
   const outlet = h('div', { id: 'content', tabindex: '-1' }, []);
-  const mainLandmark = h('main', {}, [outlet]);
+  const mainLandmark = h('main', { id: 'outlet' }, [outlet]);
   const publicFooter = h('footer', { class: 'modern-footer', id: 'publicFooter' }, []);
   const main = h('div', { class: 'main' }, [topbar, publicNav, mainLandmark, publicFooter]);
   const root = h('div', { class: 'app', id: 'shell' }, [skip, sidebar, main]);
@@ -1027,7 +1044,7 @@ export function refreshShell(path: string): void {
   const content = document.getElementById('content');
   if (content !== null) {
     content.querySelectorAll('.app-footnote').forEach((node) => { node.remove(); });
-    if (workspace) {
+    if (workspace && document.getElementById('shell') !== null) {
       const footnote = h('footer', { class: 'app-footnote' }, [
         h('span', {}, ['ChangeProof AI · Independent verification']),
         h('span', {}, [

@@ -34,7 +34,7 @@ is unchanged. The fulfillment consumer is pinned to the v1 schema.
 `INTENT-PROPOSAL.md` (this file, approved revision), the check
 `tests/native/fixture-baseline.test.ts`, and the runtime pins
 `postgres:16-alpine` + `redis:7-alpine`. Any change after freeze = a new
-freeze with a new digest (AGENTS.md §3 rule 15).
+freeze with a new digest (./prepare/AGENTS.md §3 rule 15).
 
 ## Owner ceremony
 

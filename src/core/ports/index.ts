@@ -1,7 +1,7 @@
 /**
  * Ports in core.
  *
- * AGENTS.md §5: leaf modules may only import `core`. Cross-module collaboration
+ * ./prepare/AGENTS.md §5: leaf modules may only import `core`. Cross-module collaboration
  * goes through ports defined here, with implementations wired by the
  * orchestrator. A port is a contract, never a concrete I/O handle: no AST
  * objects, no runtime handles, no driver instances.
@@ -182,7 +182,7 @@ export interface CampaignRunnerPort {
 /**
  * Configuration access.
  *
- * AGENTS.md §3 rule 8 and NFR3-08: a missing tool, credential or config must
+ * ./prepare/AGENTS.md §3 rule 8 and NFR3-08: a missing tool, credential or config must
  * raise a specific actionable error, never silently default. Implementations
  * are required to throw rather than return a substitute.
  */
@@ -192,7 +192,7 @@ export interface ConfigurationPort {
 }
 
 /**
- * Secret broker (AGENTS.md §3 rule 12).
+ * Secret broker (./prepare/AGENTS.md §3 rule 12).
  *
  * Model, provider, and payment credentials are read at call time from the
  * broker and never stored in modules, guests, logs, or contracts. A ref that

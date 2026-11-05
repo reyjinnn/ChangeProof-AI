@@ -16,6 +16,7 @@ evidence-tmp/
 .env
 .env.*
 !.env.example
+compose.override.yaml
 
 # Editor / OS
 .DS_Store

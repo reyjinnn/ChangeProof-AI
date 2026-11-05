@@ -728,7 +728,6 @@ async function renderTeam(outlet: HTMLElement): Promise<void> {
 }
 
 export function registerSettingsPage(): void {
-  for (const view of ['account', 'team', 'privacy'] as const) registerRoute({ path: `/${view}`, title: `${view} settings`, render: outlet => renderSettings(outlet, view) });
   registerRoute({
     path: '/settings',
     title: 'Organization settings',

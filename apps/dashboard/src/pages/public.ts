@@ -20,10 +20,11 @@ import type {
 import type { SupportTicket } from '../../../../src/core/contracts/schemas/support.js';
 
 import { apiGet, apiPost, ApiRequestError } from '../api.js';
-import { badge, changeproofMarkSvg, emptyState, errorState, field, h, iconSvg, pillIcon, staticBadge } from '../components.js';
+import { badge, changeproofMarkSvg, emptyState, errorState, field, h, iconSvg, pillIcon, siteHeader, staticBadge } from '../components.js';
 import type { IconName } from '../icons.js';
-import { registerRoute } from '../routes.js';
+import { currentRouteEpoch, isCurrentRouteEpoch, registerRoute } from '../routes.js';
 import { initPublicChrome } from './public-chrome.js';
+import { renderPublicDesign } from './public-design.js';
 import { TECH_LOGOS } from './tech-logos.js';
 
 export type Destination =
@@ -2202,6 +2203,31 @@ async function renderPublicPage(outlet: HTMLElement, manifestPath: string): Prom
     outlet,
     () => apiGet<PublicRoute>(`/api/site/routes?path=${encodeURIComponent(manifestPath)}`),
     async (route) => {
+      const design = renderPublicDesign(manifestPath, manifestPath === '/');
+      if (design !== undefined) {
+        outlet.replaceChildren(design);
+        const published = h('section', { class: 'published-content', 'aria-label': 'Published service content' }, []);
+        const content = design.querySelector('.public-page-content') ?? design.querySelector('.reyn-content');
+        const block = SECTION_BLOCKS[manifestPath];
+        if (manifestPath === '/pricing') await renderPricingBlock(design);
+        else if (block !== undefined) {
+          if (manifestPath === '/help') {
+            const position = design.querySelector('.public-search');
+            position?.before(published);
+            position?.remove();
+            design.querySelector('.public-faq-list')?.remove();
+            design.querySelector('.public-no-results')?.remove();
+          } else if (manifestPath === '/changelog') design.querySelectorAll('.public-release').forEach(e => { e.remove(); });
+          else if (manifestPath === '/roadmap') design.querySelector('.public-page-content > .public-info-grid')?.remove();
+          await block(published);
+        }
+        if (published.childNodes.length > 0) {
+          if (published.isConnected) { /* Help content already occupies the original search position. */ }
+          else if (content?.classList.contains('reyn-content') === true) content.querySelector('.modern-footer')?.before(published);
+          else content?.append(published);
+        }
+        return;
+      }
       outlet.replaceChildren(renderPublicNav(manifestPath), pageHead(route));
       const block = SECTION_BLOCKS[manifestPath];
       if (block !== undefined) await block(outlet);

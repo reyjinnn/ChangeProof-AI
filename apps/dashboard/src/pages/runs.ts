@@ -451,8 +451,7 @@ async function renderLists(outlet: HTMLElement): Promise<void> {
           emptyState('No runs yet', 'File your first run to see it here.', h('a', { class: 'button', href: '#/runs/new' }, ['File your first run'])),
         );
       } else {
-        runTable.replaceChildren(
-          table(
+        const runsTable = table(
             ['Run', 'Project', 'Mode', 'Targets', 'Outcome', 'Credits', 'Updated'],
             runs.hits.map((hit) => [
               h('div', {}, [
@@ -466,9 +465,10 @@ async function renderLists(outlet: HTMLElement): Promise<void> {
               '—',
               h('span', { class: 'muted' }, [hit.createdAt]),
             ]),
-            { className: 'runs' },
-          ),
-        );
+            { className: 'runs run-search-table' },
+          );
+        runsTable.querySelector('table')?.prepend(h('caption', {}, ['Matches from current-grant search']));
+        runTable.replaceChildren(runsTable);
       }
       const stats = h('div', { class: 'stats' }, [
         h('div', { class: 'stat' }, [

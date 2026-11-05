@@ -39,7 +39,8 @@ import {
 import { notifySessionChanged } from '../session.js';
 import { shellModeFor } from '../shell.js';
 import { validateReturnTarget } from './public.js';
-import { parseHash, registerRoute, renderStandalone, type RouteContext } from '../routes.js';
+import { currentRouteEpoch, isCurrentRouteEpoch, parseHash, registerRoute, renderStandalone, type Route, type RouteContext } from '../routes.js';
+import { standaloneAuth } from './auth-port.js';
 
 let claimTicket: string | undefined;
 
@@ -437,13 +438,6 @@ async function loginForm(outlet: HTMLElement, ctx: RouteContext): Promise<void> 
     autocomplete: 'current-password',
     placeholder: 'Enter your password',
   });
-  for (const part of [email, password]) {
-    const label = part.wrap.querySelector('label')?.textContent ?? '';
-    part.wrap = h('label', { class: 'field', for: part.input.id }, [label, part.input]);
-  }
-  email.input.placeholder = 'name@company.com';
-  password.input.placeholder = 'Enter your password';
-  registerPassword(password.input, password.wrap);
   const tenant = field({ id: 'login-tenant', label: 'Organization (only if you belong to several)', autocomplete: 'organization' });
   const prefillTenant = params.get('tenant');
   if (prefillTenant !== undefined && prefillTenant !== '') tenant.input.value = prefillTenant;
@@ -1312,6 +1306,31 @@ function sessionExpiredPage(outlet: HTMLElement): void {
       h('p', {}, [h('a', { class: 'primary', href: '#/login' }, ['Log in again'])]),
     ]),
   );
+}
+
+function authShell(formCard: HTMLElement): HTMLElement {
+  return standaloneAuth(formCard);
+}
+
+function registerAccountRoute(route: Route): void {
+  registerRoute({ ...route, render: async (outlet, ctx) => {
+    const epoch = currentRouteEpoch();
+    const frame = (): void => {
+      if (!isCurrentRouteEpoch(epoch)) { observer.disconnect(); return; }
+      if (outlet.childNodes.length === 0 || [...outlet.children].some(e => e.classList.contains('reyn-design') || e.classList.contains('register-page'))) return;
+      const card = h('section');
+      card.append(...outlet.childNodes);
+      const heading = card.querySelector('h2');
+      if (card.querySelector('h1') === null && heading !== null) heading.replaceWith(h('h1', {}, [heading.textContent ?? '']));
+      outlet.replaceChildren(authShell(card));
+    };
+    // Async verification/reset responses keep their real handlers and state;
+    // this observer only supplies the original account presentation.
+    const observer = new MutationObserver(frame);
+    observer.observe(outlet, { childList: true });
+    await route.render(outlet, ctx);
+    frame();
+  } });
 }
 
 export function registerAuthPages(): void {

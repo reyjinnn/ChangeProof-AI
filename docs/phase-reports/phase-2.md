@@ -137,7 +137,7 @@ jobs,usage,github,fixtures,observability}/`, `src/modules/verifier/{campaign,red
 fixtures,native,observability,verifier}/`, `tests/orchestrator/phase2-composition.test.ts`.
 NOTE (foreign churn, not mine — left untouched): `mockup.html` moved to
 `.template-ui/mockup.html` with reference updates across `.prepare/*.md`,
-`AGENTS.md`, `README.md`, `SKILL.md`, `docs/*`, `phases/phase-6.md`, plus
+`./prepare/AGENTS.md`, `README.md`, `./prepare/SKILL.md`, `docs/*`, `phases/phase-6.md`, plus
 `.gitignore` edits. The `phase-2.md` diff was verified to contain only this
 report's own rewrite. No foreign file was created, modified, reverted, or
 deleted by this turn.

@@ -22,7 +22,7 @@ import { validateFaultTarget } from './campaign.js';
  * supervisor. It spawns argv only — never a shell — with finite timeouts, kills
  * strays, and applies faults solely to allowlisted targets validated by
  * `validateFaultTarget`. Trial/reset programs are trusted fixture code in this
- * slice. Untrusted customer code must run in a qualified guest (AGENTS.md §3
+ * slice. Untrusted customer code must run in a qualified guest (./prepare/AGENTS.md §3
  * rule 11); this executor does not claim that boundary. The model proposes a
  * typed fault intent; only a target present in the frozen plan is injectable.
  *

@@ -412,8 +412,8 @@ pnpm test:identity:native
 
 ## 8. Source-of-truth references
 
-- [`AGENTS.md`](AGENTS.md): collaboration contract, security rules, task/report format, and definition of done.
-- [`SKILL.md`](SKILL.md): development workflow, module playbooks, requirements index, negatives, and dependency summary.
+- [`./prepare/AGENTS.md`](./prepare/AGENTS.md): collaboration contract, security rules, task/report format, and definition of done.
+- [`./prepare/SKILL.md`](./prepare/SKILL.md): development workflow, module playbooks, requirements index, negatives, and dependency summary.
 - [`phases/phase-1.md`](phases/phase-1.md): phase-1 scope, tasks, prerequisites, acceptance checks, and blockers.
 - [`docs/phase-reports/phase-1.md`](docs/phase-reports/phase-1.md): recorded phase-1 results and remaining gaps.
 - [`phases/phase-2.md`](phases/phase-2.md): phase-2 scope, task breakdown, prerequisites, and acceptance checks.

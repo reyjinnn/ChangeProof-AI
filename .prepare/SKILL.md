@@ -5,7 +5,7 @@ description: Playbook for developing ChangeProof AI 1.0, a hosted TypeScript mod
 
 # ChangeProof AI 1.0 — Development Playbook
 
-This skill guides agents in building ChangeProof correctly. It complements `AGENTS.md` (non-negotiable rules, always read first). If `AGENTS.md` and this skill appear to differ, `AGENTS.md` takes precedence; then record the conflict.
+This skill guides agents in building ChangeProof correctly. It complements `./prepare/AGENTS.md` (non-negotiable rules, always read first). If `./prepare/AGENTS.md` and this skill appear to differ, `./prepare/AGENTS.md` takes precedence; then record the conflict.
 
 The core principle to always remember: **this product sells evidence, not code.** Any decision that makes claims easier to make than to prove is the wrong decision. The reason: customers use these results to decide whether to merge cross-system changes; false assurance is more dangerous than "I don't know".
 
@@ -17,18 +17,18 @@ The core principle to always remember: **this product sells evidence, not code.*
 | Exact behavior, data contracts, policy, NFR | `.prepare/PRD.md` (FR3-xx, §8 data contracts, §9 NFR, §12 DEC3) |
 | What must be proven, work order, gates | `.prepare/MVP.md` (§3 matrix, §6 gates, §7 negatives, §8 WP, §17 campaign protocol) |
 | Which module, allowed imports, trust boundary | `.prepare/architecture.md` (§2 structure, §3 import matrix, §7 trust, §15–17 hosted) |
-| UI appearance | `.template-ui/mockup.html` + `SKILL.md#ref-ui-mockup-guide` |
-| Concise WP/dependency/gate list | `SKILL.md#ref-work-packages` |
-| Requirement ID index | `SKILL.md#ref-requirements-index` |
-| Negative case list | `SKILL.md#ref-negative-cases` |
+| UI appearance | `.template-ui/mockup.html` + `./prepare/SKILL.md#ref-ui-mockup-guide` |
+| Concise WP/dependency/gate list | `./prepare/SKILL.md#ref-work-packages` |
+| Requirement ID index | `./prepare/SKILL.md#ref-requirements-index` |
+| Negative case list | `./prepare/SKILL.md#ref-negative-cases` |
 | Assisted readiness, safe reuse, forecast, B2/ablation and Meta contribution | `.prepare/PRD.md#product-depth-decision`, `.prepare/MVP.md#product-depth-acceptance`, `.prepare/architecture.md#product-depth-architecture` |
 | Simulated assessment and hackathon credit offer status | `.prepare/BRD.md#hackathon-context` — not official judging results, an account balance or product proof |
 | Event rubric, prizes, credit claim terms, IP license, tax and submission admin | `.prepare/BRD.md#hackathon-event-terms`: participant-reported event terms with dated provenance, not verified entitlement or eligibility |
 | Hackathon build scope, demo boundary and claim limits | `.prepare/BRD.md#hackathon-build-scope`, `.prepare/PRD.md#hackathon-competition-compliance`, `.prepare/MVP.md#hackathon-build-scope`, `.prepare/architecture.md#hackathon-build-architecture` |
-| Status vocab & verdict precedence | `SKILL.md#ref-policy-and-evidence` |
-| Security/tenant/hosted checklist per PR | `SKILL.md#ref-hosted-security-checklist` |
-| L1/L2/L3 ecosystem matrix | `SKILL.md#ref-capability-matrix` |
-| Which Claude skill to load before this step or change type | `SKILL.md` §1 *Skill bindings* |
+| Status vocab & verdict precedence | `./prepare/SKILL.md#ref-policy-and-evidence` |
+| Security/tenant/hosted checklist per PR | `./prepare/SKILL.md#ref-hosted-security-checklist` |
+| L1/L2/L3 ecosystem matrix | `./prepare/SKILL.md#ref-capability-matrix` |
+| Which Claude skill to load before this step or change type | `./prepare/SKILL.md` §1 *Skill bindings* |
 | Phase-specific task list, tests-first rows, acceptance commands, blockers, DoD | `phases/phase-1.md` … `phases/phase-7.md`, section *Task breakdown* |
 | Available checks vs. scripts actually present | `package.json` — script names are targets until they exist (AGENTS §6) |
 
@@ -40,7 +40,7 @@ Large documents (MVP ~107 KB, PRD ~112 KB): do not read in full. Use `grep -n '^
 
 ### phase-1 through phase-7 and hackathon slice triggers
 
-If the user requests `phase-N` (N = 1–7), follow [AGENTS §18](AGENTS.md#18-pemanggilan-fase-eksekusi) and open `phases/phase-N.md` relative to this skill's folder. A bare prompt means execution, while an explanation/review question means answering the question asked. Use the division in [MVP §22](.prepare/MVP.md#execution-phases), not the P0 roadmap at the root. Audit prerequisites and continue all dependency-ready tasks within the requested phase; resume using the engineering report `docs/phase-reports/phase-N.md` at the project root after revalidating the evidence.
+If the user requests `phase-N` (N = 1–7), follow [AGENTS §18](./prepare/AGENTS.md#18-pemanggilan-fase-eksekusi) and open `phases/phase-N.md` relative to this skill's folder. A bare prompt means execution, while an explanation/review question means answering the question asked. Use the division in [MVP §22](.prepare/MVP.md#execution-phases), not the P0 roadmap at the root. Audit prerequisites and continue all dependency-ready tasks within the requested phase; resume using the engineering report `docs/phase-reports/phase-N.md` at the project root after revalidating the evidence.
 
 If the user explicitly requests `hackathon-slice`, `competition slice`, or the Meta hackathon build/demo, use only [phases/hackathon-slice.md](phases/hackathon-slice.md) and its scope authorities [BRD §21](.prepare/BRD.md#hackathon-build-scope), [PRD §21](.prepare/PRD.md#hackathon-competition-compliance), [MVP §23](.prepare/MVP.md#hackathon-build-scope), and [architecture](.prepare/architecture.md#hackathon-build-architecture). This is a competition build playbook, **not an eighth release phase**. It does not change the full product scope, WP DAG, phase assignments or G3 gates. Preserve the product's value by keeping the slice deep (real workflow, live/labeled Meta contribution, protected intent, independent proof, evidence) while reducing breadth. Never describe the slice as the full product or organic pilot.
 
@@ -51,12 +51,12 @@ Do not automatically run the next phase. Phase files are playbooks, not schedule
 - If the repo is empty: start with WP3-01.
 
 ### Step 2 — Choose a ready work package
-- Open `SKILL.md#ref-work-packages`. Choose a WP whose dependencies are all `done` **with evidence**. IDs are not an ordering.
+- Open `./prepare/SKILL.md#ref-work-packages`. Choose a WP whose dependencies are all `done` **with evidence**. IDs are not an ordering.
 - One WP may be split into small tasks, but each task must have observable behavior. Splitting does not change the gate.
 - If a dependency is not ready but certain work does not depend on it (e.g. preparation), do that part and record the rest as a blocker.
 
 ### Step 3 — Trace requirements
-For the task, gather relevant BR3 → FR3 → NFR3 → DEC3 → WP → G3 → NEG3 → SC3 (see `SKILL.md#ref-requirements-index`). Read the original text in PRD/MVP, not the summary here. Write the task header using the format in `AGENTS.md §7.1`.
+For the task, gather relevant BR3 → FR3 → NFR3 → DEC3 → WP → G3 → NEG3 → SC3 (see `./prepare/SKILL.md#ref-requirements-index`). Read the original text in PRD/MVP, not the summary here. Write the task header using the format in `./prepare/AGENTS.md §7.1`.
 
 ### Step 4 — Write failure-path tests first
 For `policy`, guard/gateway, verifier, identity/grants, jobs/lease, usage, deletion: write negative tests **before** implementation. Example questions to guide tests:
@@ -71,7 +71,7 @@ Follow the module playbooks in §2 below. Always: versioned Zod schemas in `core
 Strict typecheck → lint + dependency-cruiser → unit/integration → **native/real checks if the scope touches real execution, isolation, DB, browser, or hosted**. Record command + exit code. Report mock vs native separately.
 
 ### Step 7 — Report
-Use the format in `AGENTS.md §7.2`. Separate: *proven*, *worked on but not yet proven*, *blocked*, *missing check*. Name the next dependency-ready task.
+Use the format in `./prepare/AGENTS.md §7.2`. Separate: *proven*, *worked on but not yet proven*, *blocked*, *missing check*. Name the next dependency-ready task.
 
 ### Skill bindings — what to load before the step that needs it
 
@@ -118,7 +118,7 @@ This package contains **no implementation**, so the environment's tooling skills
 
 ### 2.2 Adding/changing rules in `policy`
 - `policy` is pure: no I/O, model, clock, env. Input = precomputed facts + validity/config identities.
-- Write tests for each precedence row (`SKILL.md#ref-policy-and-evidence`) **before** code, including: stale+pass, full pass+unknown, partial+invalid oracle, target pass+edge fail, mixed candidate, dimension inconclusive+functional pass.
+- Write tests for each precedence row (`./prepare/SKILL.md#ref-policy-and-evidence`) **before** code, including: stale+pass, full pass+unknown, partial+invalid oracle, target pass+edge fail, mixed candidate, dimension inconclusive+functional pass.
 - No averaging, voting, model confidence, or summary text as proof input.
 - Rules must not branch by framework. If framework knowledge is needed → that is the adapter's job (constraints/facts), not policy's.
 
@@ -152,7 +152,7 @@ This package contains **no implementation**, so the environment's tooling skills
 - Legacy without a valid baseline/intent → characterization + abstain (`behavior_contract_unknown`); the oracle must not be independently derived from an observed bug without owner/domain validation.
 
 ### 2.6 Hosted module (identity, jobs, usage, lifecycle, queries, notifications, support, collaboration)
-Must go through `SKILL.md#ref-hosted-security-checklist`. In brief:
+Must go through `./prepare/SKILL.md#ref-hosted-security-checklist`. In brief:
 - Every query/projection/stream/cache/export: scope tenant+actor+project+repo **and** current grant.
 - State in PostgreSQL; transactions + outbox; CAS/version; RLS tested with concurrent tenants.
 - External effects: idempotency identity + reconciliation; lease + fencing epoch.
@@ -162,7 +162,7 @@ Must go through `SKILL.md#ref-hosted-security-checklist`. In brief:
 - BYOK: `ModelCredentialRef` per tenant; secrets only in the broker; revoke/rotation/accounting tested.
 
 ### 2.7 Dashboard / UI
-See `SKILL.md#ref-ui-mockup-guide`. Principles: mockup = design, not evidence; all controls have real behavior; the browser never holds secrets/authority; browser storage is restricted; keyboard/label accessibility; public content separate from tenant data.
+See `./prepare/SKILL.md#ref-ui-mockup-guide`. Principles: mockup = design, not evidence; all controls have real behavior; the browser never holds secrets/authority; browser storage is restricted; keyboard/label accessibility; public content separate from tenant data.
 
 ### 2.8 Evidence & publication
 - Content-addressed evidence manifest, immutable during retention (not "cannot be deleted"), containing the exact candidate tested. Revised candidate ⇒ new proof for the affected scope.

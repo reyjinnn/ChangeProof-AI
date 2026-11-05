@@ -5,7 +5,7 @@ import { SemanticViolationError } from '../errors/index.js';
 /**
  * Identity domains.
  *
- * AGENTS.md §5 and the phase-1 playbook require a raw-byte hash to stay
+ * ./prepare/AGENTS.md §5 and the phase-1 playbook require a raw-byte hash to stay
  * distinct from a canonical structured identity. They answer different
  * questions:
  *

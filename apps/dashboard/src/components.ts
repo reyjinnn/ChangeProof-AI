@@ -5,6 +5,7 @@
  * drawer/modal/toast roots, .cp-select combobox, .cp-file-picker). */
 
 import { ICON_PATHS, type IconName } from './icons.js';
+import { loadTheme, saveTheme } from './store.js';
 
 export type { IconName };
 export type BadgeTone = 'ok' | 'warn' | 'bad' | 'info';

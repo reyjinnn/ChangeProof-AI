@@ -39,7 +39,7 @@ CREATE TABLE IF NOT EXISTS invitations (
 );
 REVOKE ALL ON invitations FROM PUBLIC, app_user;
 
--- Deletion fence: a tombstoned tenant admits nothing new (AGENTS.md §10).
+-- Deletion fence: a tombstoned tenant admits nothing new (./prepare/AGENTS.md §10).
 CREATE TABLE IF NOT EXISTS tenant_tombstones (
   tenant_id TEXT PRIMARY KEY REFERENCES tenants (id),
   reason TEXT NOT NULL,

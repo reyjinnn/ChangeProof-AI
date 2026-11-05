@@ -1194,4 +1194,4 @@ code.inline {
   font-size: 13px;
   margin-top: 4px;
 }
-
+} /* legacy: direct ports supply their own isolated skin */

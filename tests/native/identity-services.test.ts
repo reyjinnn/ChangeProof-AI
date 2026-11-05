@@ -260,7 +260,7 @@ describe('membership changes keep an owner and stay current (NEG3-38)', () => {
   });
 });
 
-describe('tenant deletion fences every admission (AGENTS.md §10)', () => {
+describe('tenant deletion fences every admission (./prepare/AGENTS.md §10)', () => {
   it('refuses deletion by a non-owner, then fences the tenant for everyone', async () => {
     const tenantId = uniqueId('tenant-del');
     const ownerId = uniqueId('user-owner');

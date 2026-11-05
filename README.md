@@ -214,7 +214,7 @@ compose.yaml          disposable Docker stack (app + pg + mailpit)
 Dockerfile            application image (node 26.12.1, pnpm 12.5.1)
 ```
 
-To contribute, read in order: `AGENTS.md` (working contract), then `SKILL.md` (playbook), then `.prepare/BRD.md`, `PRD.md`, `MVP.md`, and `architecture.md`. Never commit credentials or `.env` files.
+To contribute, read in order: `./prepare/AGENTS.md` (working contract), then `./prepare/SKILL.md` (playbook), then `.prepare/BRD.md`, `PRD.md`, `MVP.md`, and `architecture.md`. Never commit credentials or `.env` files.
 
 ---
 
