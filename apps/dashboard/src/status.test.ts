@@ -48,3 +48,22 @@ test('a late health response cannot overwrite a newer route', async () => {
   await pending;
   expect(host.textContent).toBe('Current page');
 });
+
+test.each([false, true])('overview gives an honest next action for authenticated=%s without invented run data', async authenticated => {
+  const calls: string[] = [];
+  globalThis.fetch = vi.fn((input: unknown) => {
+    calls.push(String(input));
+    return Promise.resolve(new Response(JSON.stringify({ ok: true, data: String(input) === '/api/health'
+      ? { status: 'ok', service: 'changeproof', contentVersion: 'published-snapshot-7' }
+      : { authenticated, ...(authenticated ? { tenantId: 'review-workspace', role: 'owner' } : {}) } }), { status: 200 }));
+  });
+  const host = outlet();
+  await renderStatus(host);
+  expect(host.querySelector('[data-overview-primary]')?.getAttribute('href')).toBe(authenticated ? '#/runs/new' : '#/login');
+  expect(host.querySelector('[data-overview-map]')?.getAttribute('aria-label')).toContain('Illustrative');
+  expect(host.textContent).toContain('Not assessed');
+  expect(host.textContent).toContain('published-snapshot-7');
+  expect(host.textContent).not.toContain('3 results need');
+  expect(calls.sort()).toEqual(['/api/auth/session', '/api/health']);
+  expect(host.querySelector('[aria-busy="true"]')).toBeNull();
+});

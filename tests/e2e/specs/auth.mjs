@@ -3,7 +3,7 @@
 // plus login negatives, guest guards, and axe on login/settings.
 import assert from 'node:assert/strict';
 
-import { axeScan } from '../helpers.mjs';
+import { axeScan, captureVisualMatrix } from '../helpers.mjs';
 
 export const needsDb = true;
 export const migrations = [
@@ -46,6 +46,7 @@ export async function spec({ base, context, rootDir, browser, mailApi }) {
 
   // Register → verify → create-org → login.
   await page.goto(`${base}/#/register`, { waitUntil: 'networkidle' });
+  await captureVisualMatrix(page, 'register-empty', rootDir);
   await page.locator('#reg-email').fill(ownerEmail);
   await page.locator('#reg-password').fill(password);
   await page.locator('#reg-confirm').fill(password);
@@ -61,6 +62,7 @@ export async function spec({ base, context, rootDir, browser, mailApi }) {
   await page.getByText('Organization created').waitFor();
   await page.locator('main#outlet a', { hasText: 'Log in' }).click();
   await page.locator('#login-email').waitFor();
+  await captureVisualMatrix(page, 'login-empty', rootDir);
   assert.equal(await page.locator('#login-tenant').inputValue(), `e2e-org-${stamp}`);
   await page.locator('#login-email').fill(ownerEmail);
   await page.locator('#login-password').fill(password);
@@ -95,6 +97,7 @@ export async function spec({ base, context, rootDir, browser, mailApi }) {
   await page.goto(`${base}/#/settings`, { waitUntil: 'networkidle' });
   await page.getByRole('heading', { level: 1 }).waitFor();
   await page.getByText('This session').waitFor();
+  await captureVisualMatrix(page, 'settings-authenticated', rootDir);
   assert.match((await page.locator('main#outlet').textContent()) ?? '', new RegExp(`e2e-org-${stamp}`));
 
   // Invite the member; the member path runs register → own org → accept.
@@ -150,6 +153,7 @@ export async function spec({ base, context, rootDir, browser, mailApi }) {
   await page.getByText('reset mail is on its way').waitFor();
   const resetToken = await mailToken(mailApi, ownerEmail, 'reset');
   await page.goto(`${base}/#/reset-password?token=${encodeURIComponent(resetToken)}`, { waitUntil: 'networkidle' });
+  await captureVisualMatrix(page, 'reset-password-valid-ticket', rootDir);
   await page.locator('#reset-password').fill('new-correct-horse-43');
   await page.locator('#reset-confirm').fill('new-correct-horse-43');
   await page.locator('main#outlet button[type="submit"]').click();

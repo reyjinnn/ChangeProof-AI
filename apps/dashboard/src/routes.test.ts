@@ -7,6 +7,22 @@ afterEach(() => {
   document.body.replaceChildren();
 });
 
+test('shared polish follows public/auth/workspace boundaries without changing route destinations', async () => {
+  const shell = h('div', { id: 'shell' }); document.body.append(shell);
+  const outlet = outletWithAnnouncer(); shell.append(outlet);
+  for (const path of ['/p/guides', '/login', '/projects']) registerRoute({ path, title: path, render: host => { host.append(h('h1', {}, [path])); } });
+  await renderRoute(outlet, '#/login');
+  expect(document.body.classList.contains('auth-refined')).toBe(true);
+  expect(shell.classList.contains('workspace-refined')).toBe(false);
+  await renderRoute(outlet, '#/projects');
+  expect(document.body.classList.contains('auth-refined')).toBe(false);
+  expect(shell.classList.contains('workspace-refined')).toBe(true);
+  expect(shell.dataset['workspacePage']).toBe('/projects');
+  await renderRoute(outlet, '#/p/guides');
+  expect(shell.classList.contains('workspace-refined')).toBe(false);
+  expect(shell.dataset['workspacePage']).toBe('');
+});
+
 test('public errors retain a page heading and a return to the public landing', async () => {
   const outlet = outletWithAnnouncer();
   await renderRoute(outlet, '#/p/missing-design-screen');

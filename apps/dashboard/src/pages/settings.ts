@@ -190,7 +190,7 @@ function renderDeletion(host: HTMLElement, tenantId: string): void {
     autocomplete: 'off',
   });
   const alert = h('div', {}, []);
-  const submit = h('button', { class: 'button primary', type: 'submit' }, ['Delete this organization']);
+  const submit = h('button', { class: 'button danger', type: 'submit' }, ['Delete this organization']);
   const form = h('form', { novalidate: 'novalidate' }, [reason.wrap, confirm.wrap, alert, h('p', {}, [submit])]);
   form.addEventListener('submit', (event) => {
     event.preventDefault();

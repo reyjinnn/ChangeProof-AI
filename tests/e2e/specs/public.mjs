@@ -69,6 +69,13 @@ export async function spec({ base, context, rootDir }) {
         assert.doesNotMatch((await page.locator('main#outlet').textContent()) ?? '', /Page not found/);
         await page.goto(`${base}/#/p${route.path}`, { waitUntil: 'networkidle' });
         await page.getByRole('heading', { level: 1 }).waitFor();
+      } else if (href === '#/') {
+        await page.goto(`${base}/${href}`, { waitUntil: 'networkidle' });
+        await page.getByRole('heading', { name: 'Workspace overview', exact: true }).waitFor();
+        await page.locator('.overview-facts').waitFor();
+        assert.equal(await page.locator('[data-overview-primary]').getAttribute('href'), '#/login');
+        await page.goto(`${base}/#/p${route.path}`, { waitUntil: 'networkidle' });
+        await page.getByRole('heading', { level: 1 }).waitFor();
       } else if (href === '#/register') {
         await page.goto(`${base}/${href}`, { waitUntil: 'networkidle' });
         await page.getByRole('heading', { name: 'Create an account', exact: true }).waitFor();
@@ -189,5 +196,52 @@ export async function spec({ base, context, rootDir }) {
   await page.locator('.cp-identity-hero').waitFor();
   assert.equal(await page.locator('.sidebar').isVisible(), false);
 
+  // Composition regression: real DOM line boxes, not CSS-class presence alone.
+  // Visual approval still requires inspecting the full-page screenshots.
+  for (const width of [1440, 390]) {
+    await page.setViewportSize({ width, height: width === 1440 ? 900 : 844 });
+    await page.goto(`${base}/#/p/product`, { waitUntil: 'networkidle' });
+    await page.locator('.contract-diff-header').waitFor();
+    await page.evaluate(() => document.fonts.ready);
+    const rows = await page.locator('[data-feature-index]').evaluateAll(nodes => nodes.map(node => {
+      const number = node.querySelector('.feature-number'), title = node.querySelector('h2');
+      const n = number.getBoundingClientRect(), t = title.getBoundingClientRect(), container = node.getBoundingClientRect();
+      const p = node.querySelector('p').getBoundingClientRect(), a = node.querySelector('a').getBoundingClientRect();
+      return { text: number.textContent, size: Number.parseFloat(window.getComputedStyle(number).fontSize), numberX: n.x, titleX: t.x, topDelta: Math.abs(n.top - t.top), descriptionX: p.x, actionX: a.x, leftInset: n.left - container.left, rightInset: container.right - a.right };
+    }));
+    assert.deepEqual(rows.map(row => row.text), ['01', '02', '03', '04']);
+    for (const row of rows) {
+      assert.ok(row.size >= 18 && row.topDelta <= 8, `number is readable and anchored to its title at ${width}px`);
+      assert.ok(row.leftInset >= 20 && row.rightInset >= 20, `Product content has internal horizontal breathing room at ${width}px`);
+      assert.ok(Math.abs(row.numberX - rows[0].numberX) < 1 && Math.abs(row.titleX - rows[0].titleX) < 1, 'editorial columns align across all rows');
+      if (width === 390) assert.ok(Math.abs(row.titleX - row.descriptionX) < 1 && Math.abs(row.titleX - row.actionX) < 1, 'mobile description and action align under the title');
+    }
+    assert.equal(await page.locator('.contract-diff-line').count(), 4);
+    assert.equal(await page.locator('[data-diff=removed] code').textContent(), '  id: string;');
+    assert.equal(await page.locator('[data-diff=added] code').textContent(), '  id: OrderId;');
+    assert.match(await page.locator('.contract-diff-header').textContent(), /Illustrative.*Not executed/);
+    assert.doesNotMatch(await page.locator('[data-product-illustration]').textContent(), /passed|successfully|execution complete/i);
+    assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth), false);
+    await page.goto(`${base}/#/p/changelog`, { waitUntil: 'networkidle' });
+    await page.locator('.public-release .release-entry').first().waitFor();
+    const timeline = await page.locator('.public-release .release-entry').evaluateAll(nodes => nodes.map(node => {
+      const heading = node.querySelector('h3').getBoundingClientRect(), date = node.querySelector('time').getBoundingClientRect(), body = node.querySelector('p').getBoundingClientRect();
+      return { x: heading.x, width: heading.width, dateX: date.x, bodyX: body.x, y: heading.y, bottom: node.getBoundingClientRect().bottom };
+    }));
+    assert.ok(timeline.length >= 2, 'The published design-note fixtures exercise repeated timeline entries');
+    for (const entry of timeline) {
+      assert.ok(Math.abs(entry.x - timeline[0].x) < 1 && Math.abs(entry.x - entry.dateX) < 1 && Math.abs(entry.x - entry.bodyX) < 1, 'Every timeline marker/date/title/body shares one content column');
+      assert.ok(entry.width >= (width === 390 ? 240 : 600), 'Timeline entries are not squeezed into the old date/sidebar column');
+    }
+    for (let i = 1; i < timeline.length; i += 1) assert.ok(timeline[i].y > timeline[i - 1].bottom, 'Entries follow one vertical reading order');
+    await page.goto(`${base}/#/session-expired`, { waitUntil: 'networkidle' });
+    const signIn = page.locator('.fresh-auth-form a.button.primary');
+    await signIn.waitFor();
+    const target = await signIn.boundingBox();
+    assert.ok(target.height >= 44 && target.width >= 60, 'The expired-session recovery link remains a usable button, not an inline text sliver');
+    await signIn.click();
+    await page.waitForURL('**#/login');
+    await page.locator('#login-email').waitFor();
+  }
   await page.close();
 }

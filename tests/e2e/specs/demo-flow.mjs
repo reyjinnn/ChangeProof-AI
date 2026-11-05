@@ -1,6 +1,8 @@
 // Real public → email account → project → versioned draft journey.
 // No worker/model call, payment, PR or fabricated repair result.
 import assert from 'node:assert/strict';
+import { workspaceJourney } from '../pilot-checks.mjs';
+import { captureVisualMatrix } from '../helpers.mjs';
 
 export const needsDb = true;
 export const migrations = ['V1__identity_tenancy.sql', 'V2__identity_services.sql', 'V3__jobs.sql', 'V4__usage.sql', 'V5__email_identity.sql', 'V6__lifecycle.sql', 'V7__engagement.sql', 'V10__enterprise.sql'];
@@ -19,7 +21,7 @@ async function verificationToken(mailApi, email) {
   throw new Error('Verification mail did not arrive in the isolated Mailpit instance.');
 }
 
-export async function spec({ base, context, mailApi }) {
+export async function spec({ base, context, mailApi, rootDir }) {
   const page = await context.newPage();
   await page.setViewportSize({ width: 1440, height: 900 });
   const stamp = Date.now(), email = `demo-flow-${stamp}@example.com`, tenant = `demo-flow-${stamp}`, password = 'demo-flow-test-password-42';
@@ -45,15 +47,32 @@ export async function spec({ base, context, mailApi }) {
   await page.locator('button[type=submit]').click();
   await page.waitForURL(`${base}/#/`);
   await page.locator('#account', { hasText: tenant }).waitFor();
+  await page.locator('.overview-facts').waitFor();
+  assert.equal(await page.locator('[data-overview-primary]').getAttribute('href'), '#/runs/new');
+  assert.ok(await page.getByRole('link', { name: 'Prepare a change', exact: true }).isVisible());
+  assert.match(await page.locator('[data-overview-map]').getAttribute('aria-label'), /Illustrative/);
+  assert.match(await page.locator('.overview-facts').textContent(), /Active/);
+  assert.match(await page.locator('.overview-facts').textContent(), /Not assessed/);
   await page.goto(`${base}/#/projects/new`, { waitUntil: 'networkidle' });
   await page.locator('#project-name').fill('Demo review project');
   await page.getByRole('button', { name: 'Create project', exact: true }).click();
   await page.waitForURL('**#/project?id=**');
+  await page.getByRole('link', { name: 'Prepare a run', exact: true }).waitFor();
+  const projectUrl = page.url();
+  await captureVisualMatrix(page, 'project-detail-authenticated', rootDir);
+  await page.goto(`${base}/#/projects`, { waitUntil: 'networkidle' });
+  await page.getByRole('heading', { name: 'Demo review project', exact: true }).waitFor();
+  await captureVisualMatrix(page, 'projects-authenticated', rootDir);
+  await page.goto(projectUrl, { waitUntil: 'networkidle' });
   await page.getByRole('link', { name: 'Prepare a run', exact: true }).click();
   await page.locator('#draft-intent').fill('Investigate a controlled API change; do not claim a repaired workflow without evidence.');
   await page.locator('#save-draft').click();
   await page.locator('#draft-result', { hasText: /revision/i }).waitFor();
   assert.match(await page.locator('.run-form-summary').textContent(), /Muse and Modal are not configured/);
+  await workspaceJourney(page, base, true);
+  await page.setViewportSize({ width: 390, height: 844 });
+  await workspaceJourney(page, base, true);
+  await page.setViewportSize({ width: 1440, height: 900 });
   assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth), false);
   await page.setViewportSize({ width: 390, height: 844 });
   assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth), false);
@@ -88,5 +107,12 @@ export async function spec({ base, context, mailApi }) {
     assert.equal(await page.getByRole('heading', { level: 1 }).textContent(), 'Clear changes. Confident decisions.', `${path}: stale session must not replace the public page`);
     assert.ok(page.url().endsWith('#/p/product'));
   }
+  await page.goto(`${base}/#/impact`, { waitUntil: 'networkidle' });
+  await page.getByRole('heading', { name: 'Impact graph', exact: true }).waitFor();
+  await captureVisualMatrix(page, 'impact-unavailable-authenticated', rootDir);
+  await page.locator('.unavailable-reference > summary').focus();
+  await page.keyboard.press('Enter');
+  assert.notEqual(await page.locator('.unavailable-reference').getAttribute('open'), null);
+  assert.equal(await page.locator('.workspace-unavailable').evaluate(node => node.inert), true);
   await page.close();
 }

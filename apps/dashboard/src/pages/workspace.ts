@@ -99,6 +99,10 @@ async function blocked(outlet: HTMLElement, name: keyof typeof gaps): Promise<vo
     if (!isCurrentRouteEpoch(epoch)) return;
     const [title, reason] = gaps[name];
     const layout = h('div', { class: 'workspace-unavailable', 'data-layout': name });
+    // This is an inactive design preview, not a second interactive workspace.
+    // The preceding real heading and service blocker remain accessible.
+    layout.inert = true;
+    layout.setAttribute('aria-hidden', 'true');
     const template = document.createElement('template'); template.innerHTML = workspaceLayouts[name];
     layout.append(template.content.cloneNode(true));
     layout.querySelectorAll<HTMLElement>('h2,h3,label,legend').forEach(element => {
@@ -106,7 +110,20 @@ async function blocked(outlet: HTMLElement, name: keyof typeof gaps): Promise<vo
     });
     layout.querySelectorAll<HTMLElement>('[disabled]').forEach(control => { control.title = reason; });
     layout.querySelectorAll<HTMLAnchorElement>('a').forEach(link => { link.removeAttribute('href'); link.textContent = 'Service integration unavailable'; link.setAttribute('aria-disabled', 'true'); });
-    outlet.replaceChildren(pageHead({ title, subtitle: 'Original screen composition · service integration unavailable' }), h('aside', { class: 'notice service-blocker', role: 'status' }, [h('strong', {}, ['Unavailable — no workspace result is being shown.']), h('p', {}, [reason]), h('a', { href: '#/runs' }, ['Review available runs']), document.createTextNode(' · '), h('a', { href: '#/p/help' }, ['Read the help guide'])]), layout);
+    const connection = h('figure', { class: 'unavailable-connection', role: 'img', 'aria-label': `${title} requires a service connection. No execution or result is shown.` }, [
+      h('figcaption', {}, ['THE MISSING CONNECTION']), h('div', {}, [
+        h('section', {}, [h('span', {}, ['01']), h('strong', {}, ['Workspace context']), h('small', {}, ['Current session and grants'])]),
+        h('section', { class: 'connection-gap' }, [h('span', {}, ['02']), h('strong', {}, [title]), h('small', {}, ['Service integration unavailable'])]),
+        h('section', {}, [h('span', {}, ['03']), h('strong', {}, ['No result claimed']), h('small', {}, ['Evidence remains unavailable'])]),
+      ]),
+    ]);
+    const next = h('section', { class: 'unavailable-next' }, [h('h2', {}, ['What you can do now']), ...([
+      ['#/projects', 'Review your projects', 'Use the existing project and access workflow.'],
+      ['#/runs/new', 'Prepare a change', 'Capture intent and context in a versioned draft.'],
+      ['#/p/guides', 'Read the workflow guide', 'Understand prerequisites before expecting results.'],
+    ] as const).map(([href, label, detail]) => h('a', { href }, [h('strong', {}, [label]), h('span', {}, [detail]), h('span', { 'aria-hidden': 'true' }, ['↗'])]))]);
+    const reference = h('details', { class: 'unavailable-reference' }, [h('summary', {}, ['Inactive design reference · no live data or controls']), layout]);
+    outlet.replaceChildren(pageHead({ title, subtitle: 'Service connection required · no live results' }), h('div', { class: 'notice service-blocker', role: 'status' }, [h('strong', {}, ['Unavailable — no workspace result is being shown.']), h('p', {}, [reason]), h('a', { href: '#/runs' }, ['Review available runs']), document.createTextNode(' · '), h('a', { href: '#/p/help' }, ['Read the help guide'])]), connection, next, reference);
   } catch (error) {
     if (!isCurrentRouteEpoch(epoch)) return;
     outlet.replaceChildren(errorState('Workspace service unavailable', message(error), { label: 'Retry', onClick: () => { void blocked(outlet, name); } }));

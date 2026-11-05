@@ -72,7 +72,7 @@ export function renderShell(app: HTMLElement): Shell {
     h('div', { class: 'eyebrow' }, ['Your workspace']),
     h('p', { class: 'muted', id: 'sidebar-session-summary' }, ['Guest session · sign in to access workspace']),
   ]);
-  const sidebar = h('aside', { class: 'sidebar', id: 'sidebar' }, [brand, nav, sidebarFoot]);
+  const sidebar = h('aside', { class: 'sidebar', id: 'sidebar', 'aria-label': 'Workspace navigation' }, [brand, nav, sidebarFoot]);
 
   const menuButton = h(
     'button',
