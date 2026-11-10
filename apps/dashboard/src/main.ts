@@ -20,7 +20,7 @@ import { registerRunPages } from './pages/runs.js';
 import { registerSettingsPage } from './pages/settings.js';
 import { renderRoute, registerRoute } from './routes.js';
 import { refreshAccount, SESSION_CHANGED_EVENT } from './session.js';
-import { refreshShellServices, renderShell } from './shell.js';
+import { renderShell } from './shell.js';
 import { renderStatus } from './status.js';
 
 async function boot(): Promise<void> {
@@ -70,7 +70,7 @@ async function boot(): Promise<void> {
 
   const { outlet } = renderShell(app);
   await refreshAccount();
-  refreshShellServices();
+
   window.addEventListener('hashchange', () => void renderRoute(outlet, window.location.hash));
   window.addEventListener(SESSION_CHANGED_EVENT, () => {
     // The account refresh is async; if the user navigates meanwhile, the
