@@ -43,7 +43,9 @@ export function sendBytes(response: ServerResponse, bytes: Uint8Array, digest: s
 export function sendRedirect(response: ServerResponse, location: string): void {
   const inApp = location.startsWith('/') && !location.startsWith('//') && !location.includes('\\');
   const authorize = location.startsWith('https://github.com/login/oauth/authorize?');
-  if (!inApp && !authorize) {
+  const install =
+    location.startsWith('https://github.com/apps/') && location.includes('/installations/new?');
+  if (!inApp && !authorize && !install) {
     sendFail(response, 500, 'internal', 'Refusing an unsafe redirect target.');
     return;
   }
