@@ -91,25 +91,26 @@ const NAV_GROUPS: readonly {
       { id: 'dashboard', icon: 'dashboard', label: 'Overview', href: '#/dashboard' },
       { id: 'projects', icon: 'projects', label: 'Projects', href: '#/projects' },
       { id: 'runs', icon: 'runs', label: 'Runs', href: '#/runs' },
-      { id: 'new-run', icon: 'plus', label: 'New run', href: '#/new-run' },
+
       { id: 'evidence-library', icon: 'evidence', label: 'Evidence', href: '#/evidence-library' },
+      { id: 'capabilities', icon: 'shield', label: 'Capabilities', href: '#/capabilities' },
     ],
   },
   {
     label: 'ORGANIZATION',
     items: [
-      { id: 'repositories', icon: 'git', label: 'Repositories', href: '#/repositories' },
-      { id: 'capabilities', icon: 'shield', label: 'Capabilities', href: '#/capabilities' },
-      { id: 'usage', icon: 'usage', label: 'Usage & credits', href: '#/usage' },
       { id: 'team', icon: 'team', label: 'Team & access', href: '#/team' },
+      { id: 'repositories', icon: 'git', label: 'GitHub connections', href: '#/repositories' },
+      { id: 'usage', icon: 'usage', label: 'Usage & credits', href: '#/usage' },
+      { id: 'audit', icon: 'clock', label: 'Activity log', href: '#/audit' },
       { id: 'settings', icon: 'settings', label: 'Settings', href: '#/settings' },
     ],
   },
   {
     label: 'RESOURCES',
     items: [
-      { id: 'documentation', icon: 'book', label: 'Product guide', href: '#/documentation' },
       { id: 'support', icon: 'support', label: 'Help & status', href: '#/support' },
+      { id: 'documentation', icon: 'book', label: 'Product guide', href: '#/documentation' },
     ],
   },
 ];
@@ -130,10 +131,11 @@ const NAV_PARENT: ReadonlyMap<string, string> = new Map([
   ['review', 'runs'],
   ['running', 'runs'],
   ['run-created', 'runs'],
+  ['new-run', 'runs'],
+  ['runs/new', 'runs'],
   ['evidence', 'evidence-library'],
   ['account', 'settings'],
   ['privacy', 'settings'],
-  ['audit', 'settings'],
   ['create-org', 'settings'],
   ['onboarding', 'repositories'],
   ['service-status', 'support'],
@@ -599,32 +601,6 @@ function openWorkspaceDrawer(trigger: HTMLElement): void {
   );
 }
 
-async function refreshPlanMeter(host: HTMLElement): Promise<void> {
-  try {
-    const data = (await apiGet<unknown>('/api/billing/summary')) as Record<string, unknown> | null;
-    const used = typeof data?.['used'] === 'number' ? (data['used']) : null;
-    const limit = typeof data?.['limit'] === 'number' ? (data['limit']) : null;
-    const tier = typeof data?.['tier'] === 'string' ? (data['tier']) : 'Plan';
-    if (used === null || limit === null || limit <= 0) throw new Error('unusable summary');
-    const percent = Math.min(100, Math.max(0, Math.round((used / limit) * 100)));
-    const bar = h('div', { class: 'meter' }, [h('span', { style: `width:${String(percent)}%` }, [])]);
-    host.replaceChildren(
-      h('div', {}, [
-        h('strong', {}, [tier]),
-        h('span', {}, [` ${String(used)} / ${String(limit)} cr`]),
-      ]),
-      bar,
-      h('a', { href: '#/usage' }, ['Manage usage →']),
-    );
-  } catch {
-    host.replaceChildren(
-      h('div', {}, [h('strong', {}, ['Usage']), h('span', {}, ['Unavailable'])]),
-      h('div', { class: 'meter' }, []),
-      h('a', { href: '#/usage' }, ['Manage usage →']),
-    );
-  }
-}
-
 function themeButton(): HTMLElement {
   const button = h(
     'button',
@@ -753,11 +729,6 @@ export function renderShell(app: HTMLElement): Shell {
     }
   }
 
-  const planMeter = h('div', { class: 'plan-mini', id: 'planMeter' }, []);
-  planMeter.replaceChildren(
-    h('div', {}, [h('strong', {}, ['Usage']), h('span', {}, [' Loading…'])]),
-    h('div', { class: 'meter' }, []),
-  );
   const orgButton = h('button', { class: 'organization', type: 'button', 'data-modern': 'workspace', 'aria-label': 'Select workspace' }, [
     h('span', { class: 'org-logo' }, ['–']),
     h('span', { class: 'workspace-copy' }, [
@@ -769,7 +740,6 @@ export function renderShell(app: HTMLElement): Shell {
   orgButton.dataset['label'] = 'Select workspace';
   orgButton.addEventListener('click', () => { openWorkspaceDrawer(orgButton); });
   const sidebarFoot = h('div', { class: 'sidebar-foot' }, [
-    planMeter,
     orgButton,
     h('div', { class: 'sidebar-note' }, ['Tenant-isolated workspace']),
   ]);
@@ -815,7 +785,6 @@ export function renderShell(app: HTMLElement): Shell {
     navMenuButton.setAttribute('aria-label', open ? 'Close navigation' : 'Open navigation');
   });
   const topContext = h('div', { class: 'top-context' }, [
-    h('span', { class: 'context-orb', 'aria-hidden': 'true' }, []),
     h('span', { class: 'context-parent' }, ['Workspace /']),
     h('strong', { id: 'topSection' }, ['Overview']),
   ]);
@@ -966,15 +935,6 @@ export function renderShell(app: HTMLElement): Shell {
   updateSidebarState();
   syncNotificationDot();
   return { root, outlet };
-}
-
-/**
- * Background shell services (plan meter). Called by main.ts after boot;
- * renderShell stays fetch-free so page data-fetch contracts stay exact.
- */
-export function refreshShellServices(): void {
-  const planMeter = document.getElementById('planMeter');
-  if (planMeter !== null) void refreshPlanMeter(planMeter);
 }
 
 /**
