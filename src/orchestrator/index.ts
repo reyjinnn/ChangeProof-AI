@@ -3,6 +3,7 @@ export * from './configuration.js';
 export * from './distribution.js';
 export * from './errors.js';
 export * from './github-auth.js';
+export * from './github-install.js';
 export * from './installation-connect.js';
 export * from './providers.js';
 export * from './publication.js';
