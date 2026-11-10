@@ -1,5 +1,5 @@
 ﻿/* A small, scoped token layer for Landing and Overview only. */
-#public-site-page.landing-pilot, #public-site-page.public-refined, #shell.workspace-port, .auth-refined {
+#public-site-page.landing-pilot, #public-site-page.public-refined, #shell.workspace-port:has(.pilot-overview), .auth-refined {
   --pilot-bg:#f4f7fb; --pilot-surface:#ffffff; --pilot-raised:#eaf0f8;
   --pilot-ink:#152b45; --pilot-muted:#53657b; --pilot-faint:#596d83;
   --pilot-line:#cfdae7; --pilot-accent:#275fa3; --pilot-accent-soft:#dfeafb;
@@ -9,7 +9,7 @@
   --ink:var(--pilot-ink); --muted:var(--pilot-muted); --line:var(--pilot-line); --blue:var(--pilot-accent);
   color:var(--pilot-ink); background:var(--pilot-bg); font-family:Inter,sans-serif;
 }
-[data-theme=dark] #public-site-page.landing-pilot, [data-theme=dark] #public-site-page.public-refined, [data-theme=dark] #shell.workspace-port, [data-theme=dark] .auth-refined {
+[data-theme=dark] #public-site-page.landing-pilot, [data-theme=dark] #public-site-page.public-refined, [data-theme=dark] #shell.workspace-port:has(.pilot-overview), [data-theme=dark] .auth-refined {
   --pilot-bg:#0b1017; --pilot-surface:#111a25; --pilot-raised:#192636;
   --pilot-ink:#e8eef7; --pilot-muted:#a6b5c8; --pilot-faint:#8e9fb5;
   --pilot-line:#293b51; --pilot-accent:#8abbff; --pilot-accent-soft:#192f4b;
