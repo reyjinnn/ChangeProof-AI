@@ -271,7 +271,7 @@ async function renderDashboard(outlet: HTMLElement): Promise<void> {
     h('div', { class: 'live-summary-caption' }, ['LIVE ACTIVITY']),
     h('div', { class: 'live-summary-row' }, [
       h('i', { class: runs === null ? 'live-dot' : 'live-dot is-running', 'aria-hidden': 'true' }, []),
-      h('span', {}, [h('strong', {}, [runs === null ? '—' : String(running)]), ' runs running']),
+      h('span', {}, [h('strong', {}, [runs === null ? '—' : String(running)]), running === 1 ? ' run running' : ' runs running']),
     ]),
     h('div', { class: 'live-summary-row' }, [
       h('i', { class: 'live-dot queued-dot', 'aria-hidden': 'true' }, []),
@@ -284,7 +284,7 @@ async function renderDashboard(outlet: HTMLElement): Promise<void> {
     );
   } else if (connections.total === 0) {
     liveSummary.appendChild(
-      h('div', { class: 'live-summary-row' }, [h('span', {}, ['No GitHub connections yet'])]),
+      h('div', { class: 'live-summary-row' }, [h('a', { href: '#/repositories' }, ['No GitHub connections yet'])]),
     );
   } else if (connections.attention > 0) {
     const alert = h('a', { class: 'live-summary-alert', href: '#/repositories' }, [
@@ -384,7 +384,6 @@ async function renderDashboard(outlet: HTMLElement): Promise<void> {
 
   outlet.replaceChildren(
     pageHead({
-      eyebrow: 'Workspace',
       title: 'Workspace overview',
       subtitle: 'Every important change, in one view.',
     }),
@@ -496,7 +495,6 @@ async function renderProjects(outlet: HTMLElement, ctx: RouteContext): Promise<v
     h('div', { class: 'project-list-tools' }, [filterButton, createButton]),
   ]);
   const head = pageHead({
-    eyebrow: 'Workspace',
     title: 'Projects',
     subtitle: 'Repositories, readiness, and verification setup per project.',
   });
@@ -533,7 +531,7 @@ async function renderProjects(outlet: HTMLElement, ctx: RouteContext): Promise<v
     }
     for (const hit of hits) grid.appendChild(projectCard(hit));
     grid.appendChild(createProjectCard());
-    countSpan.textContent = `${String(hits.length)} project(s) in this workspace.`;
+    countSpan.textContent = `${String(hits.length)} ${hits.length === 1 ? 'project' : 'projects'} in this workspace.`;
     gridHost.replaceChildren(grid);
   };
 
@@ -646,7 +644,7 @@ async function renderProjectDetail(outlet: HTMLElement, ctx: RouteContext): Prom
   const projectId = projectIdOf(ctx);
   if (projectId === null) {
     outlet.replaceChildren(
-      pageHead({ eyebrow: 'Projects', title: 'Project overview', subtitle: 'Topology, readiness, and baseline.' }),
+      pageHead({ title: 'Project overview', subtitle: 'Topology, readiness, and baseline.' }),
       projectTabs('project-detail', null),
       emptyState('No project selected', 'Choose a project to see its topology and readiness.', h('a', { class: 'button', href: '#/projects' }, ['Open projects'])),
     );
@@ -655,7 +653,7 @@ async function renderProjectDetail(outlet: HTMLElement, ctx: RouteContext): Prom
 
   const body = h('div', {}, [emptyState('Loading…', 'Reading project topology.')]);
   outlet.replaceChildren(
-    pageHead({ eyebrow: 'Projects', title: 'Project overview', subtitle: 'Topology, readiness, and baseline.' }),
+    pageHead({ title: 'Project overview', subtitle: 'Topology, readiness, and baseline.' }),
     projectTabs('project-detail', projectId),
     body,
   );
@@ -765,6 +763,30 @@ function connectionBadge(status: string): HTMLElement {
   return badge('warn', status);
 }
 
+const INSTALL_ERROR_COPY: ReadonlyMap<string, string> = new Map([
+  ['state_invalid', 'The install session expired or was forged. Start the install again.'],
+  ['login_required', 'Sign in first, then start the install again.'],
+  ['cancelled', 'The GitHub App install was cancelled. Nothing was connected.'],
+  ['setup_rejected', 'GitHub did not complete an installation. Install the App, then retry.'],
+  ['connect_unavailable', 'This server has no GitHub App key; an operator must provision it.'],
+  ['installation_not_found', 'That installation is unknown to this GitHub App.'],
+  ['github_unavailable', 'GitHub did not answer; retry the install later.'],
+]);
+
+/** One-shot banner for the install-callback landing (?connected=N / ?githubError=code). */
+function installResultBanner(params: ReadonlyMap<string, string>): HTMLElement | null {
+  const connected = params.get('connected') ?? '';
+  if (/^[0-9]+$/.test(connected)) {
+    const count = Number(connected);
+    return h('div', { class: 'notice', role: 'status' }, [
+      count === 1 ? 'Connected 1 repository.' : `Connected ${String(count)} repositories.`,
+    ]);
+  }
+  const code = params.get('githubError') ?? '';
+  if (code === '') return null;
+  return h('div', { class: 'notice', role: 'alert' }, [INSTALL_ERROR_COPY.get(code) ?? 'The install did not complete; retry.']);
+}
+
 async function renderRepositories(outlet: HTMLElement, ctx: RouteContext): Promise<void> {
   outlet.replaceChildren(emptyState('Loading…', 'Reading repository connections.'));
   try {
@@ -787,13 +809,15 @@ async function renderRepositories(outlet: HTMLElement, ctx: RouteContext): Promi
   const body = h('div', {}, []);
   outlet.replaceChildren(
     pageHead({
-      eyebrow: 'Projects',
       title: 'GitHub connections',
       subtitle: 'Repository access, webhook health, and revocation.',
+      actions: [h('a', { class: 'button primary', href: '/api/github/install/start' }, ['Install GitHub App'])],
     }),
     projectTabs('repositories', projectId),
     body,
   );
+  const installResult = installResultBanner(ctx.params);
+  if (installResult !== null) outlet.insertBefore(installResult, body);
 
   const load = async (): Promise<void> => {
     body.replaceChildren(emptyState('Loading…', 'Reading repository connections.'));
@@ -862,11 +886,11 @@ async function renderRepositories(outlet: HTMLElement, ctx: RouteContext): Promi
   const installNote = note();
   const connectButton = h('button', { class: 'button primary', type: 'button' }, ['Connect']);
   const connectPanel = h('details', { class: 'compact-detail' }, [
-    h('summary', {}, ['Connect an installation']),
+    h('summary', {}, ['Or connect with an installation id']),
     h('div', { class: 'card' }, [
       h('div', { class: 'pad' }, [
         h('p', { class: 'help' }, [
-          'Enter the numeric installation id from the GitHub App install page. The server verifies it live before storing anything.',
+          'Installed the App directly from GitHub settings? Enter its numeric installation id instead. The server verifies it live before storing anything.',
         ]),
         h('p', {}, [
           h('input', {
@@ -888,7 +912,7 @@ async function renderRepositories(outlet: HTMLElement, ctx: RouteContext): Promi
     const field = connectPanel.querySelector('input');
     const installationId = field?.value.trim() ?? '';
     if (!/^[1-9][0-9]*$/.test(installationId)) {
-      installNote.replaceChildren('Enter the numeric installation id from the GitHub App install page.');
+      installNote.replaceChildren('Enter the numeric installation id from the GitHub App settings page.');
       return;
     }
     connectButton.disabled = true;
@@ -993,7 +1017,6 @@ async function renderCapabilities(outlet: HTMLElement, ctx: RouteContext): Promi
   const body = h('div', {}, []);
   outlet.replaceChildren(
     pageHead({
-      eyebrow: 'Projects',
       title: 'Capability matrix',
       subtitle: 'Claimed support next to proven support, per stack. Targets are not proof.',
       actions: [levelsButton],
@@ -1161,7 +1184,6 @@ async function renderEnvironments(outlet: HTMLElement, ctx: RouteContext): Promi
   let currentProfile: EnvironmentProfile | null = null;
   outlet.replaceChildren(
     pageHead({
-      eyebrow: 'Projects',
       title: 'Environment & topology',
       subtitle: 'Pin services, dependencies, dataset, and resource profile before verification.',
       actions: [editButton],
@@ -1355,7 +1377,6 @@ async function renderTelemetry(outlet: HTMLElement, ctx: RouteContext): Promise<
   const body = h('div', {}, []);
   outlet.replaceChildren(
     pageHead({
-      eyebrow: 'Projects',
       title: 'Telemetry corpus',
       subtitle: 'Observed behavior the investigation can correlate. Gaps stay visible.',
       actions: [addButton],
@@ -1421,7 +1442,6 @@ async function renderCharacterization(outlet: HTMLElement, ctx: RouteContext): P
   const projectId = projectIdOf(ctx);
   outlet.replaceChildren(
     pageHead({
-      eyebrow: 'Projects',
       title: 'Legacy characterization',
       subtitle: 'Understand system behavior before repair. Diagnosis only — no code changes.',
       actions: [h('a', { class: 'button primary', href: '#/runs/new' }, ['Start from a run draft'])],
@@ -1482,7 +1502,7 @@ async function renderProjectSettings(outlet: HTMLElement, ctx: RouteContext): Pr
   const projectId = projectIdOf(ctx);
   if (projectId === null) {
     outlet.replaceChildren(
-      pageHead({ eyebrow: 'Projects', title: 'Project settings', subtitle: 'Name, description, and danger zone.' }),
+      pageHead({ title: 'Project settings', subtitle: 'Name, description, and danger zone.' }),
       projectTabs('project-settings', null),
       emptyState('No project selected', 'Choose a project to edit its settings.', h('a', { class: 'button', href: '#/projects' }, ['Open projects'])),
     );
@@ -1491,7 +1511,7 @@ async function renderProjectSettings(outlet: HTMLElement, ctx: RouteContext): Pr
 
   const body = h('div', {}, [emptyState('Loading…', 'Reading project settings.')]);
   outlet.replaceChildren(
-    pageHead({ eyebrow: 'Projects', title: 'Project settings', subtitle: 'Name, description, and danger zone.' }),
+    pageHead({ title: 'Project settings', subtitle: 'Name, description, and danger zone.' }),
     projectTabs('project-settings', projectId),
     body,
   );
