@@ -1320,7 +1320,7 @@ function productPreview(): HTMLElement {
     h('div', { class: 'preview-columns' }, [timeline, evidence]),
     h('div', { class: 'preview-bottom' }, [
       h('span', { class: 'mono' }, ['a41f9c2 → e07b13d']),
-      h('span', {}, ['The final decision stays in your hands. ', h('strong', {}, ['↗'])]),
+      h('span', {}, ['The final decision stays in your hands.']),
     ]),
   ]);
   const frame = h(
