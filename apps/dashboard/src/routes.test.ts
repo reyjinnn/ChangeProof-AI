@@ -97,13 +97,14 @@ test('epoch helpers track the latest render', async () => {
   expect(isCurrentRouteEpoch(seen - 1)).toBe(false);
 });
 
-test('the default entry opens the public site while an explicit workspace link stays in the workspace', async () => {
-  registerRoute({ path: '/p/', title: 'Public', render: (outlet) => { outlet.append(h('h1', {}, ['Public'])); } });
+test('the default entry opens the landing while an explicit workspace link stays in the workspace', async () => {
+  registerRoute({ path: '/landing', title: 'Landing', render: (outlet) => { outlet.append(h('h1', {}, ['Landing'])); } });
   registerRoute({ path: '/', title: 'Workspace', render: (outlet) => { outlet.append(h('h1', {}, ['Workspace'])); } });
   const outlet = outletWithAnnouncer();
   await renderRoute(outlet, '');
-  expect(outlet.querySelector('h1')?.textContent).toBe('Public');
-  expect(document.body.classList.contains('public-surface')).toBe(true);
+  expect(outlet.querySelector('h1')?.textContent).toBe('Landing');
+  await renderRoute(outlet, '#/landing');
+  expect(outlet.querySelector('h1')?.textContent).toBe('Landing');
   await renderRoute(outlet, '#/');
   expect(outlet.querySelector('h1')?.textContent).toBe('Workspace');
   expect(document.body.classList.contains('public-surface')).toBe(false);
