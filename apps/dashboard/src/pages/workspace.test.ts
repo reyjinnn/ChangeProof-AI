@@ -338,6 +338,43 @@ test('connect surfaces an unknown installation honestly', async () => {
   await settle(outlet, 'unknown to this GitHub App');
 });
 
+test('repositories offer one-click App install next to the manual fallback', async () => {
+  stubFetch({
+    '/api/auth/session': { status: 200, json: SESSION },
+    '/api/github/connections': { status: 200, json: [] },
+  });
+  const outlet = boot();
+  await renderRoute(outlet, '#/repositories');
+  await settle(outlet, 'No connections');
+  const install = outlet.querySelector('.pagehead .actions a[href="/api/github/install/start"]');
+  expect(install?.textContent).toBe('Install GitHub App');
+  expect(outlet.querySelector('#connect-installation-id')).not.toBeNull();
+});
+
+test('repositories report the install callback result once', async () => {
+  stubFetch({
+    '/api/auth/session': { status: 200, json: SESSION },
+    '/api/github/connections': { status: 200, json: [] },
+  });
+  const outlet = boot();
+  await renderRoute(outlet, '#/repositories?connected=2');
+  await settle(outlet, 'Connected 2 repositories');
+  expect(outlet.querySelector('.notice[role="status"]')?.textContent).toContain('Connected 2 repositories');
+});
+
+test('repositories explain install failures without leaking details', async () => {
+  stubFetch({
+    '/api/auth/session': { status: 200, json: SESSION },
+    '/api/github/connections': { status: 200, json: [] },
+  });
+  const outlet = boot();
+  await renderRoute(outlet, '#/repositories?githubError=cancelled');
+  await settle(outlet, 'install was cancelled');
+  expect(outlet.querySelector('.notice[role="alert"]')?.textContent).toContain('Nothing was connected');
+  await renderRoute(outlet, '#/repositories?githubError=bogus-code');
+  await settle(outlet, 'did not complete');
+});
+
 test('capabilities separate target level from proven level', async () => {
   stubFetch({
     '/api/auth/session': { status: 200, json: SESSION },
