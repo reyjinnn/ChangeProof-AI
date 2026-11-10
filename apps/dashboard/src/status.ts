@@ -43,7 +43,7 @@ export async function renderStatus(outlet: HTMLElement): Promise<void> {
           ['01', 'Connect project', 'Give the change a home. Repository access is a separate authorization.', '#/projects/new', 'public'],
           ['02', 'Submit a change', 'Capture intent and scope in a versioned draft before submission.', '#/runs/new', 'new-run'],
           ['03', 'Explore evidence', 'Review artifacts and their verification boundaries.', '#/evidence', 'evidence'],
-        ] as const).map(([number, title, description, href, icon]) => h('a', { class: 'overview-action-link', href }, [h('span', { class: 'overview-action-number' }, [number]), iconSvg(icon), h('span', {}, [h('strong', {}, [title]), h('small', {}, [description])]), h('span', { class: 'overview-action-arrow', 'aria-hidden': 'true' }, ['↗'])])),
+        ] as const).map(([number, title, description, href, icon]) => h('a', { class: 'overview-action-link', href }, [h('span', { class: 'overview-action-number' }, [number]), iconSvg(icon), h('span', {}, [h('strong', {}, [title]), h('small', {}, [description])]), h('span', { class: 'overview-action-arrow', 'aria-hidden': 'true' }, ['→'])])),
       ]),
     ]);
     const readiness = h('section', { class: 'overview-readiness', 'aria-labelledby': 'overview-readiness-title' }, [
