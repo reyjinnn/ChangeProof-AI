@@ -15,12 +15,13 @@ import {
 } from '../core/index.js';
 import type { LifecycleSessionPort } from '../core/ports/index.js';
 import type {
+  GitHubInstallComposition,
   InstallationConnectComposition,
   LifecycleComposition,
   QueriesComposition,
 } from '../orchestrator/index.js';
-import { actingContext, HttpRouteError, parseBody, pathSegment } from './context.js';
-import { sendBytes, sendCreated, sendFail, sendOk } from './respond.js';
+import { actingContext, cookieValue, HttpRouteError, parseBody, pathSegment } from './context.js';
+import { sendBytes, sendCreated, sendFail, sendOk, sendRedirect } from './respond.js';
 
 /**
  * Run-journey routes (T-45, WP3-25).
@@ -40,6 +41,7 @@ export interface RunsDeps {
   readonly lifecycle: LifecycleComposition;
   readonly queries: QueriesComposition;
   readonly githubConnect?: InstallationConnectComposition | undefined;
+  readonly githubInstall?: GitHubInstallComposition | undefined;
 }
 
 const ProjectBody = z.strictObject({ name: z.string().trim().min(1).max(200) });
@@ -125,6 +127,42 @@ async function orMapped<T>(work: Promise<T>): Promise<T> {
   }
 }
 
+/**
+ * Install nonce cookie: binds the returning browser to the install flow
+ * that started it (login-CSRF layer, mirrors the OAuth flow). Lax so the
+ * top-level return navigation carries it; short-lived, single use.
+ */
+const INSTALL_NONCE_COOKIE = 'cp_install';
+const INSTALL_NONCE_MAX_AGE = 600;
+
+function setInstallNonceCookie(response: ServerResponse, nonce: string): void {
+  response.setHeader(
+    'Set-Cookie',
+    `${INSTALL_NONCE_COOKIE}=${encodeURIComponent(nonce)}; HttpOnly; Path=/api/github/install; SameSite=Lax; Max-Age=${String(INSTALL_NONCE_MAX_AGE)}`,
+  );
+}
+
+function clearInstallNonceCookie(response: ServerResponse): void {
+  response.setHeader(
+    'Set-Cookie',
+    `${INSTALL_NONCE_COOKIE}=; HttpOnly; Path=/api/github/install; SameSite=Lax; Max-Age=0`,
+  );
+}
+
+type InstallErrorCode =
+  | 'state_invalid'
+  | 'login_required'
+  | 'cancelled'
+  | 'setup_rejected'
+  | 'connect_unavailable'
+  | 'installation_not_found'
+  | 'github_unavailable';
+
+function installFailure(response: ServerResponse, code: InstallErrorCode): void {
+  clearInstallNonceCookie(response);
+  sendRedirect(response, `/#/repositories?githubError=${code}`);
+}
+
 export function isRunsPath(pathname: string): boolean {
   return (
     pathname === '/api/projects' ||
@@ -135,6 +173,8 @@ export function isRunsPath(pathname: string): boolean {
     pathname.startsWith('/api/runs/') ||
     pathname === '/api/search' ||
     pathname === '/api/environments' ||
+    pathname === '/api/github/install/start' ||
+    pathname === '/api/github/install/callback' ||
     pathname === '/api/github/connections' ||
     pathname.startsWith('/api/github/connections/') ||
     pathname === '/api/telemetry/corpus' ||
@@ -369,6 +409,110 @@ export async function handleRunsApi(
     );
     sendCreated(response, saved);
     return;
+  }
+  if (method === 'GET' && pathname === '/api/github/install/start') {
+    const ctx = await actingContext(runs.session, request, nowIso);
+    const install = runs.githubInstall;
+    if (install === undefined) {
+      sendFail(
+        response,
+        503,
+        'github_not_configured',
+        'This server has no GitHub App slug; an operator must set CP_GITHUB_APP_SLUG.',
+      );
+      return;
+    }
+    const nonce = randomBytes(16).toString('hex');
+    try {
+      const flow = await install.startFlow({ userId: ctx.userId, nonce, nowMs: Date.parse(nowIso) });
+      setInstallNonceCookie(response, nonce);
+      sendRedirect(response, flow.installUrl);
+    } catch (error) {
+      if (error instanceof ChangeProofError && error.message.includes('Credential ref')) {
+        sendFail(response, 503, 'github_not_configured', 'GitHub install is temporarily unavailable; retry later.');
+        return;
+      }
+      throw error;
+    }
+    return;
+  }
+  if (method === 'GET' && pathname === '/api/github/install/callback') {
+    const install = runs.githubInstall;
+    if (install === undefined) {
+      installFailure(response, 'state_invalid');
+      return;
+    }
+    let verified: Awaited<ReturnType<GitHubInstallComposition['verifyFlow']>>;
+    try {
+      verified = await install.verifyFlow({
+        state: url.searchParams.get('state') ?? '',
+        nowMs: Date.parse(nowIso),
+      });
+    } catch {
+      installFailure(response, 'state_invalid');
+      return;
+    }
+    const cookieNonce = cookieValue(request, INSTALL_NONCE_COOKIE);
+    if (cookieNonce === undefined || cookieNonce === '' || cookieNonce !== verified.nonce) {
+      installFailure(response, 'state_invalid');
+      return;
+    }
+    let ctx: Awaited<ReturnType<typeof actingContext>>;
+    try {
+      ctx = await actingContext(runs.session, request, nowIso);
+    } catch {
+      installFailure(response, 'login_required');
+      return;
+    }
+    if (ctx.userId !== verified.userId) {
+      installFailure(response, 'state_invalid');
+      return;
+    }
+    const installationId = url.searchParams.get('installation_id') ?? '';
+    if (installationId === '') {
+      installFailure(response, 'cancelled');
+      return;
+    }
+    try {
+      install.assertCallback({ installationId, setupAction: url.searchParams.get('setup_action') ?? '' });
+    } catch {
+      installFailure(response, 'setup_rejected');
+      return;
+    }
+    const connect = runs.githubConnect;
+    if (connect === undefined) {
+      installFailure(response, 'connect_unavailable');
+      return;
+    }
+    try {
+      const checked = await connect.connect(installationId, Date.parse(nowIso));
+      const stored = await orMapped(
+        runs.lifecycle.store.registerConnections(
+          { sessionId: ctx.sessionId, nowIso },
+          { installationId: checked.installationId, repositories: checked.repositories },
+        ),
+      );
+      clearInstallNonceCookie(response);
+      sendRedirect(response, `/#/repositories?connected=${String(stored.connectionIds.length)}`);
+      return;
+    } catch (error) {
+      if (error instanceof MissingConfigurationError) {
+        installFailure(response, 'connect_unavailable');
+        return;
+      }
+      if (error instanceof ChangeProofError && error.message.includes('unknown or not shared')) {
+        installFailure(response, 'installation_not_found');
+        return;
+      }
+      if (
+        error instanceof ChangeProofError &&
+        /unreachable|answered HTTP|rejected the App credential|no installation token/.test(error.message)
+      ) {
+        installFailure(response, 'github_unavailable');
+        return;
+      }
+      throw error;
+    }
   }
   if (method === 'GET' && pathname === '/api/github/connections') {
     const ctx = await actingContext(runs.session, request, nowIso);
