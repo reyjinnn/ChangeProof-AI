@@ -99,7 +99,6 @@ async function renderInbox(outlet: HTMLElement): Promise<void> {
   ]);
   outlet.replaceChildren(
     h('section', { class: 'card' }, [
-      h('div', { class: 'eyebrow' }, ['Tenant Notification Center']),
       h('h1', {}, ['Inbox']),
       countLine,
       filterWrap,
@@ -107,7 +106,7 @@ async function renderInbox(outlet: HTMLElement): Promise<void> {
       actionNote,
     ]),
     h('div', { class: 'split' }, [
-      h('section', { class: 'card' }, [h('div', { class: 'eyebrow' }, ['Activity Stream']), h('h2', {}, ['Notifications']), list, moreWrap]),
+      h('section', { class: 'card' }, [h('h2', {}, ['Notifications']), list, moreWrap]),
       prefsSection,
     ]),
   );
