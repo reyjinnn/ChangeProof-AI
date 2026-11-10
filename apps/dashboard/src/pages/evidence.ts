@@ -324,7 +324,6 @@ async function renderLibrary(outlet: HTMLElement, ctx: RouteContext): Promise<vo
       document.createTextNode(' / Evidence'),
     ]),
     pageHead({
-      eyebrow: 'Content-Addressed Artifact Store',
       title: `Evidence ${runId}`,
       subtitle: `Run ${run.runId} · ${run.state} · version ${String(run.version)}. Artifacts below are the run's own records, in event order.`,
       actions: [
@@ -569,18 +568,17 @@ async function renderEvidenceLibrary(outlet: HTMLElement): Promise<void> {
   }
   outlet.replaceChildren(
     pageHead({
-      eyebrow: 'Evidence library',
       title: 'Evidence library',
       subtitle: 'Private evidence that binds changes, candidates, and verification.',
       actions: [h('a', { class: 'button', href: '#/runs' }, ['Back to runs'])],
     }),
     h('div', { class: 'stats' }, [
-      h('div', { class: 'stat' }, [
+      h('div', { class: 'card stat' }, [
         h('div', { class: 'label' }, ['Runs with evidence']),
         h('div', { class: 'value' }, [String(runs.hits.length)]),
         h('div', { class: 'sub' }, ['Returned from /api/search']),
       ]),
-      h('div', { class: 'stat' }, [
+      h('div', { class: 'card stat' }, [
         h('div', { class: 'label' }, ['Access']),
         h('div', { class: 'value' }, ['Private']),
         h('div', { class: 'sub' }, ['Downloads follow current grants']),
