@@ -1,3 +1,12 @@
 /* The original DOM starts from browser defaults, not the previous generic
- * application skin. Keep SVG presentation attributes and inherited tokens. */
-.reyn-design :where(*:not(svg):not(svg *)) { all: revert; }
+ * application skin. Keep SVG presentation attributes and inherited tokens.
+ * Scoped to the ported roots only: the workspace shell reuses the
+ * reyn-design class for its skin overrides, so a bare .reyn-design scope
+ * would `all: revert` the live workspace skin (unlayered reset beats the
+ * layered tokens) and drop the main#outlet sidebar offset, sliding content
+ * under the fixed sidebar. */
+#public-site-page.reyn-design :where(*:not(svg):not(svg *)),
+.auth-port.reyn-design :where(*:not(svg):not(svg *)),
+.recovery-modal.reyn-design :where(*:not(svg):not(svg *)) {
+  all: revert;
+}
