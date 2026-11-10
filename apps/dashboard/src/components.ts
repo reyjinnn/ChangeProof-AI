@@ -270,9 +270,13 @@ export function tabs(items: readonly TabItem[], currentId: string): HTMLElement 
 }
 
 export function emptyStateArt(): SVGElement {
-  return svgEl('svg', { class: 'modern-empty-art', viewBox: '0 0 64 40', 'aria-hidden': 'true' }, [
-    svgEl('rect', { x: '6', y: '8', width: '52', height: '24', rx: '8' }),
-    svgEl('path', { d: 'M18 20h28M18 15h14M18 25h20' }),
+  return svgEl('svg', { class: 'modern-empty-art', viewBox: '0 0 120 90', fill: 'none', 'aria-hidden': 'true' }, [
+    svgEl('rect', { x: '22', y: '25', width: '74', height: '52', rx: '12', fill: 'var(--surface)', stroke: 'var(--line)' }),
+    svgEl('rect', { x: '34', y: '14', width: '53', height: '54', rx: '9', fill: 'var(--paper)', stroke: 'var(--line)' }),
+    svgEl('path', { d: 'M47 30h26M47 38h19M47 46h13', stroke: 'currentColor', 'stroke-width': '1.5', 'stroke-linecap': 'round' }),
+    svgEl('circle', { cx: '85', cy: '63', r: '14', fill: 'var(--accent)' }),
+    svgEl('path', { d: 'm79 63 4 4 8-9', stroke: 'var(--accent-ink)', 'stroke-width': '2', 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }),
+    svgEl('path', { d: 'm15 12 2 4 4 2-4 2-2 4-2-4-4-2 4-2zM105 33v6m-3-3h6', stroke: 'var(--line)', 'stroke-linecap': 'round' }),
   ]);
 }
 
