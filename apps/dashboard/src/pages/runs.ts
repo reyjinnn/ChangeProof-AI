@@ -406,7 +406,6 @@ async function renderLists(outlet: HTMLElement): Promise<void> {
   const lists = h('div', {}, []);
   outlet.replaceChildren(
     pageHead({
-      eyebrow: 'Workspace Runs',
       title: 'Runs',
       subtitle: 'Search active and historical verification runs and projects in your organization.',
     }),
@@ -471,22 +470,22 @@ async function renderLists(outlet: HTMLElement): Promise<void> {
         runTable.replaceChildren(runsTable);
       }
       const stats = h('div', { class: 'stats' }, [
-        h('div', { class: 'stat' }, [
+        h('div', { class: 'card stat' }, [
           h('div', { class: 'label' }, ['Matching runs']),
           h('div', { class: 'value' }, [String(runs.hits.length)]),
           h('div', { class: 'sub' }, ['Returned from /api/search']),
         ]),
-        h('div', { class: 'stat' }, [
+        h('div', { class: 'card stat' }, [
           h('div', { class: 'label' }, ['Matching projects']),
           h('div', { class: 'value' }, [String(projects.hits.length)]),
           h('div', { class: 'sub' }, ['Active workspace projects']),
         ]),
-        h('div', { class: 'stat' }, [
+        h('div', { class: 'card stat' }, [
           h('div', { class: 'label' }, ['State filter']),
           h('div', { class: 'value' }, [stateSelect.value === '' ? 'All' : stateSelect.value]),
           h('div', { class: 'sub' }, ['Lifecycle state filter']),
         ]),
-        h('div', { class: 'stat' }, [
+        h('div', { class: 'card stat' }, [
           h('div', { class: 'label' }, ['Tenant scope']),
           h('div', { class: 'value' }, [account.tenantId]),
           h('div', { class: 'sub' }, [`Role: ${account.role}`]),
@@ -1268,7 +1267,6 @@ async function renderForm(outlet: HTMLElement, ctx: RouteContext): Promise<void>
 
   outlet.replaceChildren(
     pageHead({
-      eyebrow: 'File a run',
       title: 'Submit a problem and review the plan',
       subtitle: 'Template, project, versioned draft, then one immutable submit. Nothing runs until the run is filed.',
       actions: [h('a', { class: 'button', href: '#/runs' }, ['Back to runs'])],
@@ -1490,7 +1488,6 @@ async function renderDetail(outlet: HTMLElement, ctx: RouteContext): Promise<voi
   const renderHeader = (current: RunDetail): void => {
     head.replaceChildren(
       pageHead({
-        eyebrow: 'Run Manifest & Lifecycle',
         title: `Run ${current.runId}`,
         subtitle: `Project ${current.projectId} · created ${current.createdAt}.`,
         actions: [
@@ -1744,7 +1741,6 @@ async function renderRunCreated(outlet: HTMLElement, ctx: RouteContext): Promise
   });
   outlet.replaceChildren(
     pageHead({
-      eyebrow: 'Run accepted',
       title: `Run ${run.runId} filed`,
       subtitle: `Project ${run.projectId} · created ${run.createdAt}.`,
       actions: [
@@ -1924,7 +1920,6 @@ async function renderReview(outlet: HTMLElement, ctx: RouteContext): Promise<voi
   outlet.replaceChildren(
     runCrumb(run, 'Review'),
     pageHead({
-      eyebrow: 'Review run',
       title: `Review ${run.runId}`,
       subtitle: `Lifecycle state ${run.state} · version ${String(run.version)} · actual cost is not exposed yet.`,
       actions: [
@@ -2019,7 +2014,6 @@ async function renderImpact(outlet: HTMLElement, ctx: RouteContext): Promise<voi
   outlet.replaceChildren(
     runCrumb(run, 'Impact'),
     pageHead({
-      eyebrow: 'Dependency graph',
       title: `Impact ${run.runId}`,
       subtitle: 'Granted components with honest resolution states. Unknowns stay visible.',
       actions: [h('a', { class: 'button primary', href: `#/investigation?run=${encodeURIComponent(run.runId)}` }, ['Open hypothesis ledger'])],
@@ -2081,7 +2075,6 @@ async function renderInvestigation(outlet: HTMLElement, ctx: RouteContext): Prom
   outlet.replaceChildren(
     runCrumb(run, 'Investigation'),
     pageHead({
-      eyebrow: 'Investigation',
       title: `Hypothesis ledger ${run.runId}`,
       subtitle: 'Symptoms, proven causes, and explanations that still need testing.',
       actions: [h('a', { class: 'button', href: `#/campaigns?run=${encodeURIComponent(run.runId)}` }, ['Open verification'])],
@@ -2167,7 +2160,6 @@ async function renderCampaigns(outlet: HTMLElement, ctx: RouteContext): Promise<
   outlet.replaceChildren(
     runCrumb(run, 'Verification'),
     pageHead({
-      eyebrow: 'Verification campaign',
       title: `Verification ${run.runId}`,
       subtitle: 'Complete trials, four dimensions, and explicit claim limits.',
       actions: [h('a', { class: 'button primary', href: `#/evidence?run=${encodeURIComponent(run.runId)}` }, ['Open evidence'])],
@@ -2278,7 +2270,6 @@ async function renderPublication(outlet: HTMLElement, ctx: RouteContext): Promis
   outlet.replaceChildren(
     runCrumb(run, 'Publication'),
     pageHead({
-      eyebrow: 'Publication',
       title: `Publication ${run.runId}`,
       subtitle: 'Review candidates, dependencies, and proof before preparing a PR.',
       actions: [h('a', { class: 'button', href: `#/evidence?run=${encodeURIComponent(run.runId)}` }, ['Open evidence'])],
@@ -2450,7 +2441,6 @@ async function renderOutcome(outlet: HTMLElement, ctx: RouteContext): Promise<vo
   outlet.replaceChildren(
     runCrumb(run, 'Outcome'),
     pageHead({
-      eyebrow: 'Owner validation',
       title: `Outcome ${run.runId}`,
       subtitle: 'Record workflow recovery, adoption evidence, and human contribution.',
     }),
