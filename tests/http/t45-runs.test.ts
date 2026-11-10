@@ -15,7 +15,8 @@ import type { RunsDeps } from '../../src/http/routes-runs.js';
 import type { LifecycleStore } from '../../src/modules/lifecycle/index.js';
 import type { QueriesStore } from '../../src/modules/queries/index.js';
 import { createHttpServer, type HttpHandle } from '../../src/http/index.js';
-import { composePublicSite, type InstallationConnectComposition } from '../../src/orchestrator/index.js';
+import { composeGitHubInstall, composePublicSite, type InstallationConnectComposition } from '../../src/orchestrator/index.js';
+import { createMapSecretBroker } from '../../src/modules/github/index.js';
 
 // Run-journey HTTP proof (T-45): the real server over stub stores with
 // sentinel ids. No database — the native suite proves the real stores;
@@ -243,6 +244,12 @@ const githubConnect: InstallationConnectComposition = {
   },
 };
 
+const githubInstall = composeGitHubInstall({
+  secrets: createMapSecretBroker(new Map([['install-state-secret', 'install-state-secret-32-chars-min!']])),
+  stateSecretRef: 'install-state-secret',
+  appSlug: 'changeproof-ai',
+});
+
 function deps(): RunsDeps {
   return {
     session: {
@@ -251,6 +258,7 @@ function deps(): RunsDeps {
     },
     lifecycle: { store: lifecycle },
     githubConnect,
+    githubInstall,
     queries: { store: queries },
   };
 }
@@ -300,6 +308,46 @@ async function call(
   }
   return { status: response.status, body, headers: response.headers };
 }
+
+async function callManual(
+  method: string,
+  path: string,
+  options: { headers?: Record<string, string> } = {},
+): Promise<{ status: number; location: string | null; cookies: string[] }> {
+  const response = await fetch(`${base}${path}`, {
+    method,
+    redirect: 'manual',
+    ...(options.headers === undefined ? {} : { headers: options.headers }),
+  });
+  await response.text();
+  return {
+    status: response.status,
+    location: response.headers.get('location'),
+    cookies: response.headers.getSetCookie(),
+  };
+}
+
+function installCookies(nonce: string): Record<string, string> {
+  return { ...UI, Cookie: `cp_session=sess-good; cp_install=${nonce}` };
+}
+
+async function startInstall(): Promise<{ state: string; nonce: string }> {
+  const started = await callManual('GET', '/api/github/install/start', { headers: authed });
+  expect(started.status).toBe(302);
+  const location = new URL(started.location ?? '');
+  expect(`${location.origin}${location.pathname}`).toBe('https://github.com/apps/changeproof-ai/installations/new');
+  const setCookie = started.cookies.find((entry) => entry.startsWith('cp_install=')) ?? '';
+  expect(setCookie).toContain('Path=/api/github/install');
+  const nonce = decodeURIComponent(setCookie.split(';')[0]?.split('=')[1] ?? '');
+  expect(nonce).not.toBe('');
+  return { state: location.searchParams.get('state') ?? '', nonce };
+}
+
+function corrupt(state: string): string {
+  const last = state.endsWith('0') ? '1' : '0';
+  return `${state.slice(0, -1)}${last}`;
+}
+
 
 const SUBMIT = {
   projectId: 'project-1',
@@ -519,6 +567,67 @@ test('connect refuses bad ids quietly and unknown installations honestly', async
   connectFailure = undefined;
 });
 
+test('install start redirects a logged-in user to the GitHub App page', async () => {
+  const { state } = await startInstall();
+  expect(state.startsWith('v1.')).toBe(true);
+  const guest = await callManual('GET', '/api/github/install/start', { headers: UI });
+  expect(guest.status).toBe(401);
+});
+
+test('install callback connects the installation and lands back with a count', async () => {
+  connectFailure = undefined;
+  connectCalls.length = 0;
+  const { state, nonce } = await startInstall();
+  const done = await callManual(
+    'GET',
+    `/api/github/install/callback?installation_id=178697398&setup_action=install&state=${encodeURIComponent(state)}`,
+    { headers: installCookies(nonce) },
+  );
+  expect(done.status).toBe(302);
+  expect(done.location).toBe('/#/repositories?connected=2');
+  expect(connectCalls).toEqual(['178697398']);
+});
+
+test('install callback refuses forged, foreign, cancelled, and incomplete installs', async () => {
+  const { state, nonce } = await startInstall();
+  const forged = await callManual(
+    'GET',
+    `/api/github/install/callback?installation_id=178697398&setup_action=install&state=${encodeURIComponent(corrupt(state))}`,
+    { headers: installCookies(nonce) },
+  );
+  expect(forged.location).toBe('/#/repositories?githubError=state_invalid');
+  const wrongBrowser = await callManual(
+    'GET',
+    `/api/github/install/callback?installation_id=178697398&setup_action=install&state=${encodeURIComponent(state)}`,
+    { headers: authed },
+  );
+  expect(wrongBrowser.location).toBe('/#/repositories?githubError=state_invalid');
+  const guest = await callManual(
+    'GET',
+    `/api/github/install/callback?installation_id=178697398&setup_action=install&state=${encodeURIComponent(state)}`,
+    { headers: { ...UI, Cookie: `cp_install=${nonce}` } },
+  );
+  expect(guest.location).toBe('/#/repositories?githubError=login_required');
+  const cancelled = await callManual('GET', `/api/github/install/callback?state=${encodeURIComponent(state)}`, {
+    headers: installCookies(nonce),
+  });
+  expect(cancelled.location).toBe('/#/repositories?githubError=cancelled');
+  const requested = await callManual(
+    'GET',
+    `/api/github/install/callback?installation_id=178697398&setup_action=request&state=${encodeURIComponent(state)}`,
+    { headers: installCookies(nonce) },
+  );
+  expect(requested.location).toBe('/#/repositories?githubError=setup_rejected');
+  connectFailure = new ChangeProofError('GitHub installation is unknown or not shared with this App; refusing.');
+  const unknown = await callManual(
+    'GET',
+    `/api/github/install/callback?installation_id=999&setup_action=install&state=${encodeURIComponent(state)}`,
+    { headers: installCookies(nonce) },
+  );
+  expect(unknown.location).toBe('/#/repositories?githubError=installation_not_found');
+  connectFailure = undefined;
+});
+
 test('github connections list honestly empty and revoke refuses unknown ids', async () => {
   const listed = await call('GET', '/api/github/connections', { headers: authed });
   expect(listed.status).toBe(200);
@@ -580,6 +689,8 @@ test('new workspace paths answer 503 without the database', async () => {
     ['PATCH', '/api/projects/project-1', { name: 'x' }],
     ['GET', '/api/environments', undefined],
     ['POST', '/api/environments', { name: 'x' }],
+    ['GET', '/api/github/install/start', undefined],
+    ['GET', '/api/github/install/callback', undefined],
     ['GET', '/api/github/connections', undefined],
     ['POST', '/api/github/connections', { installationId: '178697398' }],
     ['POST', '/api/github/connections/conn-1/revoke', {}],
