@@ -260,7 +260,7 @@ function formStubs(session: unknown = SESSION): void {
 async function openForm(hash = '#/runs/new'): Promise<HTMLElement> {
   const outlet = boot();
   await renderRoute(outlet, hash);
-  await settle(outlet, 'File a run');
+  await settle(outlet, 'Submit a problem and review the plan');
   return outlet;
 }
 
@@ -656,7 +656,7 @@ test('new-run alias renders the same filing form', async () => {
   formStubs();
   const outlet = boot();
   await renderRoute(outlet, '#/new-run');
-  await settle(outlet, 'File a run');
+  await settle(outlet, 'Submit a problem and review the plan');
   expect(outlet.querySelector('form#runForm')).not.toBeNull();
   expect(outlet.querySelector('#run-template')).not.toBeNull();
   expect(outlet.querySelector('#changeTemplate')).not.toBeNull();
@@ -749,7 +749,7 @@ test('run-created shows the accepted run without inventing a verdict', async () 
   });
   const outlet = boot();
   await renderRoute(outlet, '#/run-created?id=run-1');
-  await settle(outlet, 'Run accepted');
+  await settle(outlet, 'Run run-1 filed');
   expect(outlet.textContent).toContain('None yet');
   expect(outlet.textContent).toContain('Not created yet');
   expect(outlet.textContent).toContain('repo-1');
