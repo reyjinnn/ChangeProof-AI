@@ -83,7 +83,7 @@ export function isCurrentRouteEpoch(value: number): boolean {
 export async function renderRoute(outlet: HTMLElement, hash: string): Promise<void> {
   epoch += 1;
   const mine = epoch;
-  const initial = (hash === '' || hash === '#') && registry.has('/p/') ? '#/p/' : hash;
+  const initial = (hash === '' || hash === '#') && registry.has('/landing') ? '#/landing' : hash;
   const parsed = parseHash(initial);
   let path = parsed.path;
   const params = new Map(parsed.params);
