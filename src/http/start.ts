@@ -11,6 +11,7 @@ import {
   composeFileEvidence,
   composeGitHub,
   composeGitHubAuth,
+  composeGitHubInstall,
   composeInstallationConnect,
   composeIdentityStore,
   composeJobs,
@@ -47,7 +48,9 @@ import type { TeamworkDeps } from './routes-teamwork.js';
  * is set; without it providers report `githubApp: false`. Alternatively the
  * GitHub App id plus its private key file (CP_GITHUB_APP_ID and
  * CP_GITHUB_APP_KEY_FILE, both or neither) enable mint-on-demand
- * installation tokens for the connect endpoint.
+ * installation tokens for the connect endpoint. CP_GITHUB_APP_SLUG
+ * (the public github.com/apps/<slug> name) enables the one-click
+ * install entry; without it only manual installation ids connect.
  */
 
 export interface StartEnv {
@@ -67,6 +70,7 @@ export interface StartEnv {
   readonly CP_GITHUB_INSTALLATION_TOKEN?: string | undefined;
   readonly CP_GITHUB_APP_ID?: string | undefined;
   readonly CP_GITHUB_APP_KEY_FILE?: string | undefined;
+  readonly CP_GITHUB_APP_SLUG?: string | undefined;
 }
 
 function requiredEnv(
@@ -140,6 +144,7 @@ function wireAuth(
       throw new Error('CP_GITHUB_APP_KEY_FILE does not look like a PEM private key; refusing to start.');
     }
   }
+  const githubAppSlug = env.CP_GITHUB_APP_SLUG ?? '';
   const installationToken = env.CP_GITHUB_INSTALLATION_TOKEN ?? '';
   const secrets = composeMapSecrets(
     new Map([
@@ -189,6 +194,15 @@ function wireAuth(
       queries,
       ...(githubAppKey !== ''
         ? { githubConnect: composeInstallationConnect({ secrets, keyRef: 'github-app-key', appId: githubAppId }) }
+        : {}),
+      ...(githubAppSlug !== ''
+        ? {
+            githubInstall: composeGitHubInstall({
+              secrets,
+              stateSecretRef: 'email-challenge-secret',
+              appSlug: githubAppSlug,
+            }),
+          }
         : {}),
     },
     notifications: {
@@ -279,6 +293,7 @@ export function buildStartEnv(source: NodeJS.ProcessEnv): StartEnv {
     CP_GITHUB_INSTALLATION_TOKEN: source['CP_GITHUB_INSTALLATION_TOKEN'],
     CP_GITHUB_APP_ID: source['CP_GITHUB_APP_ID'],
     CP_GITHUB_APP_KEY_FILE: source['CP_GITHUB_APP_KEY_FILE'],
+    CP_GITHUB_APP_SLUG: source['CP_GITHUB_APP_SLUG'],
   };
 }
 
