@@ -53,7 +53,7 @@ test('shell renders landmarks, skip link, portals, and announcer', () => {
   expect(document.getElementById('announcer')?.getAttribute('aria-live')).toBe('polite');
 });
 
-test('sidebar has brand row, three nav groups, plan meter, and org foot', () => {
+test('sidebar has brand row, three nav groups, and org foot (mockup order, no meter)', () => {
   boot();
   expect(document.querySelector('.side-brand-row .brand')).not.toBeNull();
   expect(document.getElementById('menuClose')).not.toBeNull();
@@ -66,26 +66,29 @@ test('sidebar has brand row, three nav groups, plan meter, and org foot', () => 
   expect(document.querySelector('#nav a[href="#/dashboard"]')).not.toBeNull();
   expect(document.querySelector('#nav a[href="#/runs"]')).not.toBeNull();
   expect(document.querySelector('#nav a[href="#/settings"]')).not.toBeNull();
-  expect(document.getElementById('planMeter')).not.toBeNull();
+  expect(document.getElementById('planMeter')).toBeNull();
+  expect(document.querySelector('#nav a[href="#/audit"]')?.textContent).toContain('Activity log');
+  expect(document.querySelector('#nav a[href="#/repositories"]')?.textContent).toContain('GitHub connections');
+  expect(document.querySelector('#nav a[href="#/new-run"]')).toBeNull();
   expect(document.querySelector('.sidebar-foot .organization')).not.toBeNull();
   expect(document.getElementById('orgLabel')).not.toBeNull();
 });
 
-test('sidebar brand uses the product mark and the meter has no manage link', () => {
+test('sidebar brand uses the product mark', () => {
   boot();
   const brand = document.querySelector('.side-brand-row .brand');
   expect(brand?.querySelector('.cp-brandmark svg')?.getAttribute('viewBox')).toBe('0 0 64 64');
   expect(brand?.querySelector('.brandmark')).toBeNull();
-  const meter = document.getElementById('planMeter');
-  expect(meter?.textContent).toContain('Usage Loading…');
-  expect(meter?.textContent).not.toContain('UsageLoading');
-  expect(meter?.querySelector('a[href="#/usage"]')).toBeNull();
+  expect(document.getElementById('planMeter')).toBeNull();
+
+
+
 });
 
 test('topbar has context capsule and profile capsule controls', () => {
   boot();
   expect(document.getElementById('topSection')).not.toBeNull();
-  expect(document.querySelector('.top-context .context-orb')).not.toBeNull();
+  expect(document.querySelector('.top-context .context-parent')?.textContent).toContain('Workspace');
   expect(document.querySelector('.search-trigger kbd')).not.toBeNull();
   expect(document.querySelector('.header-help')).not.toBeNull();
   expect(document.querySelector('[data-modern="notifications"]')).not.toBeNull();
