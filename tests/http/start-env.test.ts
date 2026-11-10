@@ -30,6 +30,7 @@ describe('buildStartEnv', () => {
       CP_GITHUB_INSTALLATION_TOKEN: 'token',
       CP_GITHUB_APP_ID: 'app',
       CP_GITHUB_APP_KEY_FILE: 'keyfile',
+      CP_GITHUB_APP_SLUG: 'slug',
       SOMETHING_ELSE: 'ignored',
     };
     expect(buildStartEnv(source)).toEqual({
@@ -49,6 +50,7 @@ describe('buildStartEnv', () => {
       CP_GITHUB_INSTALLATION_TOKEN: 'token',
       CP_GITHUB_APP_ID: 'app',
       CP_GITHUB_APP_KEY_FILE: 'keyfile',
+      CP_GITHUB_APP_SLUG: 'slug',
     });
   });
 });
